@@ -20,9 +20,13 @@ export function TopBar({ userEmail }: TopBarProps) {
   const router = useRouter()
 
   async function handleSignOut() {
-    const supabase = createClient()
-    await supabase.auth.signOut()
-    router.push('/login')
+    try {
+      const supabase = createClient()
+      await supabase.auth.signOut()
+      router.refresh()
+    } finally {
+      router.push('/login')
+    }
   }
 
   return (
