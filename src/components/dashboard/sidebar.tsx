@@ -10,12 +10,22 @@ import {
   CreditCard,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { AgentAvatar } from '@/components/agents/agent-avatar'
+import type { LucideIcon } from 'lucide-react'
 
-const NAV_ITEMS = [
+type AgentNavItem = { label: string; href: string; agentId: string; exact: boolean; icon?: never }
+type IconNavItem  = { label: string; href: string; icon: LucideIcon; exact: boolean; agentId?: never }
+type NavItem = AgentNavItem | IconNavItem
+
+function isAgentItem(item: NavItem): item is AgentNavItem {
+  return typeof (item as AgentNavItem).agentId === 'string'
+}
+
+const NAV_ITEMS: NavItem[] = [
   {
     label: 'Mia',
     href: '/dashboard',
-    icon: Sparkles,
+    agentId: 'mia',
     exact: true,
   },
   {
@@ -73,7 +83,6 @@ export function Sidebar({ userEmail }: SidebarProps) {
         {/* Nav items */}
         <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1" aria-label="Main navigation">
           {NAV_ITEMS.map((item) => {
-            const Icon = item.icon
             const active = isActive(item)
             return (
               <Link
@@ -87,13 +96,21 @@ export function Sidebar({ userEmail }: SidebarProps) {
                 )}
                 aria-current={active ? 'page' : undefined}
               >
-                <Icon
-                  className={cn(
-                    'h-4 w-4 shrink-0',
-                    active ? 'text-[#6366f1]' : 'text-muted-foreground'
-                  )}
-                  aria-hidden="true"
-                />
+                {isAgentItem(item) ? (
+                  <AgentAvatar
+                    agentId={item.agentId}
+                    size="sm"
+                    state={active ? 'working' : 'default'}
+                  />
+                ) : (
+                  <item.icon
+                    className={cn(
+                      'h-4 w-4 shrink-0',
+                      active ? 'text-[#6366f1]' : 'text-muted-foreground'
+                    )}
+                    aria-hidden="true"
+                  />
+                )}
                 {item.label}
               </Link>
             )
@@ -119,7 +136,6 @@ export function Sidebar({ userEmail }: SidebarProps) {
         aria-label="Mobile navigation"
       >
         {NAV_ITEMS.map((item) => {
-          const Icon = item.icon
           const active = isActive(item)
           return (
             <Link
@@ -133,7 +149,15 @@ export function Sidebar({ userEmail }: SidebarProps) {
               )}
               aria-current={active ? 'page' : undefined}
             >
-              <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
+              {isAgentItem(item) ? (
+                <AgentAvatar
+                  agentId={item.agentId}
+                  size="sm"
+                  state={active ? 'working' : 'default'}
+                />
+              ) : (
+                <item.icon className="h-5 w-5 shrink-0" aria-hidden="true" />
+              )}
               <span className="text-[10px] font-medium leading-none">{item.label}</span>
             </Link>
           )
