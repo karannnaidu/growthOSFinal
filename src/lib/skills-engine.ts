@@ -351,9 +351,17 @@ export async function runSkill(input: SkillRunInput): Promise<SkillRunResult> {
   // 10. Entity extraction
   // TODO: Extract entities from output and store in knowledge graph (Task TBD)
 
-  // 11. Auto-chaining
-  // TODO: Check skill.chainsTo and conditionally enqueue follow-up skill runs.
-  //       Should respect max chain depth to avoid infinite loops.
+  // 11. Auto-chaining via Mia orchestration engine
+  if (status === 'completed' && runId) {
+    // Fire-and-forget: orchestration is non-blocking and non-fatal
+    import('@/lib/mia-orchestrator')
+      .then(({ miaOrchestrate }) =>
+        miaOrchestrate(input.brandId, runId, input.skillId, output),
+      )
+      .catch((err) => {
+        console.warn('[SkillsEngine] Mia orchestration failed (non-fatal):', err);
+      });
+  }
 
   return {
     id: runId,
