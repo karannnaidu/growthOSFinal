@@ -348,8 +348,16 @@ export async function runSkill(input: SkillRunInput): Promise<SkillRunResult> {
     }
   }
 
-  // 10. Entity extraction
-  // TODO: Extract entities from output and store in knowledge graph (Task TBD)
+  // 10. Entity extraction — fire-and-forget, non-fatal
+  if (status === 'completed' && runId) {
+    import('@/lib/knowledge/extract')
+      .then(({ extractEntities }) =>
+        extractEntities(input.brandId, input.skillId, runId, output),
+      )
+      .catch((err) => {
+        console.warn('[SkillsEngine] Entity extraction failed (non-fatal):', err);
+      });
+  }
 
   // 11. Auto-chaining via Mia orchestration engine
   if (status === 'completed' && runId) {
