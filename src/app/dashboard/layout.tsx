@@ -20,13 +20,24 @@ export default async function DashboardLayout({
 
   const userEmail = user.email ?? null
 
+  // Fetch the user's first brand for notifications
+  const { data: brand } = await supabase
+    .from('brands')
+    .select('id')
+    .eq('owner_id', user.id)
+    .order('created_at', { ascending: true })
+    .limit(1)
+    .single()
+
+  const brandId = brand?.id ?? null
+
   return (
     <div className="min-h-screen bg-background">
       {/* Fixed sidebar (desktop) + bottom nav (mobile) */}
       <Sidebar userEmail={userEmail} />
 
       {/* Fixed top bar */}
-      <TopBar userEmail={userEmail} />
+      <TopBar userEmail={userEmail} brandId={brandId} />
 
       {/* Main content area */}
       {/* Offset for sidebar (md+) and top bar; bottom padding for mobile nav */}
