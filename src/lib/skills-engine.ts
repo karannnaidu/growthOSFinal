@@ -1,4 +1,6 @@
 import { loadSkill, type SkillDefinition } from '@/lib/skill-loader';
+import { routeModel as routeModelFn, type Tier } from '@/lib/model-router';
+import { callModel } from '@/lib/model-client';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -24,39 +26,41 @@ export interface SkillRunResult {
 }
 
 // ---------------------------------------------------------------------------
-// Model routing (stub — Task 1.5 will replace)
+// Model routing — Task 1.5 implementation
 // ---------------------------------------------------------------------------
 
-/** Map skill complexity to a model identifier. */
-function routeModel(complexity: SkillDefinition['complexity']): string {
-  // TODO: Replace with actual model routing from model-client.ts (Task 1.5)
-  const modelMap: Record<string, string> = {
-    free: 'gemini-2.0-flash',
-    cheap: 'deepseek-v3',
-    mid: 'claude-sonnet-4-20250514',
-    premium: 'claude-opus-4-20250514',
-  };
-  return modelMap[complexity] ?? 'deepseek-v3';
+/** Map skill complexity to a model identifier and provider. */
+function routeModelForSkill(complexity: SkillDefinition['complexity']): { model: string; provider: string } {
+  const route = routeModelFn(complexity as Tier);
+  return { model: route.model, provider: route.provider };
 }
 
 // ---------------------------------------------------------------------------
-// LLM call stub (Task 1.5 will replace)
+// LLM call — Task 1.5 implementation
 // ---------------------------------------------------------------------------
 
 interface LLMCallParams {
   model: string;
+  provider: string;
   systemPrompt: string;
   userPrompt: string;
 }
 
-/** Placeholder for the actual LLM call — returns mock output. */
-async function callLLM(_params: LLMCallParams): Promise<Record<string, unknown>> {
-  // TODO: Replace with actual model call from model-client.ts (Task 1.5)
-  return {
-    _stub: true,
-    message: 'This is a stub response. Replace with real LLM output in Task 1.5.',
-    generatedAt: new Date().toISOString(),
-  };
+/** Call the appropriate provider via model-client. */
+async function callLLM(params: LLMCallParams): Promise<Record<string, unknown>> {
+  const result = await callModel({
+    model: params.model,
+    provider: params.provider,
+    systemPrompt: params.systemPrompt,
+    userPrompt: params.userPrompt,
+  });
+
+  // Attempt JSON parse; fall back to wrapping raw content
+  try {
+    return JSON.parse(result.content) as Record<string, unknown>;
+  } catch {
+    return { content: result.content, model: result.model, provider: result.provider };
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -206,7 +210,7 @@ export async function runSkill(input: SkillRunInput): Promise<SkillRunResult> {
   }
 
   // 4. Route to the appropriate model
-  const model = routeModel(skill.complexity);
+  const { model, provider } = routeModelForSkill(skill.complexity);
 
   // 5. Build prompt and call the LLM
   const { systemPrompt, userPrompt } = buildPrompt(
@@ -217,7 +221,7 @@ export async function runSkill(input: SkillRunInput): Promise<SkillRunResult> {
 
   let output: Record<string, unknown>;
   try {
-    output = await callLLM({ model, systemPrompt, userPrompt });
+    output = await callLLM({ model, provider, systemPrompt, userPrompt });
   } catch (err) {
     output = {};
     const durationMs = Date.now() - startTime;
