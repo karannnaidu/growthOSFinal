@@ -1,6 +1,7 @@
 import { loadSkill, type SkillDefinition } from '@/lib/skill-loader';
 import { routeModel as routeModelFn, type Tier } from '@/lib/model-router';
 import { callModel } from '@/lib/model-client';
+import { fetchSkillData, type SkillDataContext } from '@/lib/mcp-client';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -86,6 +87,7 @@ function buildPrompt(
   skill: SkillDefinition,
   brandContext: Record<string, unknown>,
   additionalContext?: Record<string, unknown>,
+  liveData?: SkillDataContext,
 ): { systemPrompt: string; userPrompt: string } {
   const systemParts: string[] = [];
 
@@ -102,6 +104,9 @@ function buildPrompt(
   userParts.push(`## Brand Context\n${JSON.stringify(brandContext, null, 2)}`);
   if (additionalContext && Object.keys(additionalContext).length > 0) {
     userParts.push(`## Additional Context\n${JSON.stringify(additionalContext, null, 2)}`);
+  }
+  if (liveData && Object.keys(liveData).length > 0) {
+    userParts.push(`## Live Platform Data\n${JSON.stringify(liveData, null, 2)}`);
   }
 
   return {
@@ -212,11 +217,22 @@ export async function runSkill(input: SkillRunInput): Promise<SkillRunResult> {
   // 4. Route to the appropriate model
   const { model, provider } = routeModelForSkill(skill.complexity);
 
-  // 5. Build prompt and call the LLM
+  // 5. Fetch live platform data via MCP client (non-fatal if it fails)
+  let liveData: SkillDataContext = {};
+  if (skill.mcpTools && skill.mcpTools.length > 0) {
+    try {
+      liveData = await fetchSkillData(input.brandId, skill.mcpTools);
+    } catch (err) {
+      console.warn('[SkillsEngine] fetchSkillData failed (continuing without live data):', err);
+    }
+  }
+
+  // 6. Build prompt and call the LLM
   const { systemPrompt, userPrompt } = buildPrompt(
     skill,
     brand as Record<string, unknown>,
     input.additionalContext,
+    liveData,
   );
 
   let output: Record<string, unknown>;
