@@ -1,0 +1,115 @@
+// ---------------------------------------------------------------------------
+// GET /api/billing/balance?brandId=xxx
+//
+// Returns the current wallet balance and usage stats for a brand.
+//
+// Response shape:
+//   {
+//     balance: number,
+//     freeCredits: number,
+//     freeCreditsExpiresAt: string | null,
+//     autoRecharge: boolean,
+//     autoRechargeThreshold: number | null,
+//     autoRechargeAmount: number | null,
+//     creditsUsedToday: number,
+//     creditsUsedThisMonth: number,
+//   }
+// ---------------------------------------------------------------------------
+
+import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
+
+export async function GET(request: NextRequest): Promise<NextResponse> {
+  // 1. Auth check
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
+  }
+
+  // 2. Query params
+  const { searchParams } = new URL(request.url)
+  const brandId = searchParams.get('brandId')
+
+  if (!brandId) {
+    return NextResponse.json({ error: 'brandId query param is required' }, { status: 400 })
+  }
+
+  // 3. Verify brand access
+  const { data: brand } = await supabase
+    .from('brands')
+    .select('id, owner_id')
+    .eq('id', brandId)
+    .single()
+
+  if (!brand) {
+    return NextResponse.json({ error: 'Brand not found' }, { status: 404 })
+  }
+
+  if (brand.owner_id !== user.id) {
+    const { data: membership } = await supabase
+      .from('brand_members')
+      .select('brand_id')
+      .eq('brand_id', brandId)
+      .eq('user_id', user.id)
+      .single()
+
+    if (!membership) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+    }
+  }
+
+  // 4. Fetch wallet
+  const { data: wallet } = await supabase
+    .from('wallets')
+    .select(
+      'balance, free_credits, free_credits_expires_at, auto_recharge, auto_recharge_threshold, auto_recharge_amount',
+    )
+    .eq('brand_id', brandId)
+    .single()
+
+  // 5. Compute usage stats from wallet_transactions
+  const now = new Date()
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString()
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
+
+  // Credits used today (sum of negative 'usage' transactions)
+  const { data: todayRows } = await supabase
+    .from('wallet_transactions')
+    .select('credits')
+    .eq('brand_id', brandId)
+    .eq('type', 'usage')
+    .gte('created_at', startOfToday)
+
+  const creditsUsedToday = (todayRows ?? []).reduce(
+    (sum, row) => sum + Math.abs(row.credits ?? 0),
+    0,
+  )
+
+  // Credits used this month
+  const { data: monthRows } = await supabase
+    .from('wallet_transactions')
+    .select('credits')
+    .eq('brand_id', brandId)
+    .eq('type', 'usage')
+    .gte('created_at', startOfMonth)
+
+  const creditsUsedThisMonth = (monthRows ?? []).reduce(
+    (sum, row) => sum + Math.abs(row.credits ?? 0),
+    0,
+  )
+
+  return NextResponse.json({
+    balance: wallet?.balance ?? 0,
+    freeCredits: wallet?.free_credits ?? 0,
+    freeCreditsExpiresAt: wallet?.free_credits_expires_at ?? null,
+    autoRecharge: wallet?.auto_recharge ?? false,
+    autoRechargeThreshold: wallet?.auto_recharge_threshold ?? null,
+    autoRechargeAmount: wallet?.auto_recharge_amount ?? null,
+    creditsUsedToday,
+    creditsUsedThisMonth,
+  })
+}
