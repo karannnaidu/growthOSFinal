@@ -158,6 +158,8 @@ CREATE TABLE IF NOT EXISTS products (
   updated_at        timestamptz DEFAULT now()
 );
 
+CREATE UNIQUE INDEX IF NOT EXISTS idx_products_brand_shopify ON products(brand_id, shopify_id) WHERE shopify_id IS NOT NULL;
+
 -- 9. competitors
 CREATE TABLE IF NOT EXISTS competitors (
   id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
