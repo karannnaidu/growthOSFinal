@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useState } from 'react'
+import { Suspense, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -11,17 +11,18 @@ import { Input } from '@/components/ui/input'
 function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const redirectTo = searchParams.get('redirectTo') ?? '/dashboard'
+  const rawRedirect = searchParams.get('redirectTo') ?? '/dashboard'
+  const redirectTo = rawRedirect.startsWith('/') && !rawRedirect.startsWith('//') ? rawRedirect : '/dashboard'
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
   const [error, setError] = useState<string | null>(
-    searchParams.get('error') ?? null
+    searchParams.get('error') ? 'Authentication failed. Please try again.' : null
   )
 
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   async function handleEmailLogin(e: React.FormEvent) {
     e.preventDefault()
