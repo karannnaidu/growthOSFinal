@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { initializeBrandAgents } from '@/lib/agent-reveal'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -82,6 +83,14 @@ export async function POST(
       { success: false, error: updateError.message },
       { status: 500 },
     )
+  }
+
+  // 5. Initialize progressive agent reveal for this brand
+  try {
+    await initializeBrandAgents(brandId, focusAreas)
+  } catch (err) {
+    // Non-fatal — log and continue; agents can be initialized on next request
+    console.error('[set-focus] initializeBrandAgents error:', err)
   }
 
   return NextResponse.json({ success: true })
