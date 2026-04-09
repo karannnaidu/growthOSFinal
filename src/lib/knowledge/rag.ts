@@ -60,7 +60,7 @@ export interface RAGResult {
  * Generate a 768-dim embedding for `text` using Gemini text-embedding-004.
  * Returns a Float32Array-like number array.
  */
-async function embedText(text: string): Promise<number[]> {
+export async function embedText(text: string): Promise<number[]> {
   const apiKey = process.env.GOOGLE_AI_KEY;
   if (!apiKey) throw new Error('GOOGLE_AI_KEY is not set');
 

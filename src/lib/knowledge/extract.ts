@@ -10,6 +10,7 @@
 
 import { loadSkill } from '@/lib/skill-loader';
 import { callModel } from '@/lib/model-client';
+import { embedText } from '@/lib/knowledge/rag';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -176,7 +177,16 @@ export async function extractEntities(
     if (!node.name || !node.node_type) continue;
     if (!VALID_NODE_TYPES.has(node.node_type)) continue;
 
-    // Embedding is stubbed — set to null for now (TODO: generate via embedText)
+    // Generate embedding inline so the node is immediately searchable via RAG
+    let embedding: number[] | null = null;
+    try {
+      const textForEmbedding = `${node.name}. ${node.summary || ''}. ${JSON.stringify(node.properties || {})}`;
+      embedding = await embedText(textForEmbedding);
+    } catch (err) {
+      console.warn(`[extract] Embedding generation failed for "${node.name}":`, err);
+      // Continue with null embedding — backfill job will catch it
+    }
+
     const { data: inserted, error } = await supabase
       .from('knowledge_nodes')
       .insert({
@@ -188,7 +198,7 @@ export async function extractEntities(
         confidence: node.confidence ?? 1.0,
         source_skill: skillId,
         source_run_id: skillRunId,
-        embedding: null, // TODO: generate embeddings (Task 3.5+)
+        embedding,
         is_active: true,
       })
       .select('id')
