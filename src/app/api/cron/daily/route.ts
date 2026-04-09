@@ -150,5 +150,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     results.push(brandResults)
   })
 
+  // Bridge top_content to knowledge graph
+  const { bridgeTopContent } = await import('@/lib/knowledge/bridges')
+  for (const brand of brands) {
+    await bridgeTopContent(brand.id).catch(console.warn)
+  }
+
   return NextResponse.json({ ok: true, processed: brands.length, results })
 }

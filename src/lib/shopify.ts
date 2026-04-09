@@ -189,6 +189,36 @@ export async function pullShopifyProducts(
     // Non-fatal: log but don't throw — products are already stored
     console.error('[Shopify] Failed to upsert knowledge nodes:', knowledgeError)
   }
+
+  // After product upserts, create product_image knowledge nodes
+  const { embedText } = await import('@/lib/knowledge/rag')
+  for (const product of allProducts) {
+    const images = (product.images as any[]) || []
+    for (const image of images.slice(0, 3)) {
+      let embedding: number[] | null = null
+      try {
+        embedding = await embedText(`Product image: ${product.title}. ${(product.body_html || '').slice(0, 200)}`)
+      } catch { /* continue */ }
+
+      await supabase.from('knowledge_nodes').upsert({
+        brand_id: brandId,
+        node_type: 'product_image',
+        name: `${product.title} — Image ${images.indexOf(image) + 1}`,
+        summary: `Product photo for ${product.title}`,
+        properties: {
+          product_title: product.title,
+          shopify_product_id: String(product.id),
+          image_url: image.src,
+          alt: image.alt || product.title,
+        },
+        media_url: image.src,
+        media_type: 'image/jpeg',
+        source_skill: 'shopify-sync',
+        embedding,
+        is_active: true,
+      }, { onConflict: 'brand_id,name' })
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------

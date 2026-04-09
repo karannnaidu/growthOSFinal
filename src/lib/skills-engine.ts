@@ -428,6 +428,69 @@ export async function runSkill(input: SkillRunInput): Promise<SkillRunResult> {
       });
   }
 
+  // Post-execution: fal.ai image generation for image-brief skill
+  if (skill.id === 'image-brief' && status === 'completed') {
+    import('@/lib/fal-client').then(async ({ generateImage, persistToStorage, createMediaNode }) => {
+      try {
+        const briefs = Array.isArray(output.briefs) ? output.briefs : [output];
+        for (const briefRaw of briefs.slice(0, 4)) {
+          const brief = briefRaw as Record<string, unknown>;
+          const prompt = (brief.prompt || brief.description || JSON.stringify(brief)) as string;
+          const images = await generateImage({
+            prompt,
+            negativePrompt: brief.negative_prompt as string | undefined,
+            width: (brief.width as number | undefined) ?? 1024,
+            height: (brief.height as number | undefined) ?? 1024,
+            brandId: input.brandId,
+          });
+          for (const img of images) {
+            const filename = `ad-creatives/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.png`;
+            const { storagePath } = await persistToStorage(img.url, input.brandId, 'generated-assets', filename);
+            await createMediaNode(
+              input.brandId, 'ad_creative',
+              (brief.name as string | undefined) || `Creative from image-brief`,
+              storagePath, 'generated-assets', 'image/png',
+              skill.id, runId,
+              { prompt, dimensions: `${img.width}x${img.height}` },
+            );
+          }
+        }
+      } catch (err) {
+        console.warn('[SkillsEngine] fal.ai post-execution failed:', err);
+      }
+    }).catch(console.warn);
+  }
+
+  // Post-execution: persist brand guidelines for brand-voice-extractor
+  if (skill.id === 'brand-voice-extractor' && status === 'completed') {
+    import('@/lib/supabase/server').then(async ({ createClient: createSC }) => {
+      try {
+        const sb = await createSC();
+        await sb.from('brand_guidelines').upsert({
+          brand_id: input.brandId,
+          voice_tone: output.voice_tone ?? {},
+          target_audience: output.target_audience ?? {},
+          positioning: (output.positioning as string) ?? null,
+          do_say: Array.isArray(output.do_say) ? output.do_say : [],
+          dont_say: Array.isArray(output.dont_say) ? output.dont_say : [],
+          colors: output.colors ?? {},
+          brand_story: (output.brand_story as string) ?? null,
+          competitor_positioning: (output.competitor_positioning as string) ?? null,
+        }, { onConflict: 'brand_id' });
+        await sb.from('brands').update({ brand_guidelines: output }).eq('id', input.brandId);
+      } catch (err) {
+        console.warn('[SkillsEngine] brand guidelines persist failed:', err);
+      }
+    }).catch(console.warn);
+  }
+
+  // Post-execution: bridge top content after health-check
+  if (skill.id === 'health-check' && status === 'completed') {
+    import('@/lib/knowledge/bridges').then(async ({ bridgeTopContent }) => {
+      await bridgeTopContent(input.brandId).catch(console.warn);
+    }).catch(console.warn);
+  }
+
   return {
     id: runId,
     status,
