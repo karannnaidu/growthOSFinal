@@ -5,6 +5,8 @@ import { Sparkles, MessageSquare, Plus } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { ChatMessage } from '@/components/chat/chat-message'
 import { ChatInput } from '@/components/chat/chat-input'
+import { ChatSidebar } from '@/components/chat/chat-sidebar'
+import { ActiveContext } from '@/components/chat/active-context'
 import { cn } from '@/lib/utils'
 
 // ---------------------------------------------------------------------------
@@ -25,6 +27,11 @@ interface Conversation {
   created_at: string
 }
 
+interface BrandContextData {
+  focusAreas: string[]
+  aiPreset: string
+}
+
 // ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
@@ -32,6 +39,7 @@ interface Conversation {
 export default function ChatPage() {
   const [brandId, setBrandId] = useState<string | null>(null)
   const [brandName, setBrandName] = useState<string>('')
+  const [brandContext, setBrandContext] = useState<BrandContextData | undefined>(undefined)
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
@@ -58,7 +66,7 @@ export default function ChatPage() {
 
       const { data: ownedBrand } = await supabase
         .from('brands')
-        .select('id, name')
+        .select('id, name, focus_areas, ai_preset')
         .eq('owner_id', user.id)
         .limit(1)
         .single()
@@ -66,17 +74,25 @@ export default function ChatPage() {
       if (ownedBrand) {
         resolvedBrandId = ownedBrand.id as string
         resolvedBrandName = (ownedBrand.name as string) ?? ''
+        setBrandContext({
+          focusAreas: (ownedBrand.focus_areas as string[]) ?? [],
+          aiPreset: (ownedBrand.ai_preset as string) ?? 'balanced',
+        })
       } else {
         const { data: member } = await supabase
           .from('brand_members')
-          .select('brand_id, brands(id, name)')
+          .select('brand_id, brands(id, name, focus_areas, ai_preset)')
           .eq('user_id', user.id)
           .limit(1)
           .single()
         if (member) {
           resolvedBrandId = member.brand_id as string
-          const brands = (member.brands as unknown) as { id: string; name: string } | null
+          const brands = (member.brands as unknown) as { id: string; name: string; focus_areas?: string[]; ai_preset?: string } | null
           resolvedBrandName = brands?.name ?? ''
+          setBrandContext({
+            focusAreas: brands?.focus_areas ?? [],
+            aiPreset: brands?.ai_preset ?? 'balanced',
+          })
         }
       }
 
@@ -277,50 +293,22 @@ export default function ChatPage() {
   )
 
   // ---------------------------------------------------------------------------
-  // Render
+  // Render — 3-panel layout
   // ---------------------------------------------------------------------------
 
   return (
-    <div className="flex h-[calc(100vh-3.5rem-5rem)] md:h-[calc(100vh-3.5rem-1.5rem)] gap-4 -mx-4 md:-mx-8 -my-6 overflow-hidden">
-      {/* Conversation sidebar */}
-      <aside className="hidden lg:flex w-64 flex-col glass-panel border-r border-white/[0.06] overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06]">
-          <h2 className="text-sm font-heading font-semibold text-foreground">Conversations</h2>
-          <button
-            onClick={startNewConversation}
-            aria-label="New conversation"
-            className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground
-              hover:bg-white/[0.06] hover:text-foreground transition-colors duration-150"
-          >
-            <Plus className="h-4 w-4" aria-hidden="true" />
-          </button>
-        </div>
+    <div className="flex h-[calc(100vh-3.5rem-5rem)] md:h-[calc(100vh-3.5rem-1.5rem)] gap-0 -mx-4 md:-mx-8 -my-6 overflow-hidden">
+      {/* Left panel: ChatSidebar (hidden < lg) */}
+      <div className="hidden lg:flex">
+        <ChatSidebar
+          conversations={conversations}
+          activeId={activeConversationId}
+          onSelect={loadConversation}
+          onNew={startNewConversation}
+        />
+      </div>
 
-        <div className="flex-1 overflow-y-auto py-2 px-2">
-          {conversations.length === 0 ? (
-            <p className="px-2 py-3 text-xs text-muted-foreground/60 text-center">
-              No conversations yet
-            </p>
-          ) : (
-            conversations.map((conv) => (
-              <button
-                key={conv.id}
-                onClick={() => loadConversation(conv.id)}
-                className={cn(
-                  'w-full text-left px-3 py-2 rounded-lg text-xs transition-colors duration-150 truncate',
-                  activeConversationId === conv.id
-                    ? 'bg-[#6366f1]/15 text-[#6366f1]'
-                    : 'text-muted-foreground hover:bg-white/[0.06] hover:text-foreground',
-                )}
-              >
-                {conv.title || 'Untitled conversation'}
-              </button>
-            ))
-          )}
-        </div>
-      </aside>
-
-      {/* Main chat area */}
+      {/* Center: Main chat area */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Header */}
         <div className="flex items-center gap-3 px-4 md:px-6 py-3 border-b border-white/[0.06] glass-panel shrink-0">
@@ -407,6 +395,19 @@ export default function ChatPage() {
           onChange={setInputValue}
           onSend={sendMessage}
           disabled={isStreaming || !brandId}
+        />
+      </div>
+
+      {/* Right panel: ActiveContext (hidden < xl) */}
+      <div className="hidden xl:flex">
+        <ActiveContext
+          brandContext={brandContext}
+          activeAgents={[
+            { agentId: 'scout', status: 'idle' },
+            { agentId: 'aria', status: 'idle' },
+            { agentId: 'max', status: 'idle' },
+          ]}
+          sources={[]}
         />
       </div>
     </div>
