@@ -16,7 +16,7 @@
 |------|------|-------|------------|---------------|
 | **1** | Creative Pipeline Foundation | 8 tasks | Nothing | ✅ **COMPLETE** — Knowledge graph loop fixed, embeddings, fal.ai, schema |
 | **2** | Design Gap UI Rebuild | 16 tasks | Plan 1 | ✅ **COMPLETE** — UI matches designs, all pages built, interactions wired |
-| **3** | Creative Intelligence Engine | 7 tasks | Plans 1+2 | No cohort-driven creative generation, no video, no feedback loop |
+| **3** | Creative Intelligence Engine | 7 tasks | Plans 1+2 | ✅ **COMPLETE** — Creative generation, video, feedback loop, Creative Studio |
 
 **Total: 31 tasks**
 
@@ -942,10 +942,11 @@ git push
 ---
 
 # ============================================================
-# PLAN 3: Creative Intelligence Engine (Execute Third)
+# PLAN 3: Creative Intelligence Engine ✅ COMPLETE
 # ============================================================
 
 **Spec:** `docs/superpowers/specs/2026-04-09-creative-intelligence-engine.md`
+**Status:** ✅ All 7 tasks complete — committed and pushed.
 
 ## Spec Summary
 
@@ -1086,7 +1087,7 @@ This is implemented as a post-hook in the daily cron route — after Meta/Google
 **Files:**
 - Create: `src/lib/creative-intelligence.ts`
 
-- [ ] **Step 1: Create the creative intelligence module**
+- [x] **Step 1: Create the creative intelligence module**
 
 Implement `gatherCreativeContext()`:
 - Query knowledge graph for `ad_creative` nodes with snapshots (performance data), sorted by performance
@@ -1106,7 +1107,7 @@ Implement `scoreCreative()`:
 - Score each creative against each persona
 - Return aggregate score + per-persona feedback
 
-- [ ] **Step 2: Build passes and commit**
+- [x] **Step 2: Build passes and commit**
 
 ```bash
 npm run build
@@ -1122,7 +1123,7 @@ git commit -m "feat: add creative intelligence engine with knowledge-informed ge
 - Create: `src/app/api/creative/generate/route.ts`
 - Create: `src/app/api/creative/gallery/route.ts`
 
-- [ ] **Step 1: Create generation endpoint**
+- [x] **Step 1: Create generation endpoint**
 
 `POST /api/creative/generate`:
 1. Auth + brand access check
@@ -1135,7 +1136,7 @@ git commit -m "feat: add creative intelligence engine with knowledge-informed ge
 8. Call `scoreCreative()` for each variant
 9. Return `{ images: [...], videos: [...], reasoning, scores }`
 
-- [ ] **Step 2: Create gallery endpoint**
+- [x] **Step 2: Create gallery endpoint**
 
 `GET /api/creative/gallery?brandId=X&page=1&limit=20`:
 1. Auth + brand access check
@@ -1143,7 +1144,7 @@ git commit -m "feat: add creative intelligence engine with knowledge-informed ge
 3. Left join `knowledge_snapshots` for latest performance data per node
 4. Return paginated results with media_url, properties, performance metrics
 
-- [ ] **Step 3: Create score and feedback endpoints**
+- [x] **Step 3: Create score and feedback endpoints**
 
 `POST /api/creative/score`:
 1. Auth + brand access check
@@ -1158,7 +1159,7 @@ git commit -m "feat: add creative intelligence engine with knowledge-informed ge
 3. Create `knowledge_snapshot` for the creative node with the provided metrics
 4. Return `{ success: true }`
 
-- [ ] **Step 4: Build passes and commit**
+- [x] **Step 4: Build passes and commit**
 
 ```bash
 npm run build
@@ -1173,7 +1174,7 @@ git commit -m "feat: add creative generation, gallery, score, and feedback API e
 **Files:**
 - Create: `src/app/dashboard/creative/page.tsx`
 
-- [ ] **Step 1: Create the Creative Studio page**
+- [x] **Step 1: Create the Creative Studio page**
 
 Client component with three tabs: Gallery, Generate, Performance.
 
@@ -1188,7 +1189,7 @@ Client component with three tabs: Gallery, Generate, Performance.
 
 **Performance tab:** Simple stats cards showing: total creatives generated, average persona score, top-performing style patterns. Data from knowledge_snapshots.
 
-- [ ] **Step 2: Build passes and commit**
+- [x] **Step 2: Build passes and commit**
 
 ```bash
 npm run build
@@ -1204,7 +1205,7 @@ git commit -m "feat: add Creative Studio page with gallery, generation, and perf
 - Modify: `src/lib/fal-client.ts` (already has `generateVideo` from Plan 1)
 - Modify: `src/lib/creative-intelligence.ts`
 
-- [ ] **Step 1: Enhance video prompt generation**
+- [x] **Step 1: Enhance video prompt generation**
 
 In `generateIntelligentBrief()`, add video-specific prompt generation. Video prompts should include:
 - Scene description (based on product + brand aesthetic)
@@ -1212,11 +1213,11 @@ In `generateIntelligentBrief()`, add video-specific prompt generation. Video pro
 - Duration (5s for awareness, 10s for conversion)
 - Style reference (from top-performing video content in knowledge graph)
 
-- [ ] **Step 2: Add video preview support to Creative Studio**
+- [x] **Step 2: Add video preview support to Creative Studio**
 
 Update the Creative Studio page to handle video results: show video player for `.mp4` files, play on hover in gallery view.
 
-- [ ] **Step 3: Build passes and commit**
+- [x] **Step 3: Build passes and commit**
 
 ```bash
 npm run build
@@ -1232,7 +1233,7 @@ git commit -m "feat: add video generation support to creative intelligence engin
 - Modify: `src/app/api/cron/daily/route.ts`
 - Create: `src/lib/creative-feedback.ts`
 
-- [ ] **Step 1: Create feedback loop module**
+- [x] **Step 1: Create feedback loop module**
 
 ```typescript
 // src/lib/creative-feedback.ts
@@ -1246,7 +1247,7 @@ export async function updateCreativePerformance(brandId: string): Promise<number
 }
 ```
 
-- [ ] **Step 2: Wire into daily cron**
+- [x] **Step 2: Wire into daily cron**
 
 In `src/app/api/cron/daily/route.ts`, after running daily skills, add:
 
@@ -1258,7 +1259,7 @@ for (const brand of activeBrands) {
 }
 ```
 
-- [ ] **Step 3: Build passes and commit**
+- [x] **Step 3: Build passes and commit**
 
 ```bash
 npm run build
@@ -1273,7 +1274,7 @@ git commit -m "feat: add creative performance feedback loop via daily cron"
 **Files:**
 - Modify: `src/components/dashboard/sidebar.tsx`
 
-- [ ] **Step 1: Add Creative Studio to sidebar**
+- [x] **Step 1: Add Creative Studio to sidebar**
 
 Add a nav item for the Creative Studio between "Agent Skills" and "Billing & Usage":
 
@@ -1283,7 +1284,7 @@ Add a nav item for the Creative Studio between "Agent Skills" and "Billing & Usa
 
 Import `Palette` from `lucide-react`.
 
-- [ ] **Step 2: Build passes and commit**
+- [x] **Step 2: Build passes and commit**
 
 ```bash
 npm run build
@@ -1295,20 +1296,20 @@ git commit -m "feat: add Creative Studio to dashboard sidebar navigation"
 
 ### Plan 3 — Task 7: Final Integration + Push
 
-- [ ] **Step 1: Full build verification**
+- [x] **Step 1: Full build verification**
 
 ```bash
 npm run build
 ```
 
-- [ ] **Step 2: Verify all creative routes in build output**
+- [x] **Step 2: Verify all creative routes in build output**
 
 Expected new routes:
 - `/api/creative/generate`
 - `/api/creative/gallery`
 - `/dashboard/creative`
 
-- [ ] **Step 3: Push everything**
+- [x] **Step 3: Push everything**
 
 ```bash
 git push
