@@ -88,6 +88,7 @@ function buildPrompt(
   brandContext: Record<string, unknown>,
   additionalContext?: Record<string, unknown>,
   liveData?: SkillDataContext,
+  ragContext?: import('@/lib/knowledge/rag').RAGResult | null,
 ): { systemPrompt: string; userPrompt: string } {
   const systemParts: string[] = [];
 
@@ -107,6 +108,43 @@ function buildPrompt(
   }
   if (liveData && Object.keys(liveData).length > 0) {
     userParts.push(`## Live Platform Data\n${JSON.stringify(liveData, null, 2)}`);
+  }
+
+  if (ragContext && (ragContext.nodes.length > 0 || ragContext.agencyPatterns.length > 0)) {
+    const ragParts: string[] = ['## Knowledge Graph Context\n'];
+
+    if (ragContext.nodes.length > 0) {
+      ragParts.push('### Relevant Entities');
+      for (const node of ragContext.nodes) {
+        ragParts.push(`- **${node.name}** (${node.nodeType}) — ${node.summary || 'No summary'} [confidence: ${node.confidence}, relevance: ${node.similarity.toFixed(2)}]`);
+        if (node.properties && Object.keys(node.properties).length > 0) {
+          ragParts.push(`  Properties: ${JSON.stringify(node.properties)}`);
+        }
+      }
+    }
+
+    if (ragContext.edges.length > 0) {
+      ragParts.push('\n### Relationships');
+      for (const edge of ragContext.edges) {
+        ragParts.push(`- ${edge.sourceId} →[${edge.edgeType}]→ ${edge.targetId} (weight: ${edge.weight})`);
+      }
+    }
+
+    if (ragContext.snapshots.length > 0) {
+      ragParts.push('\n### Historical Metrics');
+      for (const snap of ragContext.snapshots) {
+        ragParts.push(`- Node ${snap.nodeId}: ${JSON.stringify(snap.metrics)} (${snap.snapshotAt})`);
+      }
+    }
+
+    if (ragContext.agencyPatterns.length > 0) {
+      ragParts.push('\n### Agency Cross-Brand Patterns');
+      for (const pat of ragContext.agencyPatterns) {
+        ragParts.push(`- **${pat.name}** (${pat.patternType}) — ${JSON.stringify(pat.data)}`);
+      }
+    }
+
+    userParts.push(ragParts.join('\n'));
   }
 
   return {
@@ -227,12 +265,31 @@ export async function runSkill(input: SkillRunInput): Promise<SkillRunResult> {
     }
   }
 
+  // 5.5. Fetch knowledge graph context via RAG (non-fatal)
+  let ragContext: import('@/lib/knowledge/rag').RAGResult | null = null;
+  if (skill.knowledge?.semanticQuery) {
+    try {
+      const { ragQuery } = await import('@/lib/knowledge/rag');
+      ragContext = await ragQuery({
+        brandId: input.brandId,
+        query: skill.knowledge.semanticQuery,
+        nodeTypes: skill.knowledge.needs,
+        limit: 15,
+        traverseDepth: skill.knowledge.traverseDepth ?? 1,
+        includeAgencyPatterns: skill.knowledge.includeAgencyPatterns ?? false,
+      });
+    } catch (err) {
+      console.warn('[SkillsEngine] ragQuery failed (continuing without knowledge context):', err);
+    }
+  }
+
   // 6. Build prompt and call the LLM
   const { systemPrompt, userPrompt } = buildPrompt(
     skill,
     brand as Record<string, unknown>,
     input.additionalContext,
     liveData,
+    ragContext,
   );
 
   let output: Record<string, unknown>;
