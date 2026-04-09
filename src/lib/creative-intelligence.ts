@@ -75,6 +75,11 @@ export interface CreativeScore {
 // Helpers
 // ---------------------------------------------------------------------------
 
+/** Return ideal video duration based on campaign goal. */
+export function getVideoDuration(campaignGoal: string): number {
+  return campaignGoal.toLowerCase().includes('awareness') ? 5 : 10;
+}
+
 /** Safely parse JSON from LLM output, stripping markdown fences if present. */
 function parseLLMJson<T>(raw: string, fallback: T): T {
   let cleaned = raw.trim();
@@ -232,7 +237,7 @@ You MUST respond with valid JSON matching this exact schema:
   ],
   "videoPrompts": [
     {
-      "prompt": "detailed video generation prompt",
+      "prompt": "detailed video generation prompt including scene description, camera motion, mood, and duration",
       "duration": 5,
       "style": "style name",
       "reasoning": "why this prompt was chosen"
@@ -253,7 +258,11 @@ You MUST respond with valid JSON matching this exact schema:
 Guidelines:
 - Generate exactly 4 image prompts, 2 video prompts, and 3 copy variants.
 - Image prompts should be detailed enough for an AI image generator (Flux/SDXL).
-- Video prompts should describe motion, transitions, and mood.
+- Video prompts must include: scene description, camera motion, mood, and duration.
+- For awareness campaigns, use 5-second durations. For conversion campaigns, use 10-second durations.
+- Video scene descriptions should be based on the product and brand aesthetic.
+- Video motion direction should reference what worked in past top-performing video content.
+- Video style should draw from the best-performing video creatives in the knowledge graph.
 - Copy should match the brand voice tone and avoid anything in the "don't say" list.
 - Reference top-performing creative styles when relevant.
 - Target specific personas with copy variants.
@@ -285,6 +294,8 @@ export async function generateIntelligentBrief(
     name: p.name, productTitle: p.productTitle,
   }));
 
+  const videoDuration = getVideoDuration(safeGoal);
+
   const userPrompt = `Generate a creative brief.
 
 ## Campaign Goal
@@ -292,6 +303,9 @@ ${safeGoal}
 
 ## Target Audience
 ${safeAudience}
+
+## Video Duration
+Use ${videoDuration}-second duration for video prompts (${videoDuration === 5 ? 'awareness' : 'conversion'} campaign).
 
 ## Performance Data — Top Performing Creatives
 ${JSON.stringify(slimCreatives)}

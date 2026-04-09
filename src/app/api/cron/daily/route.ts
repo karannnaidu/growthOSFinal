@@ -156,5 +156,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     await bridgeTopContent(brand.id).catch(console.warn)
   }
 
+  // Update creative performance from ad platforms
+  const { updateCreativePerformance } = await import('@/lib/creative-feedback')
+  for (const brand of brands) {
+    await updateCreativePerformance(brand.id).catch(console.warn)
+  }
+
   return NextResponse.json({ ok: true, processed: brands.length, results })
 }

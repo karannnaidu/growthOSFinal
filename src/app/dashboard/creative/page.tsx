@@ -648,12 +648,16 @@ export default function CreativeStudioPage() {
                 <div>
                   <p className="text-sm font-medium text-muted-foreground mb-3">Generated Videos</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {genResult.videos.map((vid, idx) => (
-                      <div key={vid.nodeId} className="glass-panel rounded-xl overflow-hidden">
+                    {genResult.videos.map((vid) => (
+                      <div key={vid.nodeId} className="glass-panel rounded-xl overflow-hidden group/vid">
                         <video
                           src={vid.url}
                           controls
+                          poster={vid.url}
+                          preload="metadata"
                           className="w-full aspect-video object-cover"
+                          onMouseEnter={(e) => { (e.target as HTMLVideoElement).play().catch(() => {}) }}
+                          onMouseLeave={(e) => { const v = e.target as HTMLVideoElement; v.pause(); v.currentTime = 0 }}
                         />
                       </div>
                     ))}

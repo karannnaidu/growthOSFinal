@@ -6,6 +6,7 @@ import {
   Sparkles,
   Users,
   Zap,
+  Palette,
   CreditCard,
   Plus,
   Settings,
@@ -24,6 +25,7 @@ const MAIN_NAV = [
   { label: 'Mia Orchestrator', href: '/dashboard', icon: Sparkles, exact: true },
   { label: 'Marketing Agents', href: '/dashboard/agents', icon: Users, exact: false },
   { label: 'Agent Skills', href: '/dashboard/skills', icon: Zap, exact: false },
+  { label: 'Creative Studio', href: '/dashboard/creative', icon: Palette, exact: false },
   { label: 'Billing & Usage', href: '/dashboard/billing', icon: CreditCard, exact: false },
 ]
 
@@ -31,6 +33,7 @@ const MOBILE_NAV = [
   { label: 'Mia', href: '/dashboard', icon: Sparkles, exact: true },
   { label: 'Agents', href: '/dashboard/agents', icon: Users, exact: false },
   { label: 'Skills', href: '/dashboard/skills', icon: Zap, exact: false },
+  { label: 'Creative', href: '/dashboard/creative', icon: Palette, exact: false },
   { label: 'Billing', href: '/dashboard/billing', icon: CreditCard, exact: false },
 ]
 
