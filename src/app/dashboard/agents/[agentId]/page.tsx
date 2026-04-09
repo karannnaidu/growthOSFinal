@@ -2,25 +2,19 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { ArrowLeft, Play, ChevronDown, ChevronUp, Loader2 } from 'lucide-react'
+import { ArrowLeft, ChevronDown, ChevronUp, Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { AgentHero } from '@/components/agents/agent-hero'
+import { SkillCard } from '@/components/agents/skill-card'
+import { AgentOutput } from '@/components/agents/agent-output'
+import { MiaControl } from '@/components/agents/mia-control'
+import type { AgentConfig } from '@/lib/agents-data'
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
-
-interface AgentConfig {
-  id: string
-  name: string
-  role: string
-  color: string
-  description: string
-  skills: string[]
-  is_manager: boolean
-  schedule: string | null
-}
 
 interface SkillRun {
   id: string
@@ -39,17 +33,6 @@ interface BrandAgentConfig {
   enabled: boolean
   autoApprove: boolean
   revealed: boolean
-}
-
-// ---------------------------------------------------------------------------
-// Complexity map — matches skill-loader.ts
-// ---------------------------------------------------------------------------
-
-const COMPLEXITY_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  free:    { label: 'Free',    color: '#10b981', bg: '#10b98118' },
-  cheap:   { label: 'Cheap',   color: '#3b82f6', bg: '#3b82f618' },
-  mid:     { label: 'Mid',     color: '#f59e0b', bg: '#f59e0b18' },
-  premium: { label: 'Premium', color: '#e11d48', bg: '#e11d4818' },
 }
 
 // ---------------------------------------------------------------------------
@@ -74,18 +57,14 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 // ---------------------------------------------------------------------------
-// Format duration
+// Format helpers
 // ---------------------------------------------------------------------------
 
 function formatDuration(ms: number | null): string {
-  if (ms == null) return '—'
+  if (ms == null) return '\u2014'
   if (ms < 1000) return `${ms}ms`
   return `${(ms / 1000).toFixed(1)}s`
 }
-
-// ---------------------------------------------------------------------------
-// Format time
-// ---------------------------------------------------------------------------
 
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime()
@@ -162,8 +141,9 @@ export default function AgentDetailPage() {
   // Expanded run rows
   const [expandedRun, setExpandedRun] = useState<string | null>(null)
 
-  // Config saving
+  // Config saving + config panel visibility
   const [isSavingConfig, setIsSavingConfig] = useState(false)
+  const [showConfig, setShowConfig] = useState(false)
 
   const supabase = createClient()
 
@@ -265,20 +245,30 @@ export default function AgentDetailPage() {
   }
 
   // ---------------------------------------------------------------------------
+  // Derive latest status from recent runs
+  // ---------------------------------------------------------------------------
+
+  const latestStatus = recentRuns[0]?.status ?? 'idle'
+
+  // Latest output from most recent completed run
+  const latestCompletedRun = recentRuns.find((r) => r.status === 'completed')
+
+  // ---------------------------------------------------------------------------
   // Render
   // ---------------------------------------------------------------------------
 
   if (isLoading) {
     return (
       <div className="space-y-4 animate-fade-in">
-        {/* Skeleton header */}
-        <div className="glass-panel rounded-xl h-32 animate-pulse" />
+        <div className="glass-panel rounded-xl h-40 animate-pulse" />
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="space-y-4">
-            <div className="glass-panel rounded-xl h-64 animate-pulse" />
+          <div className="lg:col-span-2 space-y-4">
+            <div className="glass-panel rounded-xl h-48 animate-pulse" />
             <div className="glass-panel rounded-xl h-32 animate-pulse" />
           </div>
-          <div className="lg:col-span-2 glass-panel rounded-xl h-64 animate-pulse" />
+          <div className="space-y-4">
+            <div className="glass-panel rounded-xl h-48 animate-pulse" />
+          </div>
         </div>
       </div>
     )
@@ -296,7 +286,7 @@ export default function AgentDetailPage() {
   }
 
   return (
-    <div className="space-y-8 animate-fade-in">
+    <div className="space-y-6 animate-fade-in">
       {/* Back link */}
       <button
         type="button"
@@ -307,128 +297,116 @@ export default function AgentDetailPage() {
         All Agents
       </button>
 
-      {/* Profile Header */}
-      <div
-        className="glass-panel p-6 flex items-start gap-5 rounded-xl"
-        style={{ borderTop: `3px solid ${agent.color}` }}
-      >
-        <div
-          className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl text-2xl font-bold text-white"
-          style={{ background: agent.color }}
-          aria-hidden="true"
-        >
-          {agent.name[0]}
-        </div>
-        <div className="min-w-0 flex-1">
-          <h1 className="text-2xl font-heading font-bold text-foreground">{agent.name}</h1>
-          <p className="text-muted-foreground text-sm">{agent.role}</p>
-          <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{agent.description}</p>
-          {agent.schedule && (
-            <p className="mt-2 text-xs text-muted-foreground opacity-60">
-              Scheduled: <code className="font-mono">{agent.schedule}</code>
-            </p>
-          )}
-        </div>
-      </div>
+      {/* Hero */}
+      <AgentHero
+        agent={agent}
+        status={latestStatus}
+        onConfigure={() => setShowConfig((v) => !v)}
+      />
 
-      {/* Two-column layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left column: Skills + Config */}
-        <div className="lg:col-span-1 space-y-6">
-          {/* Skills */}
-          <div className="glass-panel rounded-xl overflow-hidden">
-            <div className="px-4 py-3 border-b border-white/[0.06]">
-              <h2 className="text-sm font-heading font-semibold text-foreground">
-                Skills
-                <span
-                  className="ml-2 inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium"
-                  style={{ background: `${agent.color}18`, color: agent.color }}
-                >
-                  {agent.skills.length}
-                </span>
-              </h2>
+      {/* Config panel (toggled by Configure button) */}
+      {showConfig && (
+        <div className="glass-panel rounded-xl overflow-hidden animate-fade-in">
+          <div className="px-4 py-3 border-b border-white/[0.06] flex items-center justify-between">
+            <h2 className="text-sm font-heading font-semibold text-foreground">Configuration</h2>
+            {isSavingConfig && (
+              <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+            )}
+          </div>
+          <div className="divide-y divide-white/[0.04]">
+            <div className="flex items-center justify-between px-4 py-3">
+              <div>
+                <p className="text-xs font-medium text-foreground">Enabled</p>
+                <p className="text-[10px] text-muted-foreground">Allow this agent to run skills</p>
+              </div>
+              <Toggle
+                label="Enable agent"
+                checked={agentCfg.enabled}
+                onChange={(v) => updateConfig({ enabled: v })}
+              />
             </div>
-            <ul className="divide-y divide-white/[0.04]">
+            <div className="flex items-center justify-between px-4 py-3">
+              <div>
+                <p className="text-xs font-medium text-foreground">Auto-approve</p>
+                <p className="text-[10px] text-muted-foreground">Skip review for scheduled runs</p>
+              </div>
+              <Toggle
+                label="Auto-approve skill runs"
+                checked={agentCfg.autoApprove}
+                onChange={(v) => updateConfig({ autoApprove: v })}
+                disabled={!agentCfg.enabled}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Main content: 2-column layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left: Skills grid + Recent output */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Skills grid */}
+          <div className="space-y-3">
+            <h2 className="text-sm font-heading font-semibold text-foreground flex items-center gap-2">
+              Skills
+              <span
+                className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium"
+                style={{ background: `${agent.color}18`, color: agent.color }}
+              >
+                {agent.skills.length}
+              </span>
+            </h2>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               {agent.skills.map((skillId) => {
-                const isRunning = runningSkill === skillId
-                const result = skillRunResult[skillId]
+                const lastRunForSkill = recentRuns.find((r) => r.skill_name === skillId)
                 return (
-                  <li key={skillId} className="flex items-center justify-between px-4 py-3 gap-2">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-medium text-foreground truncate">{skillId}</p>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      {result && (
-                        <span
-                          className={cn(
-                            'text-[10px]',
-                            result === 'Done' || result === 'Ran'
-                              ? 'text-[#10b981]'
-                              : 'text-destructive',
-                          )}
-                        >
-                          {result}
-                        </span>
-                      )}
-                      <Button
-                        size="xs"
-                        variant="outline"
-                        disabled={isRunning || !!runningSkill || !agentCfg.enabled}
-                        onClick={() => handleRunSkill(skillId)}
-                        aria-label={`Run ${skillId}`}
-                      >
-                        {isRunning ? (
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                        ) : (
-                          <Play className="h-3 w-3" />
-                        )}
-                        {isRunning ? 'Running' : 'Run'}
-                      </Button>
-                    </div>
-                  </li>
+                  <SkillCard
+                    key={skillId}
+                    skillId={skillId}
+                    agentColor={agent.color}
+                    lastRun={lastRunForSkill ? timeAgo(lastRunForSkill.created_at) : undefined}
+                    isRunning={runningSkill === skillId}
+                    onRun={() => handleRunSkill(skillId)}
+                  />
                 )
               })}
-            </ul>
+            </div>
+            {/* Skill run results */}
+            {Object.entries(skillRunResult).some(([, v]) => v) && (
+              <div className="flex flex-wrap gap-2">
+                {Object.entries(skillRunResult)
+                  .filter(([, v]) => v)
+                  .map(([skillId, result]) => (
+                    <span
+                      key={skillId}
+                      className={cn(
+                        'text-[10px] px-2 py-0.5 rounded-full',
+                        result === 'Done' || result === 'Ran'
+                          ? 'bg-[#10b98118] text-[#10b981]'
+                          : 'bg-[#e11d4818] text-destructive',
+                      )}
+                    >
+                      {skillId}: {result}
+                    </span>
+                  ))}
+              </div>
+            )}
           </div>
 
-          {/* Config toggles */}
+          {/* Recent output */}
           <div className="glass-panel rounded-xl overflow-hidden">
-            <div className="px-4 py-3 border-b border-white/[0.06] flex items-center justify-between">
-              <h2 className="text-sm font-heading font-semibold text-foreground">Configuration</h2>
-              {isSavingConfig && (
-                <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
-              )}
+            <div className="px-4 py-3 border-b border-white/[0.06]">
+              <h2 className="text-sm font-heading font-semibold text-foreground">Latest Output</h2>
             </div>
-            <div className="divide-y divide-white/[0.04]">
-              <div className="flex items-center justify-between px-4 py-3">
-                <div>
-                  <p className="text-xs font-medium text-foreground">Enabled</p>
-                  <p className="text-[10px] text-muted-foreground">Allow this agent to run skills</p>
-                </div>
-                <Toggle
-                  label="Enable agent"
-                  checked={agentCfg.enabled}
-                  onChange={(v) => updateConfig({ enabled: v })}
-                />
-              </div>
-              <div className="flex items-center justify-between px-4 py-3">
-                <div>
-                  <p className="text-xs font-medium text-foreground">Auto-approve</p>
-                  <p className="text-[10px] text-muted-foreground">Skip review for scheduled runs</p>
-                </div>
-                <Toggle
-                  label="Auto-approve skill runs"
-                  checked={agentCfg.autoApprove}
-                  onChange={(v) => updateConfig({ autoApprove: v })}
-                  disabled={!agentCfg.enabled}
-                />
-              </div>
+            <div className="p-4">
+              <AgentOutput
+                agentId={agent.id}
+                output={latestCompletedRun?.output ?? null}
+              />
             </div>
           </div>
-        </div>
 
-        {/* Right column: Recent runs */}
-        <div className="lg:col-span-2">
+          {/* Recent runs history */}
           <div className="glass-panel rounded-xl overflow-hidden">
             <div className="px-4 py-3 border-b border-white/[0.06]">
               <h2 className="text-sm font-heading font-semibold text-foreground">Recent Runs</h2>
@@ -446,7 +424,6 @@ export default function AgentDetailPage() {
                   const isExpanded = expandedRun === run.id
                   return (
                     <div key={run.id} className="px-4 py-3">
-                      {/* Row */}
                       <button
                         type="button"
                         className="w-full flex items-center gap-3 text-left"
@@ -454,22 +431,18 @@ export default function AgentDetailPage() {
                         aria-expanded={isExpanded}
                       >
                         <div className="min-w-0 flex-1 grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-1 items-center">
-                          {/* Skill name */}
                           <p className="text-xs font-medium text-foreground truncate col-span-2 sm:col-span-1">
                             {run.skill_name ?? run.id}
                           </p>
-                          {/* Status */}
                           <div className="flex items-center">
                             <StatusBadge status={run.status} />
                           </div>
-                          {/* Model + credits */}
                           <p className="text-[10px] text-muted-foreground hidden sm:block truncate">
-                            {run.model_used ?? '—'}
-                            {run.credits_used != null && ` · ${run.credits_used}cr`}
+                            {run.model_used ?? '\u2014'}
+                            {run.credits_used != null && ` \u00b7 ${run.credits_used}cr`}
                           </p>
-                          {/* Time */}
                           <p className="text-[10px] text-muted-foreground hidden sm:block">
-                            {formatDuration(run.duration_ms)} · {timeAgo(run.created_at)}
+                            {formatDuration(run.duration_ms)} \u00b7 {timeAgo(run.created_at)}
                           </p>
                         </div>
                         {isExpanded ? (
@@ -479,17 +452,12 @@ export default function AgentDetailPage() {
                         )}
                       </button>
 
-                      {/* Expanded output */}
                       {isExpanded && (
                         <div className="mt-3 rounded-lg bg-white/[0.03] border border-white/[0.06] p-3">
                           {run.error ? (
                             <p className="text-xs text-destructive font-mono break-all">{run.error}</p>
                           ) : (
-                            <pre className="text-[10px] text-muted-foreground font-mono whitespace-pre-wrap break-all line-clamp-[20] overflow-auto max-h-60">
-                              {run.output
-                                ? JSON.stringify(run.output, null, 2).slice(0, 2000)
-                                : 'No output'}
-                            </pre>
+                            <AgentOutput agentId={agent.id} output={run.output} />
                           )}
                           <div className="mt-2 flex flex-wrap gap-3 text-[10px] text-muted-foreground border-t border-white/[0.06] pt-2">
                             {run.model_used && <span>Model: {run.model_used}</span>}
@@ -506,6 +474,15 @@ export default function AgentDetailPage() {
               </div>
             )}
           </div>
+        </div>
+
+        {/* Right column: Mia control */}
+        <div className="lg:col-span-1 space-y-6">
+          <MiaControl
+            agentId={agent.id}
+            agentName={agent.name}
+            brandId={brandId ?? ''}
+          />
         </div>
       </div>
     </div>

@@ -4,7 +4,24 @@ import { useState, useEffect, useMemo } from 'react'
 import { Search } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { AgentCard, type AgentCardData } from '@/components/agents/agent-card'
+import { AGENT_CATEGORIES } from '@/lib/agents-data'
 import { Input } from '@/components/ui/input'
+import { cn } from '@/lib/utils'
+
+// ---------------------------------------------------------------------------
+// Category tabs
+// ---------------------------------------------------------------------------
+
+const ALL_TAB = 'All'
+const TABS = [ALL_TAB, ...Object.keys(AGENT_CATEGORIES)]
+
+/** Reverse lookup: agentId -> category name */
+const agentCategoryMap: Record<string, string> = {}
+for (const [cat, ids] of Object.entries(AGENT_CATEGORIES)) {
+  for (const id of ids) {
+    agentCategoryMap[id] = cat
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Page
@@ -15,6 +32,7 @@ export default function AgentsPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
+  const [activeTab, setActiveTab] = useState(ALL_TAB)
 
   const supabase = createClient()
 
@@ -63,15 +81,28 @@ export default function AgentsPage() {
   }, [])
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return agents
-    const q = search.toLowerCase()
-    return agents.filter(
-      (a) =>
-        a.name.toLowerCase().includes(q) ||
-        a.role.toLowerCase().includes(q) ||
-        a.description.toLowerCase().includes(q),
-    )
-  }, [agents, search])
+    let list = agents
+
+    // Category filter
+    if (activeTab !== ALL_TAB) {
+      const allowedIds = new Set(AGENT_CATEGORIES[activeTab] ?? [])
+      // Mia (manager) appears in every tab
+      list = list.filter((a) => allowedIds.has(a.id) || a.id === 'mia')
+    }
+
+    // Search filter
+    if (search.trim()) {
+      const q = search.toLowerCase()
+      list = list.filter(
+        (a) =>
+          a.name.toLowerCase().includes(q) ||
+          a.role.toLowerCase().includes(q) ||
+          a.description.toLowerCase().includes(q),
+      )
+    }
+
+    return list
+  }, [agents, search, activeTab])
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -83,6 +114,25 @@ export default function AgentsPage() {
         </p>
       </div>
 
+      {/* Filter tabs */}
+      <div className="flex items-center gap-1 overflow-x-auto pb-1 scrollbar-none">
+        {TABS.map((tab) => (
+          <button
+            key={tab}
+            type="button"
+            onClick={() => setActiveTab(tab)}
+            className={cn(
+              'shrink-0 rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors',
+              activeTab === tab
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+            )}
+          >
+            {tab}
+          </button>
+        ))}
+      </div>
+
       {/* Search */}
       <div className="relative max-w-md">
         <Search
@@ -91,7 +141,7 @@ export default function AgentsPage() {
         />
         <Input
           type="search"
-          placeholder="Search by name or role…"
+          placeholder="Search by name or role..."
           className="pl-8"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -121,7 +171,7 @@ export default function AgentsPage() {
       {!isLoading && !error && filtered.length === 0 && (
         <div className="glass-panel rounded-xl p-10 text-center">
           <p className="text-sm text-muted-foreground">
-            {search ? 'No agents match your search.' : 'No agents available yet.'}
+            {search ? 'No agents match your search.' : 'No agents available in this category.'}
           </p>
         </div>
       )}
