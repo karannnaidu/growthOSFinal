@@ -12,6 +12,10 @@
 
 ---
 
+**IMPORTANT DEPENDENCY:** This plan MUST be executed AFTER Plan 1 (Creative Pipeline Foundation) from `docs/superpowers/plans/2026-04-09-master-execution-plan.md`. Plan 1 creates `src/lib/fal-client.ts` with full image/video generation support. Plan 2 Task 2 should NOT recreate this file — instead, it should only download CDN agent images and call the existing `generateAgentPortrait()` function for missing agents.
+
+---
+
 ## File Structure
 
 ### New Files
@@ -1058,9 +1062,9 @@ git commit -m "feat: add pitch deck pages (9 slides) for investor/client present
 - Create: `src/app/dashboard/knowledge/page.tsx`
 - Create: `src/app/dashboard/exports/page.tsx`
 
-- [ ] **Step 1: Create forgot/reset password pages**
+- [ ] **Step 1: Create forgot/reset password pages and verify-email page**
 
-Forgot: email input → calls `supabase.auth.resetPasswordForEmail()`. Reset: new password form, processes token from URL.
+Forgot: email input → calls `supabase.auth.resetPasswordForEmail()`. Reset: new password form, processes token from URL. Verify-email (`src/app/(auth)/verify-email/page.tsx`): confirmation screen shown after signup, prompts user to check their email, includes resend button.
 
 - [ ] **Step 2: Create skill run detail page**
 
@@ -1100,9 +1104,9 @@ Simple static pages with Growth OS nav, placeholder legal text, clean layout.
 
 FAQ section + "Contact us" link. Simple glass-panel cards.
 
-- [ ] **Step 3: Create custom 404**
+- [ ] **Step 3: Create custom 404 and global error boundary**
 
-Branded "Page not found" with Mia avatar, suggestions to navigate, links to dashboard/home.
+Branded "Page not found" (`src/app/not-found.tsx`) with Mia avatar, suggestions to navigate, links to dashboard/home. Global error boundary (`src/app/error.tsx`): catches unexpected runtime errors, shows friendly error card with "Try again" reset button and link back to dashboard.
 
 - [ ] **Step 4: Build passes and commit**
 

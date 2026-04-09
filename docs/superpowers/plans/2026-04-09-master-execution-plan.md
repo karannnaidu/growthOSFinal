@@ -431,6 +431,17 @@ export async function generateVideo(options: VideoGenerationOptions): Promise<Ge
   }
 }
 
+export async function generateAgentPortrait(
+  agentId: string,
+  description: string,
+  accentColor: string
+): Promise<GeneratedMedia> {
+  const prompt = `Futuristic AI agent portrait, ${description}, accent glow color ${accentColor}, dark background, high-tech, professional, cinematic lighting, digital art, 4k quality`
+  const results = await generateImage({ prompt, width: 512, height: 512 })
+  if (!results.length) throw new Error('No image generated')
+  return results[0]
+}
+
 export async function persistToStorage(
   mediaUrl: string,
   brandId: string,
@@ -729,11 +740,31 @@ export async function bridgeTopContent(brandId: string): Promise<number> {
 }
 ```
 
-- [ ] **Step 3: Build passes and commit**
+- [ ] **Step 3: Wire bridgeTopContent into call sites**
+
+Add to `src/app/api/cron/daily/route.ts` after the daily skills run:
+```typescript
+// Bridge top_content to knowledge graph
+const { bridgeTopContent } = await import('@/lib/knowledge/bridges');
+for (const brand of activeBrands) {
+  await bridgeTopContent(brand.id).catch(console.warn);
+}
+```
+
+Add to `src/lib/skills-engine.ts` as a post-execution hook for health-check:
+```typescript
+if (skill.id === 'health-check' && result.status === 'completed') {
+  import('@/lib/knowledge/bridges').then(async ({ bridgeTopContent }) => {
+    await bridgeTopContent(input.brandId).catch(console.warn);
+  }).catch(console.warn);
+}
+```
+
+- [ ] **Step 4: Build passes and commit**
 
 ```bash
 npm run build
-git add src/lib/shopify.ts src/lib/knowledge/bridges.ts
+git add src/lib/shopify.ts src/lib/knowledge/bridges.ts src/app/api/cron/daily/route.ts src/lib/skills-engine.ts
 git commit -m "feat: bridge product images and top content into knowledge graph"
 ```
 
@@ -966,14 +997,16 @@ export async function generateIntelligentBrief(
   campaignGoal: string,
   targetAudience: string,
   context: CreativeContext
-): Promise<{ imagePrompts: string[]; videoPrompts: string[]; reasoning: string }>
+): Promise<CreativeBrief>
+// See Spec 3 for full `CreativeBrief` interface with `imagePrompts` (array of objects), `videoPrompts`, `copyVariants`, `reasoning`.
 
 // Score a generated creative against brand guidelines and persona preferences
 export async function scoreCreative(
   brandId: string,
   creative: { imageUrl: string; copyText: string },
   context: CreativeContext
-): Promise<{ score: number; feedback: string; personaScores: any[] }>
+): Promise<CreativeScore>
+// See Spec 3 for full `CreativeScore` interface with `overallScore`, `brandGuidelineMatch`, `personaScores`, `strengths`, `improvements`, `predictedPerformance`.
 ```
 
 #### `src/app/dashboard/creative/page.tsx` — Creative Studio (NEW PAGE)
@@ -1108,12 +1141,27 @@ git commit -m "feat: add creative intelligence engine with knowledge-informed ge
 3. Left join `knowledge_snapshots` for latest performance data per node
 4. Return paginated results with media_url, properties, performance metrics
 
-- [ ] **Step 3: Build passes and commit**
+- [ ] **Step 3: Create score and feedback endpoints**
+
+`POST /api/creative/score`:
+1. Auth + brand access check
+2. Parse `{ brandId, creativeNodeId }`
+3. Load creative from knowledge_nodes
+4. Call `scoreCreative()` with full context
+5. Return `{ score: CreativeScore }`
+
+`POST /api/creative/feedback`:
+1. Auth + brand access check
+2. Parse `{ brandId, creativeNodeId, metrics: { ctr, roas, impressions, conversions } }`
+3. Create `knowledge_snapshot` for the creative node with the provided metrics
+4. Return `{ success: true }`
+
+- [ ] **Step 4: Build passes and commit**
 
 ```bash
 npm run build
 git add src/app/api/creative/
-git commit -m "feat: add creative generation and gallery API endpoints"
+git commit -m "feat: add creative generation, gallery, score, and feedback API endpoints"
 ```
 
 ---
