@@ -912,7 +912,9 @@ git push
 # PLAN 3: Creative Intelligence Engine (Execute Third)
 # ============================================================
 
-## Inline Spec (No Separate Spec Doc — Design Included Here)
+**Spec:** `docs/superpowers/specs/2026-04-09-creative-intelligence-engine.md`
+
+## Spec Summary
 
 ### What This Builds
 
