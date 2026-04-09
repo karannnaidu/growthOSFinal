@@ -47,18 +47,19 @@ interface ExtractedGraph {
 // ---------------------------------------------------------------------------
 
 const VALID_NODE_TYPES = new Set([
-  'product', 'audience', 'competitor', 'content',
-  'campaign', 'metric', 'insight', 'trend',
-  'keyword', 'landing_page', 'email', 'ad_creative',
-  'brand_asset', 'persona', 'funnel_stage',
-  'offer', 'testimonial', 'usp', 'channel', 'experiment',
+  'product', 'audience', 'campaign', 'content', 'competitor',
+  'insight', 'metric', 'experiment', 'creative', 'keyword',
+  'email_flow', 'channel', 'persona', 'product_image',
+  'competitor_creative', 'ad_creative', 'video_asset',
+  'landing_page', 'review_theme', 'price_point',
+  'brand_guidelines', 'brand_asset', 'top_content',
 ]);
 
 const VALID_EDGE_TYPES = new Set([
-  'targets', 'competes_with', 'supports', 'undermines',
-  'derived_from', 'similar_to', 'used_in', 'triggers',
-  'ranks_for', 'authored_by', 'belongs_to',
-  'precedes', 'follows', 'variant_of', 'promotes',
+  'targets', 'uses_creative', 'competes_with', 'inspired_by',
+  'performs_on', 'belongs_to', 'generated_by', 'reviewed_by',
+  'derived_from', 'part_of', 'sends_to', 'has_variant',
+  'supersedes', 'similar_to', 'mentions',
 ]);
 
 // ---------------------------------------------------------------------------
@@ -74,7 +75,7 @@ Return ONLY valid JSON with this exact shape (no markdown fences, no extra text)
   "nodes": [
     {
       "name": "string (concise label)",
-      "node_type": "one of: product|audience|competitor|content|campaign|metric|insight|trend|keyword|landing_page|email|ad_creative|brand_asset|persona|funnel_stage|offer|testimonial|usp|channel|experiment",
+      "node_type": "one of: product|audience|campaign|content|competitor|insight|metric|experiment|creative|keyword|email_flow|channel|persona|product_image|competitor_creative|ad_creative|video_asset|landing_page|review_theme|price_point|brand_guidelines|brand_asset|top_content",
       "summary": "one sentence description",
       "properties": { "key": "value" },
       "confidence": 0.0-1.0
@@ -84,7 +85,7 @@ Return ONLY valid JSON with this exact shape (no markdown fences, no extra text)
     {
       "source": "node name from above",
       "target": "node name from above",
-      "edge_type": "one of: targets|competes_with|supports|undermines|derived_from|similar_to|used_in|triggers|ranks_for|authored_by|belongs_to|precedes|follows|variant_of|promotes",
+      "edge_type": "one of: targets|uses_creative|competes_with|inspired_by|performs_on|belongs_to|generated_by|reviewed_by|derived_from|part_of|sends_to|has_variant|supersedes|similar_to|mentions",
       "weight": 0.0-1.0
     }
   ],
