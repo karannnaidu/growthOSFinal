@@ -1,6 +1,6 @@
 # Growth OS v2 — Design Gap Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Rebuild all UI to match `stitch_new_project/` designs, wire every interaction to real backend, add missing features (fal.ai, campaigns, pitch deck, production pages).
 
@@ -82,7 +82,7 @@ src/app/onboarding/diagnosis/page.tsx          — match design visuals
 - Modify: all page and component files listed above (audit, don't rewrite yet)
 - Create: `src/lib/brand-context.ts` — shared brand resolution helper
 
-- [ ] **Step 1: Create shared brand resolution helper**
+- [x] **Step 1: Create shared brand resolution helper**
 
 Every page currently duplicates brand fetching logic. Extract to a shared helper:
 
@@ -154,7 +154,7 @@ export async function getBrandContext(): Promise<BrandContext> {
 }
 ```
 
-- [ ] **Step 2: Audit and fix dashboard layout to use brand context**
+- [x] **Step 2: Audit and fix dashboard layout to use brand context**
 
 Update `src/app/dashboard/layout.tsx` to use `getBrandContext()` and pass `brandId`, `walletBalance` to sidebar and top bar:
 
@@ -185,7 +185,7 @@ export default async function DashboardLayout({ children }) {
 }
 ```
 
-- [ ] **Step 3: Fix agent role mismatches**
+- [x] **Step 3: Fix agent role mismatches**
 
 Ensure all UI components read agent roles from `skills/agents.json` (the source of truth), not hardcoded strings. The `loadAgentConfig()` function in `src/lib/agent-spawner.ts` already loads this. Export the agent data as a constant:
 
@@ -215,7 +215,7 @@ export const AGENT_COLORS: Record<string, string> = Object.fromEntries(
 )
 ```
 
-- [ ] **Step 4: Verify all API routes return proper responses**
+- [x] **Step 4: Verify all API routes return proper responses**
 
 Run through each API route and confirm it handles auth, returns proper JSON, and doesn't crash on missing data. Key routes to verify:
 - `POST /api/skills/run` — accepts `{ brandId, skillId }`, returns result
@@ -225,13 +225,13 @@ Run through each API route and confirm it handles auth, returns proper JSON, and
 - `GET /api/billing/balance?brandId=X` — returns wallet data
 - `GET /api/notifications?brandId=X` — returns notifications
 
-- [ ] **Step 5: Build passes**
+- [x] **Step 5: Build passes**
 
 ```bash
 cd growth-os && npm run build
 ```
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/lib/brand-context.ts src/lib/agents-data.ts src/app/dashboard/layout.tsx
@@ -248,7 +248,7 @@ git commit -m "feat: add shared brand context helper and agent data, fix layout 
 - Modify: `.env.local.example`
 - Modify: `src/components/agents/agent-avatar.tsx`
 
-- [ ] **Step 1: Create fal.ai client**
+- [x] **Step 1: Create fal.ai client**
 
 ```typescript
 // src/lib/fal-client.ts
@@ -316,7 +316,7 @@ export async function generateAgentPortrait(
 }
 ```
 
-- [ ] **Step 2: Create agent image download/generation script**
+- [x] **Step 2: Create agent image download/generation script**
 
 ```typescript
 // scripts/download-agent-images.ts
@@ -381,7 +381,7 @@ async function main() {
 main().catch(console.error)
 ```
 
-- [ ] **Step 3: Update AgentAvatar to use real images**
+- [x] **Step 3: Update AgentAvatar to use real images**
 
 ```typescript
 // src/components/agents/agent-avatar.tsx — full rewrite
@@ -443,14 +443,14 @@ export function AgentAvatar({ agentId, size = 'md', state = 'default', className
 }
 ```
 
-- [ ] **Step 4: Add FAL_AI_KEY to env example**
+- [x] **Step 4: Add FAL_AI_KEY to env example**
 
 Add to `.env.local.example`:
 ```
 FAL_AI_KEY=
 ```
 
-- [ ] **Step 5: Run image download script**
+- [x] **Step 5: Run image download script**
 
 ```bash
 npx tsx scripts/download-agent-images.ts
@@ -458,13 +458,13 @@ npx tsx scripts/download-agent-images.ts
 
 Verify images exist in `public/agents/`.
 
-- [ ] **Step 6: Build passes**
+- [x] **Step 6: Build passes**
 
 ```bash
 npm run build
 ```
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src/lib/fal-client.ts scripts/download-agent-images.ts src/components/agents/agent-avatar.tsx public/agents/ .env.local.example
@@ -478,7 +478,7 @@ git commit -m "feat: add fal.ai client, download agent images, upgrade AgentAvat
 **Files:**
 - Modify: `src/components/dashboard/sidebar.tsx`
 
-- [ ] **Step 1: Rebuild sidebar matching design**
+- [x] **Step 1: Rebuild sidebar matching design**
 
 Replace the entire sidebar component. The new sidebar has:
 - Mia avatar + "Manager Agent" header
@@ -611,13 +611,13 @@ export function Sidebar({ brandId, walletBalance = 0 }: SidebarProps) {
 }
 ```
 
-- [ ] **Step 2: Build passes**
+- [x] **Step 2: Build passes**
 
 ```bash
 npm run build
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/components/dashboard/sidebar.tsx
@@ -631,7 +631,7 @@ git commit -m "feat: rebuild sidebar to match designs — agent skills nav, camp
 **Files:**
 - Modify: `src/components/dashboard/top-bar.tsx`
 
-- [ ] **Step 1: Update top bar with MARKETING AI branding and wallet chip**
+- [x] **Step 1: Update top bar with MARKETING AI branding and wallet chip**
 
 Add "MARKETING AI" branding text, wallet chip showing "Penny's Wallet: {balance}", keep existing Cmd+K, notifications, user avatar.
 
@@ -667,7 +667,7 @@ Add wallet chip next to notifications:
 )}
 ```
 
-- [ ] **Step 2: Build passes and commit**
+- [x] **Step 2: Build passes and commit**
 
 ```bash
 npm run build
@@ -688,7 +688,7 @@ git commit -m "feat: add MARKETING AI branding and wallet chip to top bar"
 - Create: `src/components/dashboard/recommendation-card.tsx`
 - Create: `src/components/dashboard/chat-fab.tsx`
 
-- [ ] **Step 1: Create Morning Brief component**
+- [x] **Step 1: Create Morning Brief component**
 
 ```typescript
 // src/components/dashboard/morning-brief.tsx
@@ -712,7 +712,7 @@ The component renders:
 - "Execute Strategy" primary button (calls `POST /api/skills/run`)
 - "View Full Audit" outline button (navigates to `/dashboard/runs/{latestRunId}`)
 
-- [ ] **Step 2: Create MetricCard component**
+- [x] **Step 2: Create MetricCard component**
 
 ```typescript
 // src/components/dashboard/metric-card.tsx
@@ -729,7 +729,7 @@ interface MetricCardProps {
 
 Sparkline implementation: 5 divs with `height` set proportionally, flex-end alignment.
 
-- [ ] **Step 3: Create Agent Chains component**
+- [x] **Step 3: Create Agent Chains component**
 
 ```typescript
 // src/components/dashboard/agent-chains.tsx
@@ -754,7 +754,7 @@ interface AgentChainsProps {
 // Click node → navigate to agent detail
 ```
 
-- [ ] **Step 4: Create Internal Log component**
+- [x] **Step 4: Create Internal Log component**
 
 ```typescript
 // src/components/dashboard/internal-log.tsx
@@ -775,7 +775,7 @@ interface InternalLogProps {
 // Scrollable, auto-scroll to bottom
 ```
 
-- [ ] **Step 5: Create Recommendation Card component**
+- [x] **Step 5: Create Recommendation Card component**
 
 ```typescript
 // src/components/dashboard/recommendation-card.tsx
@@ -794,7 +794,7 @@ interface RecommendationCardProps {
 // CTA calls POST /api/skills/run with skillId
 ```
 
-- [ ] **Step 6: Create Chat FAB component**
+- [x] **Step 6: Create Chat FAB component**
 
 ```typescript
 // src/components/dashboard/chat-fab.tsx
@@ -816,7 +816,7 @@ export function ChatFAB() {
 }
 ```
 
-- [ ] **Step 7: Rebuild dashboard page.tsx**
+- [x] **Step 7: Rebuild dashboard page.tsx**
 
 Full rewrite of `src/app/dashboard/page.tsx` using the new components. Server component that:
 1. Calls `getBrandContext()`
@@ -824,7 +824,7 @@ Full rewrite of `src/app/dashboard/page.tsx` using the new components. Server co
 3. Derives: morning brief narrative (from latest scout health-check output or fallback text), metrics (revenue/ROAS/LTV from brand_metrics_history), active chains (from running skill_runs), internal log (from recent skill_runs), recommendations (from needs_review notifications)
 4. Renders: 12-col grid with main (col-span-8) + sidebar (col-span-4)
 
-- [ ] **Step 8: Build passes and commit**
+- [x] **Step 8: Build passes and commit**
 
 ```bash
 npm run build
@@ -844,31 +844,31 @@ git commit -m "feat: rebuild dashboard with morning brief, metrics, agent chains
 - Modify: `src/components/chat/chat-message.tsx`
 - Modify: `src/components/chat/chat-input.tsx`
 
-- [ ] **Step 1: Create chat sidebar component**
+- [x] **Step 1: Create chat sidebar component**
 
 Left panel with Mia Engine header, New Initiative button, agent shortcuts (Intelligence Hub, Aria Creative, Scout Diagnosis, Max Budget, Conversation History).
 
-- [ ] **Step 2: Create Active Context panel**
+- [x] **Step 2: Create Active Context panel**
 
 Right panel with Engine Focus (Strategy, Brand Voice, Target ROI), Delegated Sub-Agents (from running skill_runs), Ingested Sources (from knowledge_nodes), Mia Status footer.
 
-- [ ] **Step 3: Create Rich Agent Card for chat messages**
+- [x] **Step 3: Create Rich Agent Card for chat messages**
 
 Inline card that renders when Mia references an agent's work. Shows agent color bar, agent name + role, key metrics, findings.
 
-- [ ] **Step 4: Update chat-message.tsx**
+- [x] **Step 4: Update chat-message.tsx**
 
 Add rich agent card detection: parse Mia's response for patterns like `[AGENT:hugo|...]` or detect agent names + metrics in the text. Render as inline cards.
 
-- [ ] **Step 5: Update chat-input.tsx**
+- [x] **Step 5: Update chat-input.tsx**
 
 Add MCP tool access button (grid icon) and skill selector button (sparkles icon) to the left of the text input. Both open dropdown menus for skill/tool selection.
 
-- [ ] **Step 6: Rebuild chat page.tsx**
+- [x] **Step 6: Rebuild chat page.tsx**
 
 3-panel flex layout: ChatSidebar (w-64) + center chat (flex-1) + ActiveContext (w-80, hidden on mobile). Load brand data, conversations, wire all interactions.
 
-- [ ] **Step 7: Build passes and commit**
+- [x] **Step 7: Build passes and commit**
 
 ```bash
 npm run build
@@ -884,15 +884,15 @@ git commit -m "feat: rebuild chat with 3-panel layout, rich agent cards, active 
 - Modify: `src/app/dashboard/agents/page.tsx`
 - Modify: `src/components/agents/agent-card.tsx`
 
-- [ ] **Step 1: Rebuild agent-card.tsx**
+- [x] **Step 1: Rebuild agent-card.tsx**
 
 New card with: real agent image, name, role (colored), description, live status chip. Status sourced from latest skill_runs for that agent.
 
-- [ ] **Step 2: Rebuild agent directory page**
+- [x] **Step 2: Rebuild agent directory page**
 
 Add filter tabs (All/Creative/Growth/Finance/Diagnosis/Retention/Ops), improved search, Mia Active popup on Mia's card, status indicators on all cards.
 
-- [ ] **Step 3: Build passes and commit**
+- [x] **Step 3: Build passes and commit**
 
 ```bash
 npm run build
@@ -911,27 +911,27 @@ git commit -m "feat: rebuild agent directory with filter tabs, real images, live
 - Create: `src/components/agents/agent-output.tsx`
 - Create: `src/components/agents/mia-control.tsx`
 
-- [ ] **Step 1: Create agent hero banner component**
+- [x] **Step 1: Create agent hero banner component**
 
 Per-agent hero with unique background (CSS gradient per agent color), large avatar, name, role, status chip, configure button.
 
-- [ ] **Step 2: Create skill card component**
+- [x] **Step 2: Create skill card component**
 
 Card with icon, skill name, tier badge (colored), credit cost, last run time, Run button that calls the API.
 
-- [ ] **Step 3: Create agent-specific output renderers**
+- [x] **Step 3: Create agent-specific output renderers**
 
 Switch on agentId to render different output formats: Hugo → SEO scores, Aria → creative preview, Max → budget charts, Penny → financial projection, Scout → health score, others → formatted JSON.
 
-- [ ] **Step 4: Create Mia control panel**
+- [x] **Step 4: Create Mia control panel**
 
 Glass-panel card showing Mia's latest message about this agent, "Instruct Mia..." input, connected agents display.
 
-- [ ] **Step 5: Rebuild agent detail page**
+- [x] **Step 5: Rebuild agent detail page**
 
 Hero banner + skills grid + recent output + Mia control panel. Load agent from agents.json, skill_runs, brand_agents config.
 
-- [ ] **Step 6: Build passes and commit**
+- [x] **Step 6: Build passes and commit**
 
 ```bash
 npm run build
@@ -946,7 +946,7 @@ git commit -m "feat: rebuild agent detail with hero banners, skill cards, agent-
 **Files:**
 - Create: `src/app/dashboard/skills/page.tsx`
 
-- [ ] **Step 1: Create skills browsing page**
+- [x] **Step 1: Create skills browsing page**
 
 Client component that:
 1. Loads all skills via `GET /api/skills` (or imports skill-loader data)
@@ -955,7 +955,7 @@ Client component that:
 4. Run button calls `POST /api/skills/run`
 5. Click card expands to show full description/workflow
 
-- [ ] **Step 2: Create skills list API if needed**
+- [x] **Step 2: Create skills list API if needed**
 
 If `GET /api/skills` doesn't exist, create `src/app/api/skills/route.ts` that returns all parsed skills:
 ```typescript
@@ -963,7 +963,7 @@ import { loadAllSkills } from '@/lib/skill-loader'
 // GET: return all skills as array
 ```
 
-- [ ] **Step 3: Build passes and commit**
+- [x] **Step 3: Build passes and commit**
 
 ```bash
 npm run build
@@ -978,13 +978,13 @@ git commit -m "feat: add Agent Skills browsing page with filters and run buttons
 **Files:**
 - Create: `src/app/dashboard/agents/deploy/page.tsx`
 
-- [ ] **Step 1: Create deploy agent page**
+- [x] **Step 1: Create deploy agent page**
 
 Client component with form: agent name, role, base skills multi-select, custom skill markdown editor, complexity, credits, schedule, auto-approve toggle. Plan gate: only Growth/Agency can access.
 
 Submit creates `brand_agents` + optionally `custom_skills` records via existing APIs.
 
-- [ ] **Step 2: Build passes and commit**
+- [x] **Step 2: Build passes and commit**
 
 ```bash
 npm run build
@@ -1000,11 +1000,11 @@ git commit -m "feat: add Deploy Custom Agent page for Growth/Agency plans"
 - Create: `src/app/dashboard/campaigns/new/page.tsx`
 - Create: `src/app/dashboard/campaigns/page.tsx`
 
-- [ ] **Step 1: Create campaign list page**
+- [x] **Step 1: Create campaign list page**
 
 Simple list of past campaigns (stored as a series of skill_runs with metadata). Shows campaign name, status, date, assets count.
 
-- [ ] **Step 2: Create multi-step campaign creation page**
+- [x] **Step 2: Create multi-step campaign creation page**
 
 7-step flow as a single client component with step state:
 1. Define Campaign (form)
@@ -1017,7 +1017,7 @@ Simple list of past campaigns (stored as a series of skill_runs with metadata). 
 
 Each step calls real APIs and shows real results.
 
-- [ ] **Step 3: Build passes and commit**
+- [x] **Step 3: Build passes and commit**
 
 ```bash
 npm run build
@@ -1033,17 +1033,17 @@ git commit -m "feat: add campaign creation flow with Aria ad-copy + fal.ai image
 - Create: `src/app/deck/layout.tsx`
 - Create: `src/app/deck/[slideId]/page.tsx`
 
-- [ ] **Step 1: Create deck layout**
+- [x] **Step 1: Create deck layout**
 
 Minimal layout with Growth OS logo, slide indicator (X of 9), prev/next arrows. No auth required (public pages).
 
-- [ ] **Step 2: Create slide content**
+- [x] **Step 2: Create slide content**
 
 9 slides converted from code.html to React/Tailwind. Each slide is a component rendered by `[slideId]`. Use real agent images from `public/agents/`, CDN URLs for backgrounds/logos.
 
 Slides: problem, aria, luna, penny, seo, pricing, credits, security, agency.
 
-- [ ] **Step 3: Build passes and commit**
+- [x] **Step 3: Build passes and commit**
 
 ```bash
 npm run build
@@ -1062,23 +1062,23 @@ git commit -m "feat: add pitch deck pages (9 slides) for investor/client present
 - Create: `src/app/dashboard/knowledge/page.tsx`
 - Create: `src/app/dashboard/exports/page.tsx`
 
-- [ ] **Step 1: Create forgot/reset password pages and verify-email page**
+- [x] **Step 1: Create forgot/reset password pages and verify-email page**
 
 Forgot: email input → calls `supabase.auth.resetPasswordForEmail()`. Reset: new password form, processes token from URL. Verify-email (`src/app/(auth)/verify-email/page.tsx`): confirmation screen shown after signup, prompts user to check their email, includes resend button.
 
-- [ ] **Step 2: Create skill run detail page**
+- [x] **Step 2: Create skill run detail page**
 
 Shows full output of a single skill run. Metadata table (skill, agent, model, tier, credits, duration, triggered_by, timestamp). Output rendered as formatted view. Re-run and Export buttons.
 
-- [ ] **Step 3: Create knowledge graph browser**
+- [x] **Step 3: Create knowledge graph browser**
 
 List/grid of knowledge_nodes for the brand. Filter by node_type, search by name. Click to expand and see properties, edges, snapshots.
 
-- [ ] **Step 4: Create exports page**
+- [x] **Step 4: Create exports page**
 
 List of downloadable reports. "Generate Report" button creates CSV/JSON from skill_runs. Download links.
 
-- [ ] **Step 5: Build passes and commit**
+- [x] **Step 5: Build passes and commit**
 
 ```bash
 npm run build
@@ -1096,19 +1096,19 @@ git commit -m "feat: add production pages — password reset, skill run detail, 
 - Create: `src/app/support/page.tsx`
 - Create: `src/app/not-found.tsx`
 
-- [ ] **Step 1: Create legal pages**
+- [x] **Step 1: Create legal pages**
 
 Simple static pages with Growth OS nav, placeholder legal text, clean layout.
 
-- [ ] **Step 2: Create support page**
+- [x] **Step 2: Create support page**
 
 FAQ section + "Contact us" link. Simple glass-panel cards.
 
-- [ ] **Step 3: Create custom 404 and global error boundary**
+- [x] **Step 3: Create custom 404 and global error boundary**
 
 Branded "Page not found" (`src/app/not-found.tsx`) with Mia avatar, suggestions to navigate, links to dashboard/home. Global error boundary (`src/app/error.tsx`): catches unexpected runtime errors, shows friendly error card with "Try again" reset button and link back to dashboard.
 
-- [ ] **Step 4: Build passes and commit**
+- [x] **Step 4: Build passes and commit**
 
 ```bash
 npm run build
@@ -1127,15 +1127,15 @@ git commit -m "feat: add legal pages, support page, custom 404"
 - Modify: `src/app/onboarding/platforms/page.tsx`
 - Modify: `src/app/onboarding/diagnosis/page.tsx`
 
-- [ ] **Step 1: Update landing page**
+- [x] **Step 1: Update landing page**
 
 Replace AgentAvatar cluster in hero with large circular Mia portrait (real image from `public/agents/mia.png`). Match the `growth_os_v2_landing_page_mia_hero` design more closely: Mia centered with aura glow, "for Shopify" tagline, testimonial section with founder photos.
 
-- [ ] **Step 2: Update onboarding pages**
+- [x] **Step 2: Update onboarding pages**
 
 Match each step to its design screenshot more closely. Update text, icons, layout, and styling to match the code.html references.
 
-- [ ] **Step 3: Build passes and commit**
+- [x] **Step 3: Build passes and commit**
 
 ```bash
 npm run build
@@ -1147,7 +1147,7 @@ git commit -m "feat: update landing page and onboarding to match design visuals"
 
 ## Task 16: Final Integration Test + Push
 
-- [ ] **Step 1: Full build verification**
+- [x] **Step 1: Full build verification**
 
 ```bash
 npm run build
@@ -1155,17 +1155,17 @@ npm run build
 
 Verify all routes compile, no TypeScript errors.
 
-- [ ] **Step 2: Route audit**
+- [x] **Step 2: Route audit**
 
 Check the build output for all expected routes. Verify count matches expectations (~70+ routes).
 
-- [ ] **Step 3: Push to GitHub**
+- [x] **Step 3: Push to GitHub**
 
 ```bash
 git push
 ```
 
-- [ ] **Step 4: Verify Vercel deployment**
+- [x] **Step 4: Verify Vercel deployment**
 
 Check that `https://growth-os-final.vercel.app` deploys successfully.
 

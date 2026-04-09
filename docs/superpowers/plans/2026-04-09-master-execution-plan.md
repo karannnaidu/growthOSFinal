@@ -1,6 +1,6 @@
 # Growth OS v2 — Master Execution Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Complete Growth OS from functional backend to production-ready product — fix the knowledge pipeline, rebuild all UI to match designs, and build the data-driven creative intelligence engine.
 
@@ -14,8 +14,8 @@
 
 | Plan | Name | Tasks | Depends On | What It Fixes |
 |------|------|-------|------------|---------------|
-| **1** | Creative Pipeline Foundation | 8 tasks | Nothing | Knowledge graph loop broken, no embeddings, no fal.ai, schema gaps |
-| **2** | Design Gap UI Rebuild | 16 tasks | Plan 1 | UI doesn't match designs, missing pages, broken interactions |
+| **1** | Creative Pipeline Foundation | 8 tasks | Nothing | ✅ **COMPLETE** — Knowledge graph loop fixed, embeddings, fal.ai, schema |
+| **2** | Design Gap UI Rebuild | 16 tasks | Plan 1 | ✅ **COMPLETE** — UI matches designs, all pages built, interactions wired |
 | **3** | Creative Intelligence Engine | 7 tasks | Plans 1+2 | No cohort-driven creative generation, no video, no feedback loop |
 
 **Total: 31 tasks**
@@ -23,10 +23,11 @@
 ---
 
 # ============================================================
-# PLAN 1: Creative Pipeline Foundation (Execute First)
+# PLAN 1: Creative Pipeline Foundation ✅ COMPLETE
 # ============================================================
 
 **Spec:** `docs/superpowers/specs/2026-04-09-creative-pipeline-foundation.md`
+**Status:** ✅ All 8 tasks complete — committed and pushed.
 
 **Goal:** Fix the 9 critical gaps that break the knowledge graph → skills → creative pipeline loop.
 
@@ -40,7 +41,7 @@
 - Create: `supabase/migrations/001-fix-constraints.sql`
 - Modify: `src/lib/knowledge/extract.ts`
 
-- [ ] **Step 1: Create migration SQL**
+- [x] **Step 1: Create migration SQL**
 
 ```sql
 -- supabase/migrations/001-fix-constraints.sql
@@ -66,13 +67,13 @@ ALTER TABLE knowledge_edges ADD CONSTRAINT valid_edge_type CHECK (edge_type IN (
 ));
 ```
 
-- [ ] **Step 2: Run migration against live Supabase**
+- [x] **Step 2: Run migration against live Supabase**
 
 ```bash
 cd growth-os && npx supabase db query --linked -f supabase/migrations/001-fix-constraints.sql
 ```
 
-- [ ] **Step 3: Update VALID_NODE_TYPES in extract.ts**
+- [x] **Step 3: Update VALID_NODE_TYPES in extract.ts**
 
 In `src/lib/knowledge/extract.ts`, replace the `VALID_NODE_TYPES` Set (around line 49-55):
 
@@ -87,7 +88,7 @@ const VALID_NODE_TYPES = new Set([
 ]);
 ```
 
-- [ ] **Step 4: Update VALID_EDGE_TYPES in extract.ts**
+- [x] **Step 4: Update VALID_EDGE_TYPES in extract.ts**
 
 Replace the `VALID_EDGE_TYPES` Set (around line 57-62):
 
@@ -100,19 +101,19 @@ const VALID_EDGE_TYPES = new Set([
 ]);
 ```
 
-- [ ] **Step 5: Update the EXTRACTION_SYSTEM_PROMPT to include new types**
+- [x] **Step 5: Update the EXTRACTION_SYSTEM_PROMPT to include new types**
 
 Update the prompt string in `extract.ts` that lists valid types for the LLM. Find the line that says `"node_type": "one of: product|audience|..."` and replace with the full list including `creative|brand_guidelines|brand_asset|top_content|product_image|competitor_creative`.
 
 Do the same for edge types — add `reviewed_by|uses_creative|inspired_by|performs_on|generated_by|has_variant|supersedes|mentions` to the allowed list.
 
-- [ ] **Step 6: Build passes**
+- [x] **Step 6: Build passes**
 
 ```bash
 npm run build
 ```
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add supabase/migrations/ src/lib/knowledge/extract.ts
@@ -127,7 +128,7 @@ git commit -m "fix: expand knowledge graph schema constraints and extraction typ
 - Modify: `src/lib/knowledge/extract.ts`
 - Modify: `src/lib/knowledge/rag.ts` (export `embedText`)
 
-- [ ] **Step 1: Ensure embedText is exported from rag.ts**
+- [x] **Step 1: Ensure embedText is exported from rag.ts**
 
 Check `src/lib/knowledge/rag.ts` for the `embedText` function. If it's not exported, add `export` keyword. The function should have this signature:
 
@@ -137,7 +138,7 @@ export async function embedText(text: string): Promise<number[]>
 
 It calls `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent` with `GOOGLE_AI_KEY` and returns a 768-dim float array.
 
-- [ ] **Step 2: Add embedding generation to extractEntities**
+- [x] **Step 2: Add embedding generation to extractEntities**
 
 In `src/lib/knowledge/extract.ts`, import `embedText`:
 
@@ -176,13 +177,13 @@ for (const node of validNodes) {
 
 Note: This replaces any existing batch insert with per-node inserts to include embeddings. If the current code uses a batch insert, refactor to iterate.
 
-- [ ] **Step 3: Build passes**
+- [x] **Step 3: Build passes**
 
 ```bash
 npm run build
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/lib/knowledge/extract.ts src/lib/knowledge/rag.ts
@@ -196,7 +197,7 @@ git commit -m "feat: generate embeddings inline during entity extraction"
 **Files:**
 - Modify: `src/lib/skills-engine.ts`
 
-- [ ] **Step 1: Add RAG query step to runSkill**
+- [x] **Step 1: Add RAG query step to runSkill**
 
 In `src/lib/skills-engine.ts`, after step 5 (fetchSkillData / MCP) around line 228, and before step 6 (buildPrompt) around line 231, add:
 
@@ -220,7 +221,7 @@ In `src/lib/skills-engine.ts`, after step 5 (fetchSkillData / MCP) around line 2
   }
 ```
 
-- [ ] **Step 2: Update buildPrompt to accept RAG context**
+- [x] **Step 2: Update buildPrompt to accept RAG context**
 
 Update the `buildPrompt` function signature:
 
@@ -275,7 +276,7 @@ Add RAG context to the user prompt, after live data and before closing:
   }
 ```
 
-- [ ] **Step 3: Pass ragContext in the buildPrompt call**
+- [x] **Step 3: Pass ragContext in the buildPrompt call**
 
 Update the `buildPrompt` call around line 231:
 
@@ -289,13 +290,13 @@ Update the `buildPrompt` call around line 231:
   );
 ```
 
-- [ ] **Step 4: Build passes**
+- [x] **Step 4: Build passes**
 
 ```bash
 npm run build
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/lib/skills-engine.ts
@@ -310,7 +311,7 @@ git commit -m "feat: wire RAG knowledge graph context into skills engine prompt 
 - Create: `src/lib/fal-client.ts`
 - Modify: `.env.local.example`
 
-- [ ] **Step 1: Create fal.ai client**
+- [x] **Step 1: Create fal.ai client**
 
 ```typescript
 // src/lib/fal-client.ts
@@ -519,20 +520,20 @@ export async function createMediaNode(
 }
 ```
 
-- [ ] **Step 2: Add FAL_AI_KEY to env example**
+- [x] **Step 2: Add FAL_AI_KEY to env example**
 
 Add to `.env.local.example`:
 ```
 FAL_AI_KEY=
 ```
 
-- [ ] **Step 3: Build passes**
+- [x] **Step 3: Build passes**
 
 ```bash
 npm run build
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/lib/fal-client.ts .env.local.example
@@ -546,7 +547,7 @@ git commit -m "feat: add fal.ai client with image/video generation, storage pers
 **Files:**
 - Modify: `src/lib/skills-engine.ts`
 
-- [ ] **Step 1: Add image-brief post-execution hook**
+- [x] **Step 1: Add image-brief post-execution hook**
 
 After the entity extraction fire-and-forget (around the end of `runSkill`), add a new post-execution hook for image-brief:
 
@@ -588,13 +589,13 @@ After the entity extraction fire-and-forget (around the end of `runSkill`), add 
   }
 ```
 
-- [ ] **Step 2: Build passes**
+- [x] **Step 2: Build passes**
 
 ```bash
 npm run build
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/lib/skills-engine.ts
@@ -608,7 +609,7 @@ git commit -m "feat: add fal.ai post-execution hook for image-brief skill"
 **Files:**
 - Modify: `src/lib/skills-engine.ts`
 
-- [ ] **Step 1: Add brand-voice-extractor post-execution hook**
+- [x] **Step 1: Add brand-voice-extractor post-execution hook**
 
 After the fal.ai hook (or alongside it), add:
 
@@ -638,7 +639,7 @@ After the fal.ai hook (or alongside it), add:
   }
 ```
 
-- [ ] **Step 2: Build passes and commit**
+- [x] **Step 2: Build passes and commit**
 
 ```bash
 npm run build
@@ -654,7 +655,7 @@ git commit -m "feat: persist brand-voice-extractor output to brand_guidelines ta
 - Modify: `src/lib/shopify.ts`
 - Create: `src/lib/knowledge/bridges.ts`
 
-- [ ] **Step 1: Add product image knowledge nodes to Shopify sync**
+- [x] **Step 1: Add product image knowledge nodes to Shopify sync**
 
 In `src/lib/shopify.ts`, in the `pullShopifyProducts` function, after upserting products into the `products` table, add:
 
@@ -690,7 +691,7 @@ In `src/lib/shopify.ts`, in the `pullShopifyProducts` function, after upserting 
   }
 ```
 
-- [ ] **Step 2: Create top content bridge**
+- [x] **Step 2: Create top content bridge**
 
 ```typescript
 // src/lib/knowledge/bridges.ts
@@ -740,7 +741,7 @@ export async function bridgeTopContent(brandId: string): Promise<number> {
 }
 ```
 
-- [ ] **Step 3: Wire bridgeTopContent into call sites**
+- [x] **Step 3: Wire bridgeTopContent into call sites**
 
 Add to `src/app/api/cron/daily/route.ts` after the daily skills run:
 ```typescript
@@ -760,7 +761,7 @@ if (skill.id === 'health-check' && result.status === 'completed') {
 }
 ```
 
-- [ ] **Step 4: Build passes and commit**
+- [x] **Step 4: Build passes and commit**
 
 ```bash
 npm run build
@@ -777,7 +778,7 @@ git commit -m "feat: bridge product images and top content into knowledge graph"
 - Create: `src/app/api/cron/backfill-embeddings/route.ts`
 - Modify: `vercel.json`
 
-- [ ] **Step 1: Create backfill script**
+- [x] **Step 1: Create backfill script**
 
 ```typescript
 // scripts/backfill-embeddings.ts
@@ -842,7 +843,7 @@ async function main() {
 main().catch(console.error);
 ```
 
-- [ ] **Step 2: Create cron-callable backfill route**
+- [x] **Step 2: Create cron-callable backfill route**
 
 ```typescript
 // src/app/api/cron/backfill-embeddings/route.ts
@@ -882,14 +883,14 @@ export async function POST(request: NextRequest) {
 }
 ```
 
-- [ ] **Step 3: Add to vercel.json cron**
+- [x] **Step 3: Add to vercel.json cron**
 
 Add to the `crons` array in `vercel.json`:
 ```json
 { "path": "/api/cron/backfill-embeddings", "schedule": "0 * * * *" }
 ```
 
-- [ ] **Step 4: Build passes and commit**
+- [x] **Step 4: Build passes and commit**
 
 ```bash
 npm run build
@@ -897,7 +898,7 @@ git add scripts/backfill-embeddings.ts src/app/api/cron/backfill-embeddings/ ver
 git commit -m "feat: add embedding backfill script and hourly cron route"
 ```
 
-- [ ] **Step 5: Push all Plan 1 work**
+- [x] **Step 5: Push all Plan 1 work**
 
 ```bash
 git push
@@ -906,15 +907,16 @@ git push
 ---
 
 # ============================================================
-# PLAN 2: Design Gap UI Rebuild (Execute Second)
+# PLAN 2: Design Gap UI Rebuild ✅ COMPLETE
 # ============================================================
 
 **Spec:** `docs/superpowers/specs/2026-04-09-design-gap-prd.md`
 **Detailed Plan:** `docs/superpowers/plans/2026-04-09-design-gap-plan.md`
+**Status:** ✅ All 16 tasks complete — committed and pushed.
 
 **Goal:** Rebuild all UI to match `stitch_new_project/` designs, wire every interaction to real backend, add missing pages.
 
-**This plan is already fully written** at the path above with 16 tasks. Execute it as-is using subagent-driven-development. The tasks are:
+**This plan is already fully written** at the path above with 16 tasks. All completed:
 
 | Task | Name |
 |------|------|
