@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Sparkles, ArrowLeft, ArrowRight, AlertTriangle, CheckCircle2, Zap } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { AgentAvatar } from '@/components/agents/agent-avatar'
 
 interface LogLine {
   ts: string
@@ -105,12 +106,17 @@ export default function DiagnosisPage() {
         </span>
       </div>
 
-      {/* Heading */}
-      <div className="text-center mb-8">
-        <h1 className="font-heading font-bold text-3xl sm:text-4xl text-foreground mb-3">
+      {/* Heading with Mia avatar */}
+      <div className="text-center mb-10">
+        <div className="flex justify-center mb-4">
+          <div style={{ filter: 'drop-shadow(0 0 15px rgba(99,102,241,0.3))' }}>
+            <AgentAvatar agentId="mia" size="lg" state={status === 'running' ? 'working' : 'default'} />
+          </div>
+        </div>
+        <h1 className="font-heading font-bold text-3xl sm:text-4xl md:text-5xl text-foreground mb-4 tracking-tight">
           Mia&apos;s First Diagnosis
         </h1>
-        <p className="text-muted-foreground text-sm">
+        <p className="text-muted-foreground text-base max-w-lg mx-auto leading-relaxed">
           Scout is running your initial brand health check.
         </p>
       </div>
@@ -121,12 +127,7 @@ export default function DiagnosisPage() {
         <div className="glass-panel rounded-2xl p-6 space-y-4">
           {/* Agent header */}
           <div className="flex items-center gap-3">
-            <div
-              className="w-10 h-10 rounded-full flex items-center justify-center font-bold font-heading text-sm animate-pulse-glow"
-              style={{ background: '#6366f120', color: '#6366f1' }}
-            >
-              M
-            </div>
+            <AgentAvatar agentId="mia" size="sm" state={status === 'running' ? 'working' : 'default'} />
             <div>
               <p className="font-heading font-semibold text-sm text-foreground">Mia Orchestrator</p>
               <p className="text-xs text-muted-foreground flex items-center gap-1">

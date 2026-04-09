@@ -194,11 +194,15 @@ export default function LandingPage() {
             AI-powered marketing for D2C brands
           </div>
 
-          <h1 className="text-5xl sm:text-6xl md:text-7xl font-heading font-bold mb-6 leading-tight tracking-tight">
+          <h1 className="text-5xl sm:text-6xl md:text-7xl font-heading font-bold mb-4 leading-tight tracking-tight">
             Meet Mia.
             <br />
             <span className="text-[#6366f1]">Your AI Chief of Staff.</span>
           </h1>
+
+          <p className="text-sm text-[#a5b4fc] font-medium tracking-wide mb-6">
+            for Shopify
+          </p>
 
           <p className="text-lg sm:text-xl text-white/60 max-w-2xl mx-auto mb-10 leading-relaxed">
             Your marketing team. Already hired. 12 AI agents that diagnose, create, optimize, and
@@ -222,12 +226,28 @@ export default function LandingPage() {
 
           <p className="mt-5 text-sm text-white/40">100 free credits. No credit card required.</p>
 
-          {/* Avatar cluster */}
-          <div className="mt-16 flex items-center justify-center gap-2 flex-wrap">
-            {AGENTS.slice(0, 6).map((agent) => (
-              <AgentAvatar key={agent.id} agentId={agent.id} size="sm" />
-            ))}
-            <span className="text-xs text-white/40 ml-2">+6 more agents</span>
+          {/* Mia portrait with aura glow */}
+          <div className="mt-16 flex items-center justify-center">
+            <div className="relative">
+              {/* Outer aura rings */}
+              <div
+                className="absolute inset-0 -m-6 rounded-full animate-pulse-slow"
+                style={{
+                  background: 'radial-gradient(circle, rgba(99,102,241,0.20) 0%, rgba(99,102,241,0.05) 50%, transparent 70%)',
+                }}
+                aria-hidden="true"
+              />
+              <div
+                className="absolute inset-0 -m-3 rounded-full"
+                style={{
+                  background: 'radial-gradient(circle, rgba(99,102,241,0.15) 0%, transparent 60%)',
+                }}
+                aria-hidden="true"
+              />
+              <div style={{ filter: 'drop-shadow(0 0 30px rgba(99,102,241,0.4))' }}>
+                <AgentAvatar agentId="mia" size="xl" />
+              </div>
+            </div>
           </div>
         </div>
       </section>

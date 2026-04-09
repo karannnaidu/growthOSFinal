@@ -103,11 +103,11 @@ export default function ConnectStorePage() {
       </div>
 
       {/* Heading */}
-      <div className="text-center mb-8">
-        <h1 className="font-heading font-bold text-3xl sm:text-4xl text-foreground mb-3">
+      <div className="text-center mb-10">
+        <h1 className="font-heading font-bold text-3xl sm:text-4xl md:text-5xl text-foreground mb-4 tracking-tight">
           Connect your Store
         </h1>
-        <p className="text-muted-foreground text-sm">
+        <p className="text-muted-foreground text-base max-w-md mx-auto leading-relaxed">
           Link your Shopify store so Growth OS can learn your brand.
         </p>
       </div>

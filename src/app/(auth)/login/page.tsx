@@ -163,16 +163,26 @@ function LoginForm() {
         {googleLoading ? 'Redirecting…' : 'Continue with Google'}
       </Button>
 
-      {/* Footer link */}
-      <p className="text-center text-sm text-muted-foreground">
-        Don&apos;t have an account?{' '}
-        <Link
-          href="/signup"
-          className="font-medium text-[#6366f1] hover:text-[#4f52d4] underline-offset-4 hover:underline"
-        >
-          Sign up
-        </Link>
-      </p>
+      {/* Footer links */}
+      <div className="text-center space-y-2">
+        <p className="text-sm text-muted-foreground">
+          <Link
+            href="/forgot-password"
+            className="font-medium text-[#6366f1] hover:text-[#4f52d4] underline-offset-4 hover:underline"
+          >
+            Forgot your password?
+          </Link>
+        </p>
+        <p className="text-sm text-muted-foreground">
+          Don&apos;t have an account?{' '}
+          <Link
+            href="/signup"
+            className="font-medium text-[#6366f1] hover:text-[#4f52d4] underline-offset-4 hover:underline"
+          >
+            Sign up
+          </Link>
+        </p>
+      </div>
     </div>
   )
 }
