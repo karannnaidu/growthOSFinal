@@ -88,7 +88,7 @@ function parseLLMJson<T>(raw: string, fallback: T): T {
   try {
     return JSON.parse(cleaned) as T;
   } catch {
-    console.warn('[CreativeIntelligence] Failed to parse LLM JSON, using fallback');
+    console.warn('[CreativeIntelligence] Failed to parse LLM JSON, using fallback. Raw (first 200 chars):', raw.slice(0, 200));
     return fallback;
   }
 }
@@ -191,7 +191,10 @@ export async function gatherCreativeContext(
     productTitle: node.properties?.product_title ?? node.name,
   }));
 
-  // Brand guidelines
+  // Brand guidelines (log non-trivial errors, ignore "no rows" which is expected for new brands)
+  if (guidelinesResult.error && guidelinesResult.error.code !== 'PGRST116') {
+    console.warn('[CreativeIntelligence] brand_guidelines query error:', guidelinesResult.error.message);
+  }
   const gl = guidelinesResult.data;
   const brandGuidelines = {
     voiceTone: gl?.voice_tone ?? null,
@@ -262,48 +265,72 @@ export async function generateIntelligentBrief(
   targetAudience: string,
   context: CreativeContext,
 ): Promise<CreativeBrief> {
-  const userPrompt = `Generate a creative brief for brand ${brandId}.
+  // Sanitize user inputs (strip excessive newlines that could be used for prompt injection)
+  const safeGoal = campaignGoal.replace(/\n{2,}/g, '\n').slice(0, 500);
+  const safeAudience = targetAudience.replace(/\n{2,}/g, '\n').slice(0, 500);
+
+  // Slim context for token budget — only key fields, limited items
+  const slimCreatives = context.topPerformingCreatives.slice(0, 5).map(c => ({
+    name: c.name, style: c.style,
+    roas: c.metrics?.roas ?? c.metrics?.ROAS ?? null,
+    ctr: c.metrics?.ctr ?? c.metrics?.CTR ?? null,
+  }));
+  const slimPersonas = context.personas.slice(0, 5).map(p => ({
+    name: p.name, demographics: p.demographics, preferences: p.preferences,
+  }));
+  const slimCompetitors = context.competitorCreatives.slice(0, 5).map(c => ({
+    name: c.name, style: c.style,
+  }));
+  const slimProducts = context.productImages.slice(0, 10).map(p => ({
+    name: p.name, productTitle: p.productTitle,
+  }));
+
+  const userPrompt = `Generate a creative brief.
 
 ## Campaign Goal
-${campaignGoal}
+${safeGoal}
 
 ## Target Audience
-${targetAudience}
+${safeAudience}
 
 ## Performance Data — Top Performing Creatives
-${JSON.stringify(context.topPerformingCreatives, null, 2)}
+${JSON.stringify(slimCreatives)}
 
 ## Persona Profiles
-${JSON.stringify(context.personas, null, 2)}
+${JSON.stringify(slimPersonas)}
 
 ## Brand Guidelines
-${JSON.stringify(context.brandGuidelines, null, 2)}
+${JSON.stringify(context.brandGuidelines)}
 
 ## Competitor Creatives
-${JSON.stringify(context.competitorCreatives, null, 2)}
+${JSON.stringify(slimCompetitors)}
 
 ## Available Product Images
-${JSON.stringify(context.productImages, null, 2)}
+${JSON.stringify(slimProducts)}
 
 Generate the creative brief as JSON.`;
-
-  const result = await callModel({
-    model: 'claude-sonnet-4-6',
-    provider: 'anthropic',
-    systemPrompt: BRIEF_SYSTEM_PROMPT,
-    userPrompt,
-    maxTokens: 4096,
-    temperature: 0.7,
-  });
 
   const fallback: CreativeBrief = {
     imagePrompts: [],
     videoPrompts: [],
     copyVariants: [],
-    reasoning: 'Failed to generate brief — LLM response could not be parsed.',
+    reasoning: 'Failed to generate brief — LLM call or response parsing failed.',
   };
 
-  return parseLLMJson<CreativeBrief>(result.content, fallback);
+  try {
+    const result = await callModel({
+      model: 'claude-sonnet-4-6',
+      provider: 'anthropic',
+      systemPrompt: BRIEF_SYSTEM_PROMPT,
+      userPrompt,
+      maxTokens: 4096,
+      temperature: 0.7,
+    });
+    return parseLLMJson<CreativeBrief>(result.content, fallback);
+  } catch (err) {
+    console.warn('[CreativeIntelligence] generateIntelligentBrief callModel failed:', err);
+    return fallback;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -346,38 +373,32 @@ export async function scoreCreative(
   creative: { imageUrl?: string; copyText: string },
   context: CreativeContext,
 ): Promise<CreativeScore> {
-  const userPrompt = `Score this creative for brand ${brandId}.
+  // Note: imageUrl is included as metadata only — this uses a text-only LLM call,
+  // not the Vision API. The URL provides context (e.g., filename hints) but the
+  // actual image content is not analyzed.
+  const userPrompt = `Score this creative.
 
 ## Creative to Score
-${creative.imageUrl ? `Image URL: ${creative.imageUrl}` : '(no image)'}
-Copy Text: ${creative.copyText}
+Copy Text: ${creative.copyText.slice(0, 2000)}
+${creative.imageUrl ? `Image reference: ${creative.imageUrl}` : ''}
 
 ## Brand Guidelines
-${JSON.stringify(context.brandGuidelines, null, 2)}
+${JSON.stringify(context.brandGuidelines)}
 
 ## Personas
-${JSON.stringify(context.personas, null, 2)}
+${JSON.stringify(context.personas.slice(0, 5))}
 
 ## Top Performing Creatives (for reference)
-${JSON.stringify(context.topPerformingCreatives.slice(0, 5), null, 2)}
+${JSON.stringify(context.topPerformingCreatives.slice(0, 5).map(c => ({ name: c.name, style: c.style, roas: c.metrics?.roas ?? null })))}
 
 Score the creative as JSON.`;
-
-  const result = await callModel({
-    model: 'claude-sonnet-4-6',
-    provider: 'anthropic',
-    systemPrompt: SCORE_SYSTEM_PROMPT,
-    userPrompt,
-    maxTokens: 2048,
-    temperature: 0.3,
-  });
 
   const fallback: CreativeScore = {
     overallScore: 0,
     brandGuidelineMatch: 0,
     personaScores: [],
     strengths: [],
-    improvements: ['Unable to score — LLM response could not be parsed.'],
+    improvements: ['Unable to score — LLM call or response parsing failed.'],
     predictedPerformance: {
       estimatedCTR: 'unknown',
       estimatedROAS: 'unknown',
@@ -385,5 +406,18 @@ Score the creative as JSON.`;
     },
   };
 
-  return parseLLMJson<CreativeScore>(result.content, fallback);
+  try {
+    const result = await callModel({
+      model: 'claude-sonnet-4-6',
+      provider: 'anthropic',
+      systemPrompt: SCORE_SYSTEM_PROMPT,
+      userPrompt,
+      maxTokens: 2048,
+      temperature: 0.3,
+    });
+    return parseLLMJson<CreativeScore>(result.content, fallback);
+  } catch (err) {
+    console.warn('[CreativeIntelligence] scoreCreative callModel failed:', err);
+    return fallback;
+  }
 }
