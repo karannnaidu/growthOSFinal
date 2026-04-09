@@ -56,9 +56,11 @@ const NAV_ITEMS: NavItem[] = [
 
 interface SidebarProps {
   userEmail?: string | null
+  brandId?: string | null
+  walletBalance?: number
 }
 
-export function Sidebar({ userEmail }: SidebarProps) {
+export function Sidebar({ userEmail, brandId: _brandId, walletBalance: _walletBalance }: SidebarProps) {
   const pathname = usePathname()
 
   function isActive(item: (typeof NAV_ITEMS)[number]) {

@@ -17,9 +17,10 @@ import { NotificationsBell } from '@/components/notifications-bell'
 interface TopBarProps {
   userEmail?: string | null
   brandId?: string | null
+  walletBalance?: number
 }
 
-export function TopBar({ userEmail, brandId }: TopBarProps) {
+export function TopBar({ userEmail, brandId, walletBalance: _walletBalance }: TopBarProps) {
   const router = useRouter()
   const [paletteOpen, setPaletteOpen] = React.useState(false)
 
