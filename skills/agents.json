@@ -102,7 +102,7 @@
     "role": "Competitor Intel",
     "color": "#64748B",
     "avatar": "/agents/echo.png",
-    "skills": ["competitor-scan", "competitor-creative-library"],
+    "skills": ["competitor-scan", "competitor-creative-library", "competitor-traffic-report", "competitor-status-monitor"],
     "schedule": "0 8 * * 4",
     "is_manager": false,
     "can_spawn": false,
