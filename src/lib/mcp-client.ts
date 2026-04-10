@@ -39,6 +39,13 @@ export interface SkillDataContext {
     backlinks?: unknown;
     keywords?: unknown;
   };
+  competitor?: {
+    ads?: unknown[];
+    products?: unknown[];
+    traffic?: unknown[];
+    seo?: unknown[];
+    status?: unknown[];
+  };
 }
 
 interface Credential {
@@ -358,6 +365,105 @@ const TOOL_HANDLERS: Record<string, ToolHandler> = {
   // Ahrefs
   'ahrefs.backlinks': async (_brandId, cred) => fetchAhrefsBacklinks(cred),
   'ahrefs.keywords': async (_brandId, cred) => fetchAhrefsKeywords(cred),
+
+  // Competitor Intelligence (no platform credential needed — uses env vars)
+  'competitor.ads': async (brandId) => {
+    const { fetchCompetitorAds } = await import('@/lib/competitor-intel');
+    const admin = (await import('@/lib/supabase/service')).createServiceClient();
+    const { data: nodes } = await admin
+      .from('knowledge_nodes')
+      .select('name, properties')
+      .eq('brand_id', brandId)
+      .eq('node_type', 'competitor')
+      .eq('is_active', true)
+      .limit(5);
+    const allAds = [];
+    for (const node of nodes ?? []) {
+      const ads = await fetchCompetitorAds(node.name);
+      allAds.push({ competitor: node.name, ads });
+    }
+    return allAds;
+  },
+  'competitor.products': async (brandId) => {
+    const { detectBestSellers } = await import('@/lib/competitor-intel');
+    const admin = (await import('@/lib/supabase/service')).createServiceClient();
+    const { data: nodes } = await admin
+      .from('knowledge_nodes')
+      .select('name, properties')
+      .eq('brand_id', brandId)
+      .eq('node_type', 'competitor')
+      .eq('is_active', true)
+      .limit(5);
+    const allProducts = [];
+    for (const node of nodes ?? []) {
+      const domain = (node.properties as Record<string, unknown>)?.domain as string;
+      if (domain) {
+        const products = await detectBestSellers(domain);
+        allProducts.push({ competitor: node.name, domain, products });
+      }
+    }
+    return allProducts;
+  },
+  'competitor.traffic': async (brandId) => {
+    const { getTrafficEstimate } = await import('@/lib/competitor-intel');
+    const admin = (await import('@/lib/supabase/service')).createServiceClient();
+    const { data: nodes } = await admin
+      .from('knowledge_nodes')
+      .select('name, properties')
+      .eq('brand_id', brandId)
+      .eq('node_type', 'competitor')
+      .eq('is_active', true)
+      .limit(5);
+    const results = [];
+    for (const node of nodes ?? []) {
+      const domain = (node.properties as Record<string, unknown>)?.domain as string;
+      if (domain) {
+        const traffic = await getTrafficEstimate(domain);
+        results.push({ competitor: node.name, domain, traffic });
+      }
+    }
+    return results;
+  },
+  'competitor.seo': async (brandId) => {
+    const { getSEOMetrics, getKeywordRankings } = await import('@/lib/competitor-intel');
+    const admin = (await import('@/lib/supabase/service')).createServiceClient();
+    const { data: nodes } = await admin
+      .from('knowledge_nodes')
+      .select('name, properties')
+      .eq('brand_id', brandId)
+      .eq('node_type', 'competitor')
+      .eq('is_active', true)
+      .limit(5);
+    const results = [];
+    for (const node of nodes ?? []) {
+      const domain = (node.properties as Record<string, unknown>)?.domain as string;
+      if (domain) {
+        const [seo, keywords] = await Promise.all([getSEOMetrics(domain), getKeywordRankings(domain)]);
+        results.push({ competitor: node.name, domain, seo, keywords });
+      }
+    }
+    return results;
+  },
+  'competitor.status': async (brandId) => {
+    const { checkCompetitorStatus, searchCompetitorNews } = await import('@/lib/competitor-intel');
+    const admin = (await import('@/lib/supabase/service')).createServiceClient();
+    const { data: nodes } = await admin
+      .from('knowledge_nodes')
+      .select('name, properties')
+      .eq('brand_id', brandId)
+      .eq('node_type', 'competitor')
+      .eq('is_active', true)
+      .limit(10);
+    const results = [];
+    for (const node of nodes ?? []) {
+      const domain = (node.properties as Record<string, unknown>)?.domain as string;
+      if (domain) {
+        const [status, news] = await Promise.all([checkCompetitorStatus(domain), searchCompetitorNews(node.name)]);
+        results.push({ competitor: node.name, domain, status, news });
+      }
+    }
+    return results;
+  },
 };
 
 // Which platform does each tool belong to?
@@ -454,16 +560,17 @@ export async function fetchSkillData(
         return;
       }
 
-      const platform = TOOL_PLATFORM[tool] ?? '';
-      const cred = credentials.get(platform);
-      if (!cred) {
+      const platform = TOOL_PLATFORM[tool];
+      // Competitor tools use env vars, not platform credentials
+      const cred = platform ? credentials.get(platform) : null;
+      if (platform && !cred) {
         console.warn(`[MCP] No credential found for platform "${platform}" (tool: ${tool})`);
         return;
       }
 
       let result: unknown = null;
       try {
-        result = await handler(brandId, cred);
+        result = await handler(brandId, cred ?? {} as Credential);
       } catch (err) {
         console.warn(`[MCP] Tool handler error for ${tool}:`, err);
         return;
@@ -529,6 +636,28 @@ export async function fetchSkillData(
         case 'ahrefs.keywords':
           context.ahrefs = context.ahrefs ?? {};
           context.ahrefs.keywords = result;
+          break;
+
+        // Competitor Intelligence
+        case 'competitor.ads':
+          context.competitor = context.competitor ?? {};
+          context.competitor.ads = result as unknown[];
+          break;
+        case 'competitor.products':
+          context.competitor = context.competitor ?? {};
+          context.competitor.products = result as unknown[];
+          break;
+        case 'competitor.traffic':
+          context.competitor = context.competitor ?? {};
+          context.competitor.traffic = result as unknown[];
+          break;
+        case 'competitor.seo':
+          context.competitor = context.competitor ?? {};
+          context.competitor.seo = result as unknown[];
+          break;
+        case 'competitor.status':
+          context.competitor = context.competitor ?? {};
+          context.competitor.status = result as unknown[];
           break;
 
         default:
