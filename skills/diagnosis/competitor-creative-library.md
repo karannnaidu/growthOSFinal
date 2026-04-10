@@ -5,7 +5,7 @@ agent: echo
 category: diagnosis
 complexity: mid
 credits: 2
-mcp_tools: []
+mcp_tools: [competitor.ads]
 visual_capture: true
 chains_to: [ad-copy, ugc-script]
 knowledge:
