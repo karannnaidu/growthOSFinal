@@ -8,7 +8,7 @@
 // Server-side only.
 // ---------------------------------------------------------------------------
 
-import { createClient } from '@/lib/supabase/server';
+import { createServiceClient } from '@/lib/supabase/service';
 
 // ---------------------------------------------------------------------------
 // Focus-area → agent mapping
@@ -65,22 +65,14 @@ export async function initializeBrandAgents(
 ): Promise<void> {
   const initialAgents = getInitialAgents(focusAreas);
 
-  const records = ALL_AGENT_IDS.map((agentId, i) => {
-    const isInitial = initialAgents.includes(agentId);
-    return {
-      brand_id: brandId,
-      agent_id: agentId,
-      enabled: true,
-      config: {
-        revealed: isInitial,
-        reveal_after: isInitial
-          ? null
-          : new Date(Date.now() + (i * 4 + 6) * 3_600_000).toISOString(),
-      },
-    };
-  });
+  const records = ALL_AGENT_IDS.map((agentId) => ({
+    brand_id: brandId,
+    agent_id: agentId,
+    enabled: true,
+    config: { revealed: true, reveal_after: null },
+  }));
 
-  const supabase = await createClient();
+  const supabase = createServiceClient();
   const { error } = await supabase
     .from('brand_agents')
     .upsert(records, { onConflict: 'brand_id,agent_id' });
@@ -104,7 +96,7 @@ export async function initializeBrandAgents(
  * Falls back to ['mia', 'scout'] if no records exist yet.
  */
 export async function getRevealedAgents(brandId: string): Promise<string[]> {
-  const supabase = await createClient();
+  const supabase = createServiceClient();
   const { data, error } = await supabase
     .from('brand_agents')
     .select('agent_id, config')
