@@ -156,19 +156,22 @@ export default function AgentDetailPage() {
       setIsLoading(true)
       setError(null)
 
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { setError('Not authenticated'); setIsLoading(false); return }
-
       // Resolve brand
       let bid: string | null = null
-      const { data: ownedBrand } = await supabase
-        .from('brands').select('id').eq('owner_id', user.id).limit(1).single()
-      if (ownedBrand) {
-        bid = ownedBrand.id as string
+      const stored = sessionStorage.getItem('onboarding_brand_id') || localStorage.getItem('growth_os_brand_id')
+      if (stored) {
+        bid = stored
       } else {
-        const { data: member } = await supabase
-          .from('brand_members').select('brand_id').eq('user_id', user.id).limit(1).single()
-        if (member) bid = member.brand_id as string
+        try {
+          const res = await fetch('/api/brands/me')
+          if (res.ok) {
+            const data = await res.json()
+            if (data.brandId) {
+              bid = data.brandId
+              localStorage.setItem('growth_os_brand_id', data.brandId)
+            }
+          }
+        } catch { /* ignore */ }
       }
       if (!bid) { setError('No brand found'); setIsLoading(false); return }
       setBrandId(bid)

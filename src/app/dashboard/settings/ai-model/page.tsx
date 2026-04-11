@@ -77,29 +77,20 @@ export default function AIModelSettingsPage() {
   // Resolve brand
   useEffect(() => {
     async function init() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-      const { data: owned } = await supabase
-        .from('brands').select('id, ai_preset').eq('owner_id', user.id).limit(1).single()
-      if (owned) {
-        setBrandId(owned.id as string)
-        if (owned.ai_preset) setSelectedPreset(owned.ai_preset as Preset)
-        setIsLoading(false)
-        return
-      }
-      const { data: mem } = await supabase
-        .from('brand_members').select('brand_id').eq('user_id', user.id).limit(1).single()
-      if (mem) {
-        setBrandId(mem.brand_id as string)
-        // Fetch the brand's preset
-        const { data: b } = await supabase
-          .from('brands').select('ai_preset').eq('id', mem.brand_id as string).single()
-        if (b?.ai_preset) setSelectedPreset(b.ai_preset as Preset)
-      }
-      setIsLoading(false)
+      const stored = sessionStorage.getItem('onboarding_brand_id') || localStorage.getItem('growth_os_brand_id')
+      if (stored) { setBrandId(stored); return }
+      try {
+        const res = await fetch('/api/brands/me')
+        if (res.ok) {
+          const data = await res.json()
+          if (data.brandId) {
+            setBrandId(data.brandId)
+            localStorage.setItem('growth_os_brand_id', data.brandId)
+          }
+        }
+      } catch { /* ignore */ }
     }
     init()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   async function handleSave() {

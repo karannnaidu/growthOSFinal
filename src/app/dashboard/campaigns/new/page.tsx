@@ -109,25 +109,21 @@ export default function NewCampaignPage() {
 
   useEffect(() => {
     async function init() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { setInitError('Not authenticated'); setIsInit(false); return }
-
-      let bid: string | null = null
-      const { data: ownedBrand } = await supabase
-        .from('brands').select('id').eq('owner_id', user.id).limit(1).single()
-      if (ownedBrand) {
-        bid = ownedBrand.id as string
-      } else {
-        const { data: member } = await supabase
-          .from('brand_members').select('brand_id').eq('user_id', user.id).limit(1).single()
-        if (member) bid = member.brand_id as string
-      }
-      if (!bid) { setInitError('No brand found'); setIsInit(false); return }
-      setBrandId(bid)
+      const stored = sessionStorage.getItem('onboarding_brand_id') || localStorage.getItem('growth_os_brand_id')
+      if (stored) { setBrandId(stored); setIsInit(false); return }
+      try {
+        const res = await fetch('/api/brands/me')
+        if (res.ok) {
+          const data = await res.json()
+          if (data.brandId) {
+            setBrandId(data.brandId)
+            localStorage.setItem('growth_os_brand_id', data.brandId)
+          }
+        }
+      } catch { /* ignore */ }
       setIsInit(false)
     }
     init()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // ---------------------------------------------------------------------------
