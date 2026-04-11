@@ -436,9 +436,11 @@ export async function extractBrandDna(
 
   notify({ step: 'crawling', message: `Crawled ${crawlResult.totalCrawled} pages`, progress: 15 })
 
-  const visualDataList: VisualData[] = crawlResult.pages
-    .filter((p) => p.html)
-    .map((p) => extractVisualData(p.html))
+  const visualDataList: VisualData[] = await Promise.all(
+    crawlResult.pages
+      .filter((p) => p.html)
+      .map((p) => extractVisualData(p.html, p.url))
+  )
 
   notify({ step: 'crawling', message: 'Visual data extracted', progress: 25 })
 
@@ -499,10 +501,10 @@ export async function extractBrandDna(
       })
 
       const allPages = [...crawlResult.pages, ...additionalPages]
-      const allVisual = [
-        ...visualDataList,
-        ...additionalPages.filter((p) => p.html).map((p) => extractVisualData(p.html)),
-      ]
+      const additionalVisual = await Promise.all(
+        additionalPages.filter((p) => p.html).map((p) => extractVisualData(p.html, p.url))
+      )
+      const allVisual = [...visualDataList, ...additionalVisual]
 
       const rePrompt = buildExtractionPrompt(allPages, allVisual, brandName)
 

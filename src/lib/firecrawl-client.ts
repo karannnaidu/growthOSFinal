@@ -73,7 +73,7 @@ async function fetchWithTimeout(url: string, init?: RequestInit): Promise<Respon
 /**
  * Extract visual brand data (fonts, colors, logo) from raw HTML using cheerio.
  */
-export function extractVisualData(html: string): VisualData {
+export async function extractVisualData(html: string, baseUrl?: string): Promise<VisualData> {
   const $ = cheerio.load(html);
 
   // --- Fonts ---
@@ -92,7 +92,7 @@ export function extractVisualData(html: string): VisualData {
     }
   });
 
-  // CSS font-family from <style> blocks and inline style attributes
+  // CSS font-family from <style> blocks, inline styles, and external CSS
   const fontFamilyRegex = /font-family\s*:\s*([^;}"']+)/gi;
   const styleTexts: string[] = [];
   $('style').each((_, el) => {
@@ -103,6 +103,30 @@ export function extractVisualData(html: string): VisualData {
     const style = $(el).attr('style');
     if (style) styleTexts.push(style);
   });
+
+  // Fetch external CSS files (up to 3, with timeout)
+  const cssHrefs: string[] = [];
+  $('link[rel="stylesheet"]').each((_, el) => {
+    const href = $(el).attr('href');
+    if (href) cssHrefs.push(href);
+  });
+  for (const href of cssHrefs.slice(0, 3)) {
+    try {
+      let cssUrl: string | undefined;
+      if (href.startsWith('http')) cssUrl = href;
+      else if (href.startsWith('//')) cssUrl = `https:${href}`;
+      else if (baseUrl) { try { cssUrl = new URL(href, baseUrl).href; } catch { /* skip */ } }
+      if (!cssUrl) continue;
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 5000);
+      const cssRes = await fetch(cssUrl, { signal: controller.signal });
+      clearTimeout(timer);
+      if (cssRes.ok) {
+        const cssText = await cssRes.text();
+        styleTexts.push(cssText);
+      }
+    } catch { /* skip failed CSS */ }
+  }
 
   for (const text of styleTexts) {
     // Reset lastIndex because the regex is reused across iterations
