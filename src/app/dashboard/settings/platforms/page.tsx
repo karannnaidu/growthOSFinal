@@ -211,7 +211,7 @@ export default function PlatformsSettingsPage() {
               const status = statuses[platform.id] ?? { connected: false }
               const isConnected = status.connected
               const isExpanded = expandedPlatform === platform.id
-              const isComingSoon = !platform.connectFields
+              const isComingSoon = !platform.connectFields && !platform.oauth
 
               return (
                 <div
