@@ -257,16 +257,24 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   // Flat list for keyboard nav
   const flatItems = React.useMemo(() => filtered, [filtered])
 
-  // Reset on open
+  // Reset on open + global Escape listener
   React.useEffect(() => {
     if (open) {
       setQuery('')
       setActiveIndex(0)
-      // Focus input after dialog animation
       const t = setTimeout(() => inputRef.current?.focus(), 50)
-      return () => clearTimeout(t)
+
+      // Global escape handler (works regardless of focus)
+      const handleEsc = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') onOpenChange(false)
+      }
+      document.addEventListener('keydown', handleEsc)
+      return () => {
+        clearTimeout(t)
+        document.removeEventListener('keydown', handleEsc)
+      }
     }
-  }, [open])
+  }, [open, onOpenChange])
 
   // Keep activeIndex in bounds
   React.useEffect(() => {
@@ -300,7 +308,8 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogPortal>
-        <DialogOverlay />
+        {/* Overlay — click to close */}
+        <DialogOverlay onClick={() => onOpenChange(false)} />
         {/* Custom popup — not using DialogContent so we can control layout precisely */}
         <div
           role="dialog"
@@ -308,6 +317,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
           aria-label="Command palette"
           className="fixed left-1/2 top-[15vh] z-50 w-full max-w-xl -translate-x-1/2 overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0f1117]/95 shadow-2xl backdrop-blur-xl"
           onKeyDown={handleKeyDown}
+          tabIndex={-1}
         >
           {/* Search input */}
           <div className="flex items-center gap-3 border-b border-white/[0.06] px-4 py-3">
