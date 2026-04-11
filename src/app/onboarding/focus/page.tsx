@@ -97,7 +97,7 @@ export default function FocusPage() {
             background: 'oklch(1 0 0 / 4%)',
           }}
         >
-          Step 2 of 4
+          Step 4 of 5
         </span>
       </div>
 

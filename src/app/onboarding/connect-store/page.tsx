@@ -40,6 +40,7 @@ export default function ConnectStorePage() {
       }
       const brandId = createData.brandId
       sessionStorage.setItem('onboarding_brand_id', brandId)
+      sessionStorage.setItem('onboarding_domain', shopifyDomain)
 
       // Now initiate Shopify OAuth
       const res = await fetch('/api/platforms/shopify/connect', {
@@ -75,7 +76,8 @@ export default function ConnectStorePage() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Failed to create brand')
       sessionStorage.setItem('onboarding_brand_id', data.brandId)
-      router.push('/onboarding/focus')
+      sessionStorage.setItem('onboarding_domain', form.domain)
+      router.push('/onboarding/extraction')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
       setLoading(false)
@@ -98,7 +100,7 @@ export default function ConnectStorePage() {
             background: 'oklch(1 0 0 / 4%)',
           }}
         >
-          Step 1 of 4
+          Step 1 of 5
         </span>
       </div>
 

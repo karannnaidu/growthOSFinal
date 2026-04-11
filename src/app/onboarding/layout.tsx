@@ -7,9 +7,10 @@ export const metadata: Metadata = {
 
 const STEPS = [
   { path: 'connect-store', label: 'Connect Store' },
+  { path: 'extraction', label: 'Brand DNA' },
+  { path: 'review', label: 'Review' },
   { path: 'focus', label: 'Pick Focus' },
   { path: 'platforms', label: 'Ad Platforms' },
-  { path: 'diagnosis', label: 'Diagnosis' },
 ]
 
 interface OnboardingLayoutProps {

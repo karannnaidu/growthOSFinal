@@ -77,7 +77,7 @@ export default function PlatformsPage() {
             background: 'oklch(1 0 0 / 4%)',
           }}
         >
-          Step 3 of 4
+          Step 5 of 5
         </span>
       </div>
 

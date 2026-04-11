@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -57,8 +58,9 @@ export async function POST(
     .replace(/\/+$/, '')
     .toLowerCase()
 
-  // 3. Create the brand record
-  const { data: brand, error: brandError } = await supabase
+  // 3. Create the brand record (service client bypasses RLS to avoid recursive policy)
+  const admin = createServiceClient()
+  const { data: brand, error: brandError } = await admin
     .from('brands')
     .insert({
       name: name.trim(),
@@ -80,7 +82,7 @@ export async function POST(
   const brandId = brand.id
 
   // 4. Create wallet with 100 free credits (30-day expiry)
-  const { error: walletError } = await supabase.from('wallets').insert({
+  const { error: walletError } = await admin.from('wallets').insert({
     brand_id: brandId,
     balance: 0,
     free_credits: 100,
