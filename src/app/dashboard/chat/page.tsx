@@ -62,44 +62,23 @@ export default function ChatPage() {
 
       // Resolve brand
       let resolvedBrandId: string | null = null
-      let resolvedBrandName = ''
-
-      const { data: ownedBrand } = await supabase
-        .from('brands')
-        .select('id, name, focus_areas, ai_preset')
-        .eq('owner_id', user.id)
-        .limit(1)
-        .single()
-
-      if (ownedBrand) {
-        resolvedBrandId = ownedBrand.id as string
-        resolvedBrandName = (ownedBrand.name as string) ?? ''
-        setBrandContext({
-          focusAreas: (ownedBrand.focus_areas as string[]) ?? [],
-          aiPreset: (ownedBrand.ai_preset as string) ?? 'balanced',
-        })
-      } else {
-        const { data: member } = await supabase
-          .from('brand_members')
-          .select('brand_id, brands(id, name, focus_areas, ai_preset)')
-          .eq('user_id', user.id)
-          .limit(1)
-          .single()
-        if (member) {
-          resolvedBrandId = member.brand_id as string
-          const brands = (member.brands as unknown) as { id: string; name: string; focus_areas?: string[]; ai_preset?: string } | null
-          resolvedBrandName = brands?.name ?? ''
-          setBrandContext({
-            focusAreas: brands?.focus_areas ?? [],
-            aiPreset: brands?.ai_preset ?? 'balanced',
-          })
-        }
+      const stored = sessionStorage.getItem('onboarding_brand_id') || localStorage.getItem('growth_os_brand_id')
+      if (stored) { resolvedBrandId = stored } else {
+        try {
+          const res = await fetch('/api/brands/me')
+          if (res.ok) {
+            const data = await res.json()
+            if (data.brandId) {
+              resolvedBrandId = data.brandId
+              localStorage.setItem('growth_os_brand_id', data.brandId)
+            }
+          }
+        } catch { /* ignore */ }
       }
 
       if (!resolvedBrandId) return
 
       setBrandId(resolvedBrandId)
-      setBrandName(resolvedBrandName)
 
       // Load conversations
       const { data: convs } = await supabase
