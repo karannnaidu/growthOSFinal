@@ -1,251 +1,691 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Building2, Save, RefreshCw } from 'lucide-react'
+import {
+  Palette, Type, Users, Target, Package, RefreshCw, Dna,
+  Plus, ExternalLink, X, Pencil, Check,
+} from 'lucide-react'
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-interface BrandProfile {
-  name: string
-  domain: string
-  logo_url: string
-  focus_areas: string[]
+interface BrandDna {
+  brand_voice: {
+    formality: string
+    warmth: string
+    humor: string
+    confidence: string
+    style_notes: string
+    sample_phrases: string[]
+  }
+  tone_adjectives: string[]
+  target_audience: {
+    age_range: string
+    gender_skew: string
+    interests: string[]
+    pain_points: string[]
+    income_bracket: string
+    psychographic: string
+  }
+  positioning: {
+    statement: string
+    category: string
+    differentiator: string
+    price_positioning: string
+  }
+  products: {
+    name: string
+    description: string
+    price: string | null
+    image_url: string | null
+    category: string
+  }[]
+  visual_identity: {
+    primary_colors: string[]
+    secondary_colors: string[]
+    font_families: string[]
+    logo_url: string | null
+    aesthetic: string
+  }
+  brand_story: string | null
+  key_themes: string[]
+  trust_signals: string[]
+  extraction_confidence: Record<string, number>
 }
 
-const FOCUS_AREA_OPTIONS = [
-  'Email Marketing',
-  'Paid Ads',
-  'SEO & Content',
-  'Social Media',
-  'Retention',
-  'Conversion Rate',
-  'Customer Research',
-  'Analytics',
-]
+// ---------------------------------------------------------------------------
+// Editable Components
+// ---------------------------------------------------------------------------
+
+function EditableText({
+  value,
+  onSave,
+  multiline = false,
+  className = '',
+  placeholder = 'Click to edit...',
+}: {
+  value: string
+  onSave: (v: string) => void
+  multiline?: boolean
+  className?: string
+  placeholder?: string
+}) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(value)
+
+  if (editing) {
+    return (
+      <div className="space-y-1.5">
+        {multiline ? (
+          <textarea
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            rows={3}
+            className="w-full rounded-lg border border-[#6366f1]/40 bg-white/5 px-3 py-2 text-sm text-foreground focus:outline-none resize-none"
+            autoFocus
+          />
+        ) : (
+          <input
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            className="w-full rounded-lg border border-[#6366f1]/40 bg-white/5 px-3 py-1.5 text-sm text-foreground focus:outline-none"
+            autoFocus
+            onKeyDown={(e) => { if (e.key === 'Enter') { onSave(draft); setEditing(false) } }}
+          />
+        )}
+        <div className="flex gap-1.5">
+          <button onClick={() => { onSave(draft); setEditing(false) }}
+            className="flex items-center gap-1 rounded-md bg-[#6366f1] px-2 py-1 text-[10px] font-medium text-white hover:bg-[#5254cc]">
+            <Check className="w-3 h-3" /> Save
+          </button>
+          <button onClick={() => { setDraft(value); setEditing(false) }}
+            className="rounded-md px-2 py-1 text-[10px] text-muted-foreground hover:text-foreground">
+            Cancel
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <p
+      onClick={() => { setDraft(value); setEditing(true) }}
+      className={`cursor-pointer rounded-lg px-3 py-1.5 text-sm text-foreground/80 transition hover:bg-white/10 group flex items-center gap-2 ${className}`}
+    >
+      <span className="flex-1">{value || <span className="italic text-muted-foreground/50">{placeholder}</span>}</span>
+      <Pencil className="w-3 h-3 text-muted-foreground/30 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+    </p>
+  )
+}
+
+function EditableMetric({
+  label,
+  value,
+  onSave,
+}: {
+  label: string
+  value: string
+  onSave: (v: string) => void
+}) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(value)
+
+  if (editing) {
+    return (
+      <div className="rounded-lg bg-white/5 px-3 py-2">
+        <span className="block text-[10px] uppercase tracking-widest text-muted-foreground mb-1">{label}</span>
+        <input
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          className="w-full rounded border border-[#6366f1]/40 bg-white/5 px-2 py-1 text-sm text-foreground focus:outline-none"
+          autoFocus
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') { onSave(draft); setEditing(false) }
+            if (e.key === 'Escape') { setDraft(value); setEditing(false) }
+          }}
+          onBlur={() => { onSave(draft); setEditing(false) }}
+        />
+      </div>
+    )
+  }
+
+  return (
+    <div
+      className="rounded-lg bg-white/5 px-3 py-2 cursor-pointer hover:bg-white/10 transition group"
+      onClick={() => { setDraft(value); setEditing(true) }}
+    >
+      <span className="block text-[10px] uppercase tracking-widest text-muted-foreground mb-0.5">{label}</span>
+      <span className="text-sm font-metric font-semibold text-foreground flex items-center gap-1.5">
+        {value || '—'}
+        <Pencil className="w-2.5 h-2.5 text-muted-foreground/30 opacity-0 group-hover:opacity-100 transition-opacity" />
+      </span>
+    </div>
+  )
+}
+
+function EditablePills({
+  items,
+  color,
+  onUpdate,
+  placeholder = 'Add...',
+}: {
+  items: string[]
+  color: string
+  onUpdate: (items: string[]) => void
+  placeholder?: string
+}) {
+  const [adding, setAdding] = useState(false)
+  const [draft, setDraft] = useState('')
+
+  function handleAdd() {
+    const val = draft.trim()
+    if (val && !items.includes(val)) {
+      onUpdate([...items, val])
+    }
+    setDraft('')
+    setAdding(false)
+  }
+
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {items.map((item) => (
+        <span
+          key={item}
+          className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium group"
+          style={{ background: `${color}22`, color }}
+        >
+          {item}
+          <button
+            onClick={() => onUpdate(items.filter((i) => i !== item))}
+            className="opacity-0 group-hover:opacity-100 transition-opacity hover:text-red-400"
+          >
+            <X className="w-3 h-3" />
+          </button>
+        </span>
+      ))}
+      {adding ? (
+        <input
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') handleAdd()
+            if (e.key === 'Escape') { setAdding(false); setDraft('') }
+          }}
+          onBlur={handleAdd}
+          placeholder={placeholder}
+          autoFocus
+          className="rounded-full border border-dashed border-white/20 bg-white/5 px-2.5 py-0.5 text-xs text-foreground focus:outline-none focus:border-[#6366f1]/40 w-28"
+        />
+      ) : (
+        <button
+          onClick={() => setAdding(true)}
+          className="inline-flex items-center gap-1 rounded-full border border-dashed border-white/15 px-2 py-0.5 text-[10px] text-muted-foreground/50 hover:text-muted-foreground hover:border-white/30 transition-colors"
+        >
+          <Plus className="w-3 h-3" /> Add
+        </button>
+      )}
+    </div>
+  )
+}
+
+function AddProductCard({ onAdd }: { onAdd: (p: BrandDna['products'][0]) => void }) {
+  const [open, setOpen] = useState(false)
+  const [name, setName] = useState('')
+  const [price, setPrice] = useState('')
+  const [category, setCategory] = useState('')
+
+  function handleSubmit() {
+    if (!name.trim()) return
+    onAdd({ name: name.trim(), description: '', price: price.trim() || null, image_url: null, category: category.trim() || 'General' })
+    setName(''); setPrice(''); setCategory(''); setOpen(false)
+  }
+
+  if (!open) {
+    return (
+      <button onClick={() => setOpen(true)}
+        className="rounded-lg border-2 border-dashed border-white/10 hover:border-[#0d9488]/40 flex flex-col items-center justify-center gap-2 min-h-[180px] transition-colors group">
+        <Plus className="w-5 h-5 text-muted-foreground/30 group-hover:text-[#0d9488] transition-colors" />
+        <span className="text-[10px] text-muted-foreground/50 group-hover:text-muted-foreground transition-colors">Add Product</span>
+      </button>
+    )
+  }
+
+  return (
+    <div className="rounded-lg bg-white/5 border border-border/40 p-3 flex flex-col gap-2">
+      <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Product name *" autoFocus
+        className="w-full rounded bg-white/5 border border-border/40 px-2.5 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/50 focus:border-[#0d9488] focus:outline-none" />
+      <input value={price} onChange={(e) => setPrice(e.target.value)} placeholder="Price (e.g. $29.99)"
+        className="w-full rounded bg-white/5 border border-border/40 px-2.5 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/50 focus:border-[#0d9488] focus:outline-none" />
+      <input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Category"
+        className="w-full rounded bg-white/5 border border-border/40 px-2.5 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/50 focus:border-[#0d9488] focus:outline-none" />
+      <div className="flex gap-1.5">
+        <button onClick={handleSubmit} className="rounded bg-[#0d9488] px-2.5 py-1 text-[10px] font-medium text-white hover:bg-[#0d9488]/80">Add</button>
+        <button onClick={() => setOpen(false)} className="rounded px-2.5 py-1 text-[10px] text-muted-foreground hover:text-foreground">Cancel</button>
+      </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function Pill({ children, color = '#6366f1' }: { children: React.ReactNode; color?: string }) {
+  return (
+    <span className="inline-block rounded-full px-2.5 py-0.5 text-xs font-medium" style={{ background: `${color}22`, color }}>
+      {children}
+    </span>
+  )
+}
+
+function ColorSwatch({ hex, onRemove }: { hex: string; onRemove: () => void }) {
+  return (
+    <div className="flex items-center gap-2 group">
+      <div className="w-6 h-6 rounded-md border border-white/10 shrink-0" style={{ background: hex }} />
+      <span className="text-xs font-metric text-muted-foreground uppercase tracking-wider">{hex}</span>
+      <button onClick={onRemove} className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground/40 hover:text-red-400">
+        <X className="w-3 h-3" />
+      </button>
+    </div>
+  )
+}
+
+function SectionHeader({
+  icon: Icon, iconColor, title,
+}: {
+  icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>
+  iconColor: string
+  title: string
+}) {
+  return (
+    <div className="flex items-center gap-2.5 mb-3">
+      <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: `${iconColor}18` }}>
+        <Icon className="w-3.5 h-3.5" style={{ color: iconColor }} />
+      </div>
+      <h3 className="font-heading font-semibold text-sm text-foreground">{title}</h3>
+    </div>
+  )
+}
+
+function AddColorInput({ onAdd }: { onAdd: (hex: string) => void }) {
+  const [open, setOpen] = useState(false)
+  const [hex, setHex] = useState('#')
+
+  if (!open) {
+    return (
+      <button onClick={() => setOpen(true)}
+        className="flex items-center gap-1 text-[10px] text-muted-foreground/50 hover:text-muted-foreground mt-1">
+        <Plus className="w-3 h-3" /> Add color
+      </button>
+    )
+  }
+
+  return (
+    <div className="flex items-center gap-1.5 mt-1">
+      <input value={hex} onChange={(e) => setHex(e.target.value)} placeholder="#000000" autoFocus
+        className="w-20 rounded border border-border/40 bg-white/5 px-2 py-0.5 text-xs text-foreground focus:outline-none"
+        onKeyDown={(e) => { if (e.key === 'Enter' && hex.match(/^#[0-9a-fA-F]{3,8}$/)) { onAdd(hex.toLowerCase()); setHex('#'); setOpen(false) } }} />
+      <button onClick={() => { if (hex.match(/^#[0-9a-fA-F]{3,8}$/)) { onAdd(hex.toLowerCase()); setHex('#'); setOpen(false) } }}
+        className="text-[10px] text-[#6366f1] hover:text-[#6366f1]/80">Add</button>
+      <button onClick={() => { setOpen(false); setHex('#') }} className="text-[10px] text-muted-foreground">Cancel</button>
+    </div>
+  )
+}
 
 // ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
 
-export default function ProfileSettingsPage() {
+export default function BrandDnaPage() {
   const supabase = createClient()
-
   const [brandId, setBrandId] = useState<string | null>(null)
-  const [profile, setProfile] = useState<BrandProfile>({
-    name: '',
-    domain: '',
-    logo_url: '',
-    focus_areas: [],
-  })
+  const [dna, setDna] = useState<BrandDna | null>(null)
+  const [brandName, setBrandName] = useState('')
+  const [brandDomain, setBrandDomain] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [dirty, setDirty] = useState(false)
 
-  // Resolve brand
+  // Resolve brand ID
   useEffect(() => {
     async function init() {
+      const stored = sessionStorage.getItem('onboarding_brand_id') || localStorage.getItem('growth_os_brand_id')
+      if (stored) { setBrandId(stored); return }
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
-
-      const { data: ownedBrand } = await supabase
-        .from('brands')
-        .select('id')
-        .eq('owner_id', user.id)
-        .limit(1)
-        .single()
-
-      if (ownedBrand) {
-        setBrandId(ownedBrand.id as string)
-        return
-      }
-
-      const { data: member } = await supabase
-        .from('brand_members')
-        .select('brand_id')
-        .eq('user_id', user.id)
-        .limit(1)
-        .single()
-      if (member) setBrandId(member.brand_id as string)
+      const { data } = await supabase.from('brands').select('id').eq('owner_id', user.id).limit(1).single()
+      if (data) { setBrandId(data.id as string); localStorage.setItem('growth_os_brand_id', data.id as string) }
     }
     init()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Fetch profile
+  // Fetch brand DNA
   useEffect(() => {
     if (!brandId) return
-    async function fetchProfile() {
+    async function load() {
       setIsLoading(true)
       try {
-        const res = await fetch(`/api/settings/profile?brandId=${brandId}`)
-        if (res.ok) {
-          const data = await res.json() as BrandProfile
-          setProfile(data)
-        }
+        const res = await fetch(`/api/settings/brand-dna?brandId=${brandId}`)
+        if (!res.ok) return
+        const data = await res.json()
+        setBrandName(data.name ?? '')
+        setBrandDomain(data.domain ?? '')
+        setDna(data.dna as BrandDna | null)
       } finally {
         setIsLoading(false)
       }
     }
-    fetchProfile()
+    load()
   }, [brandId])
 
-  function toggleFocusArea(area: string) {
-    setProfile((prev) => ({
-      ...prev,
-      focus_areas: prev.focus_areas.includes(area)
-        ? prev.focus_areas.filter((a) => a !== area)
-        : [...prev.focus_areas, area],
-    }))
-  }
+  // Update helper — marks dirty and updates local state
+  const update = useCallback((updater: (d: BrandDna) => BrandDna) => {
+    setDna((prev) => {
+      if (!prev) return prev
+      setDirty(true)
+      return updater(prev)
+    })
+  }, [])
 
-  async function handleSave() {
-    if (!brandId) return
+  // Save to API
+  const handleSave = useCallback(async () => {
+    if (!brandId || !dna) return
     setIsSaving(true)
     setMessage(null)
     try {
-      const res = await fetch('/api/settings/profile', {
+      const res = await fetch('/api/settings/brand-dna', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ brandId, ...profile }),
+        body: JSON.stringify({ brandId, dna }),
       })
       if (res.ok) {
-        setMessage({ type: 'success', text: 'Profile saved successfully.' })
+        setMessage({ type: 'success', text: 'Brand DNA saved.' })
+        setDirty(false)
       } else {
-        const err = await res.json() as { error?: string }
-        setMessage({ type: 'error', text: err.error ?? 'Failed to save profile.' })
+        setMessage({ type: 'error', text: 'Failed to save.' })
       }
     } finally {
       setIsSaving(false)
       setTimeout(() => setMessage(null), 4000)
     }
+  }, [brandId, dna])
+
+  if (isLoading) {
+    return (
+      <div className="max-w-5xl space-y-4">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="h-40 animate-pulse rounded-2xl bg-white/[0.04]" />
+        ))}
+      </div>
+    )
   }
 
+  if (!dna) {
+    return (
+      <div className="max-w-2xl">
+        <Card className="glass-panel">
+          <CardContent className="py-12 text-center">
+            <Dna className="w-10 h-10 text-muted-foreground/30 mx-auto mb-4" />
+            <h2 className="font-heading font-semibold text-lg text-foreground mb-2">No Brand DNA Found</h2>
+            <p className="text-sm text-muted-foreground mb-4">Run the onboarding extraction to analyze your brand website.</p>
+            <Button onClick={() => window.location.href = '/onboarding/connect-store'} className="bg-[#6366f1] text-white hover:bg-[#6366f1]/80">
+              Start Onboarding
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  const avgConfidence = dna.extraction_confidence && Object.keys(dna.extraction_confidence).length > 0
+    ? Math.round(Object.values(dna.extraction_confidence).reduce((a, b) => a + b, 0) / Object.values(dna.extraction_confidence).length)
+    : 0
+
   return (
-    <div className="max-w-2xl space-y-5">
-      {/* Feedback message */}
+    <div className="max-w-5xl space-y-5">
+      {/* Feedback */}
       {message && (
-        <div
-          className={`rounded-lg border px-4 py-3 text-sm ${
-            message.type === 'success'
-              ? 'border-[#059669]/30 bg-[#059669]/10 text-[#059669]'
-              : 'border-[#ef4444]/30 bg-[#ef4444]/10 text-[#ef4444]'
-          }`}
-        >
-          {message.text}
-        </div>
+        <div className={`rounded-lg border px-4 py-3 text-sm ${
+          message.type === 'success' ? 'border-[#059669]/30 bg-[#059669]/10 text-[#059669]' : 'border-[#ef4444]/30 bg-[#ef4444]/10 text-[#ef4444]'
+        }`}>{message.text}</div>
       )}
 
-      <Card className="glass-panel">
-        <CardHeader className="border-b border-white/[0.06]">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
           <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#6366f1]/15">
-              <Building2 className="h-4 w-4 text-[#6366f1]" />
-            </div>
-            <CardTitle>Brand Profile</CardTitle>
+            <h2 className="font-heading font-bold text-lg text-foreground">{brandName}</h2>
+            {brandDomain && (
+              <a href={`https://${brandDomain}`} target="_blank" rel="noopener noreferrer"
+                className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1">
+                {brandDomain} <ExternalLink className="w-3 h-3" />
+              </a>
+            )}
           </div>
-        </CardHeader>
-        <CardContent className="pt-5 space-y-5">
-          {isLoading ? (
-            <div className="space-y-3">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="h-8 animate-pulse rounded-lg bg-white/[0.06]" />
+          {avgConfidence > 0 && (
+            <div className="flex items-center gap-1.5 mt-1">
+              <span className="text-xs text-muted-foreground">Extraction confidence</span>
+              <span className="text-xs font-metric font-semibold text-[#6366f1]">{avgConfidence}%</span>
+            </div>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => window.location.href = '/onboarding/extraction'} className="gap-1.5 text-xs">
+            <RefreshCw className="w-3 h-3" /> Re-scan
+          </Button>
+          {dirty && (
+            <Button size="sm" onClick={handleSave} disabled={isSaving}
+              className="gap-1.5 text-xs bg-[#6366f1] text-white hover:bg-[#5254cc]">
+              {isSaving ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+              {isSaving ? 'Saving...' : 'Save Changes'}
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* 2-column grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Brand Voice */}
+        <Card className="glass-panel">
+          <CardContent className="pt-5 pb-5">
+            <SectionHeader icon={Type} iconColor="#6366f1" title="Brand Voice" />
+            <div className="grid grid-cols-2 gap-2 mb-3">
+              {(['formality', 'warmth', 'humor', 'confidence'] as const).map((key) => (
+                <EditableMetric key={key} label={key} value={dna.brand_voice?.[key] || ''}
+                  onSave={(v) => update((d) => ({ ...d, brand_voice: { ...d.brand_voice, [key]: v } }))} />
               ))}
             </div>
-          ) : (
-            <>
-              {/* Brand Name */}
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium text-foreground">Brand Name</label>
-                <Input
-                  value={profile.name}
-                  onChange={(e) => setProfile((p) => ({ ...p, name: e.target.value }))}
-                  placeholder="e.g. Acme Co."
-                />
-              </div>
+            <div className="mb-3">
+              <span className="block text-[10px] uppercase tracking-widest text-muted-foreground mb-1 px-1">Style Notes</span>
+              <EditableText value={dna.brand_voice?.style_notes || ''} multiline
+                onSave={(v) => update((d) => ({ ...d, brand_voice: { ...d.brand_voice, style_notes: v } }))} />
+            </div>
+            <div>
+              <span className="block text-[10px] uppercase tracking-widest text-muted-foreground mb-2 px-1">Tone</span>
+              <EditablePills items={dna.tone_adjectives || []} color="#6366f1"
+                onUpdate={(items) => update((d) => ({ ...d, tone_adjectives: items }))} placeholder="Add tone..." />
+            </div>
+          </CardContent>
+        </Card>
 
-              {/* Domain */}
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium text-foreground">Domain</label>
-                <Input
-                  value={profile.domain}
-                  onChange={(e) => setProfile((p) => ({ ...p, domain: e.target.value }))}
-                  placeholder="e.g. acme.com"
-                />
-              </div>
-
-              {/* Logo URL */}
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium text-foreground">Logo URL</label>
-                <Input
-                  value={profile.logo_url}
-                  onChange={(e) => setProfile((p) => ({ ...p, logo_url: e.target.value }))}
-                  placeholder="https://..."
-                />
-                {profile.logo_url && (
-                  <div className="mt-2 flex items-center gap-3">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={profile.logo_url}
-                      alt="Brand logo preview"
-                      className="h-10 w-10 rounded-lg object-contain border border-white/[0.08]"
-                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
-                    />
-                    <span className="text-xs text-muted-foreground">Logo preview</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Focus Areas */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Focus Areas</label>
-                <p className="text-xs text-muted-foreground">
-                  Select the areas you want Growth OS agents to prioritize.
-                </p>
-                <div className="flex flex-wrap gap-2 pt-1">
-                  {FOCUS_AREA_OPTIONS.map((area) => {
-                    const active = profile.focus_areas.includes(area)
-                    return (
-                      <button
-                        key={area}
-                        onClick={() => toggleFocusArea(area)}
-                        className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-                          active
-                            ? 'border-[#6366f1]/50 bg-[#6366f1]/15 text-[#6366f1]'
-                            : 'border-white/[0.08] bg-white/[0.03] text-muted-foreground hover:text-foreground'
-                        }`}
-                      >
-                        {area}
-                      </button>
-                    )
-                  })}
+        {/* Visual Identity */}
+        <Card className="glass-panel">
+          <CardContent className="pt-5 pb-5">
+            <SectionHeader icon={Palette} iconColor="#f97316" title="Visual Identity" />
+            <div className="grid grid-cols-2 gap-4 mb-3">
+              <div>
+                <span className="block text-[10px] uppercase tracking-widest text-muted-foreground mb-2">Primary</span>
+                <div className="space-y-1.5">
+                  {(dna.visual_identity?.primary_colors || []).map((c) => (
+                    <ColorSwatch key={c} hex={c} onRemove={() => update((d) => ({
+                      ...d, visual_identity: { ...d.visual_identity, primary_colors: d.visual_identity.primary_colors.filter((x) => x !== c) }
+                    }))} />
+                  ))}
+                  <AddColorInput onAdd={(hex) => update((d) => ({
+                    ...d, visual_identity: { ...d.visual_identity, primary_colors: [...d.visual_identity.primary_colors, hex] }
+                  }))} />
                 </div>
               </div>
-
-              {/* Save */}
-              <div className="pt-2">
-                <Button
-                  onClick={handleSave}
-                  disabled={isSaving}
-                  className="bg-[#6366f1] text-white hover:bg-[#6366f1]/80"
-                >
-                  {isSaving ? (
-                    <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Save className="h-3.5 w-3.5" />
-                  )}
-                  {isSaving ? 'Saving...' : 'Save Profile'}
-                </Button>
+              <div>
+                <span className="block text-[10px] uppercase tracking-widest text-muted-foreground mb-2">Secondary</span>
+                <div className="space-y-1.5">
+                  {(dna.visual_identity?.secondary_colors || []).map((c) => (
+                    <ColorSwatch key={c} hex={c} onRemove={() => update((d) => ({
+                      ...d, visual_identity: { ...d.visual_identity, secondary_colors: d.visual_identity.secondary_colors.filter((x) => x !== c) }
+                    }))} />
+                  ))}
+                  <AddColorInput onAdd={(hex) => update((d) => ({
+                    ...d, visual_identity: { ...d.visual_identity, secondary_colors: [...d.visual_identity.secondary_colors, hex] }
+                  }))} />
+                </div>
               </div>
-            </>
-          )}
+            </div>
+            {dna.visual_identity?.font_families !== undefined && (
+              <div className="mb-3">
+                <span className="block text-[10px] uppercase tracking-widest text-muted-foreground mb-2">Fonts</span>
+                <EditablePills items={dna.visual_identity.font_families} color="#f97316"
+                  onUpdate={(items) => update((d) => ({ ...d, visual_identity: { ...d.visual_identity, font_families: items } }))} placeholder="Add font..." />
+              </div>
+            )}
+            <div>
+              <span className="block text-[10px] uppercase tracking-widest text-muted-foreground mb-1 px-1">Aesthetic</span>
+              <EditableText value={dna.visual_identity?.aesthetic || ''} multiline
+                onSave={(v) => update((d) => ({ ...d, visual_identity: { ...d.visual_identity, aesthetic: v } }))} />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Positioning */}
+        <Card className="glass-panel">
+          <CardContent className="pt-5 pb-5">
+            <SectionHeader icon={Target} iconColor="#10b981" title="Positioning" />
+            <div className="mb-3">
+              <span className="block text-[10px] uppercase tracking-widest text-muted-foreground mb-1 px-1">Statement</span>
+              <EditableText value={dna.positioning?.statement || ''} multiline className="italic"
+                onSave={(v) => update((d) => ({ ...d, positioning: { ...d.positioning, statement: v } }))} />
+            </div>
+            <div className="grid grid-cols-2 gap-2 mb-3">
+              <EditableMetric label="Category" value={dna.positioning?.category || ''}
+                onSave={(v) => update((d) => ({ ...d, positioning: { ...d.positioning, category: v } }))} />
+              <EditableMetric label="Price Tier" value={dna.positioning?.price_positioning || ''}
+                onSave={(v) => update((d) => ({ ...d, positioning: { ...d.positioning, price_positioning: v } }))} />
+            </div>
+            <div>
+              <span className="block text-[10px] uppercase tracking-widest text-muted-foreground mb-1 px-1">Differentiator</span>
+              <EditableText value={dna.positioning?.differentiator || ''} multiline
+                onSave={(v) => update((d) => ({ ...d, positioning: { ...d.positioning, differentiator: v } }))} />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Target Audience */}
+        <Card className="glass-panel">
+          <CardContent className="pt-5 pb-5">
+            <SectionHeader icon={Users} iconColor="#8b5cf6" title="Target Audience" />
+            <div className="grid grid-cols-3 gap-2 mb-3">
+              <EditableMetric label="Age" value={dna.target_audience?.age_range || ''}
+                onSave={(v) => update((d) => ({ ...d, target_audience: { ...d.target_audience, age_range: v } }))} />
+              <EditableMetric label="Gender" value={dna.target_audience?.gender_skew || ''}
+                onSave={(v) => update((d) => ({ ...d, target_audience: { ...d.target_audience, gender_skew: v } }))} />
+              <EditableMetric label="Income" value={dna.target_audience?.income_bracket || ''}
+                onSave={(v) => update((d) => ({ ...d, target_audience: { ...d.target_audience, income_bracket: v } }))} />
+            </div>
+            <div className="mb-3">
+              <span className="block text-[10px] uppercase tracking-widest text-muted-foreground mb-1 px-1">Psychographic</span>
+              <EditableText value={dna.target_audience?.psychographic || ''} multiline
+                onSave={(v) => update((d) => ({ ...d, target_audience: { ...d.target_audience, psychographic: v } }))} />
+            </div>
+            <div className="mb-3">
+              <span className="block text-[10px] uppercase tracking-widest text-muted-foreground mb-2 px-1">Interests</span>
+              <EditablePills items={dna.target_audience?.interests || []} color="#8b5cf6"
+                onUpdate={(items) => update((d) => ({ ...d, target_audience: { ...d.target_audience, interests: items } }))} />
+            </div>
+            <div>
+              <span className="block text-[10px] uppercase tracking-widest text-muted-foreground mb-2 px-1">Pain Points</span>
+              <EditablePills items={dna.target_audience?.pain_points || []} color="#ef4444"
+                onUpdate={(items) => update((d) => ({ ...d, target_audience: { ...d.target_audience, pain_points: items } }))} />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Products */}
+      <Card className="glass-panel">
+        <CardContent className="pt-5 pb-5">
+          <SectionHeader icon={Package} iconColor="#0d9488" title={`Products (${dna.products?.length || 0})`} />
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+            {(dna.products || []).map((product, idx) => (
+              <div key={product.name + idx} className="rounded-lg bg-white/5 overflow-hidden flex flex-col group relative">
+                {product.image_url ? (
+                  <div className="aspect-square bg-white/5 relative">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={product.image_url} alt={product.name} className="absolute inset-0 w-full h-full object-cover" />
+                  </div>
+                ) : (
+                  <div className="aspect-square bg-white/5 flex items-center justify-center">
+                    <Package className="w-6 h-6 text-muted-foreground/20" />
+                  </div>
+                )}
+                <div className="p-2.5 flex-1 flex flex-col">
+                  <span className="text-xs font-medium text-foreground line-clamp-2 mb-0.5">{product.name}</span>
+                  {product.price && <span className="text-[10px] font-metric text-muted-foreground mt-auto">{product.price}</span>}
+                </div>
+                <button
+                  onClick={() => update((d) => ({ ...d, products: d.products.filter((_, i) => i !== idx) }))}
+                  className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-black/60 text-white/70 hover:text-white hover:bg-red-500/80 flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            ))}
+            <AddProductCard onAdd={(p) => update((d) => ({ ...d, products: [...d.products, p] }))} />
+          </div>
         </CardContent>
       </Card>
+
+      {/* Key Themes + Trust Signals */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Card className="glass-panel">
+          <CardContent className="pt-5 pb-5">
+            <h3 className="text-xs uppercase tracking-widest text-muted-foreground font-medium mb-3">Key Themes</h3>
+            <EditablePills items={dna.key_themes || []} color="#0d9488"
+              onUpdate={(items) => update((d) => ({ ...d, key_themes: items }))} placeholder="Add theme..." />
+          </CardContent>
+        </Card>
+        <Card className="glass-panel">
+          <CardContent className="pt-5 pb-5">
+            <h3 className="text-xs uppercase tracking-widest text-muted-foreground font-medium mb-3">Trust Signals</h3>
+            <EditablePills items={dna.trust_signals || []} color="#10b981"
+              onUpdate={(items) => update((d) => ({ ...d, trust_signals: items }))} placeholder="Add signal..." />
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Brand Story */}
+      <Card className="glass-panel">
+        <CardContent className="pt-5 pb-5">
+          <h3 className="text-xs uppercase tracking-widest text-muted-foreground font-medium mb-3">Brand Story</h3>
+          <EditableText value={dna.brand_story || ''} multiline
+            onSave={(v) => update((d) => ({ ...d, brand_story: v }))} placeholder="Add your brand story..." />
+        </CardContent>
+      </Card>
+
+      {/* Sticky save bar when dirty */}
+      {dirty && (
+        <div className="sticky bottom-4 flex justify-end">
+          <Button onClick={handleSave} disabled={isSaving}
+            className="gap-1.5 bg-[#6366f1] text-white hover:bg-[#5254cc] shadow-lg shadow-[#6366f1]/20">
+            {isSaving ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+            {isSaving ? 'Saving...' : 'Save Changes'}
+          </Button>
+        </div>
+      )}
     </div>
   )
 }

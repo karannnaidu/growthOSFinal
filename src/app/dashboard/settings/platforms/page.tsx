@@ -20,6 +20,7 @@ interface PlatformConfig {
   label: string
   description: string
   color: string
+  oauth?: boolean
   connectFields?: { key: string; label: string; placeholder: string }[]
 }
 
@@ -43,10 +44,7 @@ const PLATFORMS: PlatformConfig[] = [
     label: 'Meta Ads',
     description: 'Facebook & Instagram advertising data',
     color: '#1877f2',
-    connectFields: [
-      { key: 'access_token', label: 'Access token', placeholder: 'EAAx...' },
-      { key: 'ad_account_id', label: 'Ad account ID', placeholder: 'act_123456' },
-    ],
+    oauth: true,
   },
   {
     id: 'google',
@@ -152,8 +150,13 @@ export default function PlatformsSettingsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ brandId, ...fields }),
       })
-      const data = await res.json() as { success?: boolean; error?: { message?: string } }
+      const data = await res.json() as { success?: boolean; data?: { redirectUrl?: string }; error?: { message?: string } }
       if (res.ok && data.success) {
+        // OAuth flow — redirect to provider
+        if (data.data?.redirectUrl) {
+          window.location.href = data.data.redirectUrl
+          return
+        }
         setMessage({ type: 'success', text: `${platformId} connected successfully.` })
         // Refresh statuses
         const statusRes = await fetch(`/api/platforms/status?brandId=${brandId}`)
@@ -271,42 +274,68 @@ export default function PlatformsSettingsPage() {
                   </div>
 
                   {/* Expanded connect form */}
-                  {isExpanded && platform.connectFields && !isConnected && (
+                  {isExpanded && !isConnected && (
                     <div className="border-t border-white/[0.06] p-4 space-y-3 bg-white/[0.02]">
-                      {platform.connectFields.map((field) => (
-                        <div key={field.key} className="space-y-1.5">
-                          <label className="text-xs font-medium text-muted-foreground">
-                            {field.label}
-                          </label>
-                          <Input
-                            value={fieldValues[platform.id]?.[field.key] ?? ''}
-                            onChange={(e) => setField(platform.id, field.key, e.target.value)}
-                            placeholder={field.placeholder}
-                          />
+                      {platform.oauth ? (
+                        /* OAuth platforms — single button */
+                        <div className="flex flex-col items-center gap-3 py-2">
+                          <p className="text-xs text-muted-foreground text-center">
+                            Click below to securely connect your {platform.label} account. You&apos;ll be redirected to authorize access.
+                          </p>
+                          <Button
+                            size="sm"
+                            onClick={() => handleConnect(platform.id)}
+                            disabled={connecting === platform.id}
+                            style={{ background: platform.color }}
+                            className="text-white hover:opacity-90"
+                          >
+                            {connecting === platform.id ? (
+                              <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <Link2 className="h-3.5 w-3.5" />
+                            )}
+                            {connecting === platform.id ? 'Redirecting...' : `Connect with ${platform.label}`}
+                          </Button>
                         </div>
-                      ))}
-                      <div className="flex gap-2 pt-1">
-                        <Button
-                          size="sm"
-                          onClick={() => handleConnect(platform.id)}
-                          disabled={connecting === platform.id}
-                          className="bg-[#6366f1] text-white hover:bg-[#6366f1]/80"
-                        >
-                          {connecting === platform.id ? (
-                            <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                          ) : (
-                            <Link2 className="h-3.5 w-3.5" />
-                          )}
-                          {connecting === platform.id ? 'Connecting...' : 'Save Connection'}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setExpandedPlatform(null)}
-                        >
-                          Cancel
-                        </Button>
-                      </div>
+                      ) : platform.connectFields ? (
+                        /* Manual credential entry */
+                        <>
+                          {platform.connectFields.map((field) => (
+                            <div key={field.key} className="space-y-1.5">
+                              <label className="text-xs font-medium text-muted-foreground">
+                                {field.label}
+                              </label>
+                              <Input
+                                value={fieldValues[platform.id]?.[field.key] ?? ''}
+                                onChange={(e) => setField(platform.id, field.key, e.target.value)}
+                                placeholder={field.placeholder}
+                              />
+                            </div>
+                          ))}
+                          <div className="flex gap-2 pt-1">
+                            <Button
+                              size="sm"
+                              onClick={() => handleConnect(platform.id)}
+                              disabled={connecting === platform.id}
+                              className="bg-[#6366f1] text-white hover:bg-[#6366f1]/80"
+                            >
+                              {connecting === platform.id ? (
+                                <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <Link2 className="h-3.5 w-3.5" />
+                              )}
+                              {connecting === platform.id ? 'Connecting...' : 'Save Connection'}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setExpandedPlatform(null)}
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        </>
+                      ) : null}
                     </div>
                   )}
                 </div>

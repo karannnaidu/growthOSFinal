@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 
 const TABS = [
-  { label: 'Profile',   href: '/dashboard/settings' },
+  { label: 'Brand DNA', href: '/dashboard/settings' },
   { label: 'Platforms', href: '/dashboard/settings/platforms' },
   { label: 'AI Model',  href: '/dashboard/settings/ai-model' },
   { label: 'Team',      href: '/dashboard/settings/team' },
