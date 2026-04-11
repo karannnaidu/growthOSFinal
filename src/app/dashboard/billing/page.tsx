@@ -151,35 +151,23 @@ export default function BillingPage() {
   const [localAmount, setLocalAmount] = useState<number>(1000)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
 
-  // 1. Resolve brand
+  // 1. Resolve brand via API (bypasses RLS)
   useEffect(() => {
     async function init() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-
-      const { data: ownedBrand } = await supabase
-        .from('brands')
-        .select('id')
-        .eq('owner_id', user.id)
-        .limit(1)
-        .single()
-
-      if (ownedBrand) {
-        setBrandId(ownedBrand.id as string)
-        return
-      }
-
-      const { data: member } = await supabase
-        .from('brand_members')
-        .select('brand_id')
-        .eq('user_id', user.id)
-        .limit(1)
-        .single()
-
-      if (member) setBrandId(member.brand_id as string)
+      const stored = sessionStorage.getItem('onboarding_brand_id') || localStorage.getItem('growth_os_brand_id')
+      if (stored) { setBrandId(stored); return }
+      try {
+        const res = await fetch('/api/brands/me')
+        if (res.ok) {
+          const data = await res.json()
+          if (data.brandId) {
+            setBrandId(data.brandId)
+            localStorage.setItem('growth_os_brand_id', data.brandId)
+          }
+        }
+      } catch { /* ignore */ }
     }
     init()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // 2. Fetch balance
