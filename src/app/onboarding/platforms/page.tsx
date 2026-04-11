@@ -47,7 +47,7 @@ export default function PlatformsPage() {
       const res = await fetch(platform.connectEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ brandId: brandId ?? '' }),
+        body: JSON.stringify({ brandId: brandId ?? '', returnTo: '/onboarding/platforms' }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error?.message ?? 'Connect failed')

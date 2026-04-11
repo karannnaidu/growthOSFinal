@@ -10,10 +10,22 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const { searchParams } = new URL(request.url)
 
   const code = searchParams.get('code')
-  const state = searchParams.get('state') // brandId
+  const stateRaw = searchParams.get('state')
   const errorParam = searchParams.get('error')
 
-  const failUrl = '/dashboard/settings?error=meta_failed'
+  // Decode state (base64url JSON with brandId + returnTo)
+  let brandId = ''
+  let returnTo = '/dashboard/settings/platforms'
+  try {
+    const decoded = JSON.parse(Buffer.from(stateRaw || '', 'base64url').toString())
+    brandId = decoded.brandId || ''
+    returnTo = decoded.returnTo || '/dashboard/settings/platforms'
+  } catch {
+    // Legacy: state might be plain brandId
+    brandId = stateRaw || ''
+  }
+
+  const failUrl = `${returnTo}?error=meta_failed`
 
   // Handle OAuth denial
   if (errorParam) {
@@ -21,7 +33,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     return NextResponse.redirect(new URL(failUrl, request.url))
   }
 
-  if (!code || !state) {
+  if (!code || !brandId) {
     return NextResponse.redirect(new URL(failUrl, request.url))
   }
 
@@ -140,7 +152,6 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   }
 
   // 4. Store credentials (use service client — OAuth callback may not have user cookie)
-  const brandId = state
   const { createServiceClient } = await import('@/lib/supabase/service')
   const admin = createServiceClient()
 
@@ -159,6 +170,6 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     return NextResponse.redirect(new URL(failUrl, request.url))
   }
 
-  // 5. Redirect to settings
-  return NextResponse.redirect(new URL('/dashboard/settings?connected=meta', request.url))
+  // 5. Redirect back to where the user came from
+  return NextResponse.redirect(new URL(`${returnTo}?connected=meta`, request.url))
 }

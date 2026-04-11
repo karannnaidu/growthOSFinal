@@ -87,11 +87,16 @@ export async function POST(request: NextRequest): Promise<NextResponse<ConnectRe
 
   const redirectUri = `${appUrl}/api/platforms/meta/callback`
 
+  // Encode brandId + return path in state so callback knows where to redirect
+  const returnTo = (body as Record<string, unknown>).returnTo as string | undefined
+  const statePayload = JSON.stringify({ brandId, returnTo: returnTo || '/dashboard/settings/platforms' })
+  const state = Buffer.from(statePayload).toString('base64url')
+
   const params = new URLSearchParams({
     client_id: metaAppId,
     redirect_uri: redirectUri,
     scope: 'ads_read,ads_management,pages_read_engagement',
-    state: brandId,
+    state,
   })
 
   const redirectUrl = `https://www.facebook.com/v19.0/dialog/oauth?${params.toString()}`
