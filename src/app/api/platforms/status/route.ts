@@ -105,8 +105,8 @@ export async function GET(request: NextRequest): Promise<NextResponse<StatusResp
     if (!membership) return errorResponse('FORBIDDEN', 'Access denied', 403)
   }
 
-  // 4. Query credentials for this brand
-  const { data: credentials, error: credError } = await supabase
+  // 4. Query credentials for this brand (service client bypasses RLS)
+  const { data: credentials, error: credError } = await admin
     .from('credentials')
     .select('platform, created_at, metadata')
     .eq('brand_id', brandId)

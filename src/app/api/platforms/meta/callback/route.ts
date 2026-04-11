@@ -139,11 +139,12 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     console.warn('[Meta Callback] Ad accounts fetch error (non-fatal):', err)
   }
 
-  // 4. Store credentials
+  // 4. Store credentials (use service client — OAuth callback may not have user cookie)
   const brandId = state
-  const supabase = await createClient()
+  const { createServiceClient } = await import('@/lib/supabase/service')
+  const admin = createServiceClient()
 
-  const { error: credError } = await supabase.from('credentials').upsert(
+  const { error: credError } = await admin.from('credentials').upsert(
     {
       brand_id: brandId,
       platform: 'meta',
