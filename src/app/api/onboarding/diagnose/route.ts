@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { runSkill } from '@/lib/skills-engine'
 
 // ---------------------------------------------------------------------------
@@ -46,8 +47,9 @@ export async function POST(
     return NextResponse.json({ success: false, error: 'brandId is required' }, { status: 400 })
   }
 
-  // 3. Verify brand access
-  const { data: brand } = await supabase
+  // 3. Verify brand access (service client bypasses RLS recursive policy)
+  const admin = createServiceClient()
+  const { data: brand } = await admin
     .from('brands')
     .select('id, owner_id')
     .eq('id', brandId)
@@ -58,7 +60,7 @@ export async function POST(
   }
 
   if (brand.owner_id !== user.id) {
-    const { data: membership } = await supabase
+    const { data: membership } = await admin
       .from('brand_members')
       .select('brand_id')
       .eq('brand_id', brandId)
@@ -69,24 +71,64 @@ export async function POST(
     }
   }
 
-  // 4. Trigger Scout's health-check skill
-  // The skill run is intentionally async (fire-and-forget from the UI's perspective).
-  // The client can poll GET /api/skills/runs?brandId=X to track status.
-  let skillRunId: string | undefined
-  try {
-    const result = await runSkill({
-      brandId,
-      skillId: 'scout-health-check',
-      triggeredBy: 'user',
-      additionalContext: { source: 'onboarding' },
+  // 4. Insert a pending skill_runs record so we can return the ID immediately
+  const { data: pendingRun, error: insertErr } = await admin
+    .from('skill_runs')
+    .insert({
+      brand_id: brandId,
+      agent_id: 'scout',
+      skill_id: 'health-check',
+      model_used: 'pending',
+      model_tier: 'cheap',
+      credits_used: 0,
+      input: { source: 'onboarding' },
+      output: {},
+      status: 'running',
+      triggered_by: 'user',
+      chain_depth: 0,
+      duration_ms: 0,
     })
-    skillRunId = result.id || undefined
-  } catch (err) {
-    // Non-fatal: return a partial success so the UI can still show the
-    // simulated diagnosis view even if the skill engine is unavailable.
-    console.error('[onboarding/diagnose] runSkill error:', err)
-    return NextResponse.json({ success: true, skillRunId: undefined })
+    .select('id')
+    .single()
+
+  if (insertErr || !pendingRun) {
+    return NextResponse.json({ success: false, error: 'Failed to create skill run' }, { status: 500 })
   }
+
+  const skillRunId = pendingRun.id
+
+  // 5. Fire-and-forget: run the skill async, update the record on completion
+  runSkill({
+    brandId,
+    skillId: 'health-check',
+    triggeredBy: 'user',
+    additionalContext: { source: 'onboarding' },
+  })
+    .then(async (result) => {
+      await admin
+        .from('skill_runs')
+        .update({
+          status: result.status,
+          output: result.output,
+          model_used: result.modelUsed,
+          credits_used: result.creditsUsed,
+          duration_ms: result.durationMs,
+          error_message: result.error ?? null,
+          completed_at: new Date().toISOString(),
+        })
+        .eq('id', skillRunId)
+    })
+    .catch(async (err) => {
+      console.error('[onboarding/diagnose] runSkill error:', err)
+      await admin
+        .from('skill_runs')
+        .update({
+          status: 'failed',
+          error_message: err instanceof Error ? err.message : String(err),
+          completed_at: new Date().toISOString(),
+        })
+        .eq('id', skillRunId)
+    })
 
   return NextResponse.json({ success: true, skillRunId })
 }

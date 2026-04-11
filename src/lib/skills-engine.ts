@@ -160,9 +160,9 @@ function buildPrompt(
 export async function runSkill(input: SkillRunInput): Promise<SkillRunResult> {
   const startTime = Date.now();
 
-  // Lazy-import server Supabase client to avoid pulling cookie APIs at build time
-  const { createClient } = await import('@/lib/supabase/server');
-  const supabase = await createClient();
+  // Use service client to bypass RLS recursive policy on brands
+  const { createServiceClient } = await import('@/lib/supabase/service');
+  const supabase = createServiceClient();
 
   // 1. Load skill definition
   let skill: SkillDefinition;

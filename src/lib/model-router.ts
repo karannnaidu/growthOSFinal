@@ -9,13 +9,13 @@
 // ---------------------------------------------------------------------------
 
 const PROVIDERS = {
-  'gemini-flash-lite': { model: 'gemini-2.0-flash-lite', provider: 'google', inputCost: 0, outputCost: 0, maxRPM: 30, maxRPD: 1500 },
-  'gemini-flash': { model: 'gemini-2.0-flash', provider: 'google', inputCost: 0, outputCost: 0, maxRPM: 15, maxRPD: 1500 },
+  'gemini-flash-lite': { model: 'gemini-2.5-flash-lite', provider: 'google', inputCost: 0, outputCost: 0, maxRPM: 30, maxRPD: 1500 },
+  'gemini-flash': { model: 'gemini-2.5-flash', provider: 'google', inputCost: 0, outputCost: 0, maxRPM: 15, maxRPD: 1500 },
   'groq-llama-8b': { model: 'llama-3.3-8b-specdec', provider: 'groq', inputCost: 0, outputCost: 0, maxRPM: 30, maxRPD: 14400 },
   'groq-llama-70b': { model: 'llama-3.3-70b-versatile', provider: 'groq', inputCost: 0, outputCost: 0, maxRPM: 30, maxRPD: 6000 },
   'deepseek-v3': { model: 'deepseek-chat', provider: 'deepseek', inputCost: 0.27, outputCost: 1.10, maxRPM: 60 },
   'deepseek-r1': { model: 'deepseek-reasoner', provider: 'deepseek', inputCost: 0.55, outputCost: 2.19, maxRPM: 60 },
-  'gemini-25-pro': { model: 'gemini-2.5-pro-preview-05-06', provider: 'google', inputCost: 0, outputCost: 0, maxRPM: 5, maxRPD: 25 },
+  'gemini-25-pro': { model: 'gemini-2.5-pro', provider: 'google', inputCost: 0, outputCost: 0, maxRPM: 5, maxRPD: 25 },
   'claude-sonnet': { model: 'claude-sonnet-4-6', provider: 'anthropic', inputCost: 3.00, outputCost: 15.00, maxRPM: 50 },
 } as const;
 
@@ -120,42 +120,64 @@ export function recordRequest(providerKey: ProviderKey): void {
 }
 
 // ---------------------------------------------------------------------------
+// Key availability — skip providers whose API key is missing
+// ---------------------------------------------------------------------------
+
+const PROVIDER_KEY_ENV: Record<string, string> = {
+  google: 'GOOGLE_AI_KEY',
+  groq: 'GROQ_API_KEY',
+  deepseek: 'DEEPSEEK_API_KEY',
+  anthropic: 'ANTHROPIC_API_KEY',
+};
+
+function hasApiKey(providerKey: ProviderKey): boolean {
+  const cfg = PROVIDERS[providerKey];
+  const envVar = PROVIDER_KEY_ENV[cfg.provider];
+  if (!envVar) return false;
+  return !!process.env[envVar];
+}
+
+// ---------------------------------------------------------------------------
 // Routing logic
 // ---------------------------------------------------------------------------
 
-const FALLBACK: ProviderKey = 'deepseek-v3';
+function toRoute(key: ProviderKey): ModelRoute {
+  const cfg = PROVIDERS[key];
+  return {
+    providerKey: key,
+    model: cfg.model,
+    provider: cfg.provider,
+    inputCost: cfg.inputCost,
+    outputCost: cfg.outputCost,
+  };
+}
 
 /**
  * Returns the best available ModelRoute for the given tier and preset.
- * Iterates candidates in order and skips any that are currently rate-limited.
- * Falls back to deepseek-v3 if every candidate is exhausted.
+ * Skips providers that are rate-limited OR whose API key is not set.
+ * Falls back across ALL providers if tier candidates are exhausted.
  */
 export function routeModel(tier: Tier, preset: Preset = 'autopilot'): ModelRoute {
   const routes = PRESETS[preset] as Record<Tier, ReadonlyArray<ProviderKey>>;
   const candidates = routes[tier] ?? TIER_ROUTES[tier];
 
+  // 1. Try tier candidates (key available + rate limit OK)
   for (const key of candidates) {
-    if (checkRateLimit(key)) {
-      const cfg = PROVIDERS[key];
-      return {
-        providerKey: key,
-        model: cfg.model,
-        provider: cfg.provider,
-        inputCost: cfg.inputCost,
-        outputCost: cfg.outputCost,
-      };
+    if (hasApiKey(key) && checkRateLimit(key)) {
+      return toRoute(key);
     }
   }
 
-  // Ultimate fallback
-  const fallbackCfg = PROVIDERS[FALLBACK];
-  return {
-    providerKey: FALLBACK,
-    model: fallbackCfg.model,
-    provider: fallbackCfg.provider,
-    inputCost: fallbackCfg.inputCost,
-    outputCost: fallbackCfg.outputCost,
-  };
+  // 2. Fallback: try ANY provider with an available key
+  const allKeys = Object.keys(PROVIDERS) as ProviderKey[];
+  for (const key of allKeys) {
+    if (hasApiKey(key) && checkRateLimit(key)) {
+      return toRoute(key);
+    }
+  }
+
+  // 3. Last resort: return first tier candidate anyway (will fail with a clear error)
+  return toRoute(candidates[0]!);
 }
 
 /** Returns the next tier up. Premium stays at premium. */

@@ -87,8 +87,11 @@ export async function GET(request: NextRequest): Promise<NextResponse<SkillRunsR
     if (!membership) return errorResponse('FORBIDDEN', 'Access denied', 403)
   }
 
-  // 4. Query skill_runs table (paginated)
-  const { data: runs, error: runsError, count } = await supabase
+  // 4. Query skill_runs table (paginated) — use service client to bypass RLS
+  //    (auth check + brand ownership already verified above)
+  const { createServiceClient } = await import('@/lib/supabase/service')
+  const admin = createServiceClient()
+  const { data: runs, error: runsError, count } = await admin
     .from('skill_runs')
     .select('*', { count: 'exact' })
     .eq('brand_id', brandId)
