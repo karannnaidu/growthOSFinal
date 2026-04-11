@@ -41,8 +41,7 @@ export default function TeamSettingsPage() {
   // Resolve brand
   useEffect(() => {
     async function init() {
-      const stored = sessionStorage.getItem('onboarding_brand_id') || localStorage.getItem('growth_os_brand_id')
-      if (stored) { setBrandId(stored); return }
+      // Always fetch from API to get the canonical brand ID
       try {
         const res = await fetch('/api/brands/me')
         if (res.ok) {
@@ -50,9 +49,14 @@ export default function TeamSettingsPage() {
           if (data.brandId) {
             setBrandId(data.brandId)
             localStorage.setItem('growth_os_brand_id', data.brandId)
+            sessionStorage.setItem('onboarding_brand_id', data.brandId)
+            return
           }
         }
       } catch { /* ignore */ }
+      // Fallback to cached (only if API fails)
+      const stored = sessionStorage.getItem('onboarding_brand_id') || localStorage.getItem('growth_os_brand_id')
+      if (stored) setBrandId(stored)
     }
     init()
   }, [])

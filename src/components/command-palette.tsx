@@ -13,7 +13,6 @@ import {
   Search,
   ChevronRight,
 } from 'lucide-react'
-import { Dialog, DialogContent, DialogPortal, DialogOverlay } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 
 // ---------------------------------------------------------------------------
@@ -305,20 +304,24 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
 
   let globalIndex = 0
 
+  if (!open) return null
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogPortal>
-        {/* Overlay — click to close */}
-        <DialogOverlay onClick={() => onOpenChange(false)} />
-        {/* Custom popup — not using DialogContent so we can control layout precisely */}
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="Command palette"
-          className="fixed left-1/2 top-[15vh] z-50 w-full max-w-xl -translate-x-1/2 overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0f1117]/95 shadow-2xl backdrop-blur-xl"
-          onKeyDown={handleKeyDown}
-          tabIndex={-1}
-        >
+    <>
+      {/* Backdrop overlay — click to close */}
+      <div
+        className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+        onClick={() => onOpenChange(false)}
+      />
+      {/* Command palette */}
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Command palette"
+        className="fixed left-1/2 top-[15vh] z-50 w-full max-w-xl -translate-x-1/2 overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0f1117]/95 shadow-2xl backdrop-blur-xl"
+        onKeyDown={handleKeyDown}
+        tabIndex={-1}
+      >
           {/* Search input */}
           <div className="flex items-center gap-3 border-b border-white/[0.06] px-4 py-3">
             <Search className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
@@ -442,7 +445,6 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
             </span>
           </div>
         </div>
-      </DialogPortal>
-    </Dialog>
+    </>
   )
 }

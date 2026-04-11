@@ -351,11 +351,10 @@ export default function BrandDnaPage() {
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [dirty, setDirty] = useState(false)
 
-  // Resolve brand ID via API (bypasses RLS)
+  // Resolve brand ID via API (bypasses RLS), validates cached IDs
   useEffect(() => {
     async function init() {
-      const stored = sessionStorage.getItem('onboarding_brand_id') || localStorage.getItem('growth_os_brand_id')
-      if (stored) { setBrandId(stored); return }
+      // Always fetch from API to get the canonical brand ID
       try {
         const res = await fetch('/api/brands/me')
         if (res.ok) {
@@ -363,9 +362,15 @@ export default function BrandDnaPage() {
           if (data.brandId) {
             setBrandId(data.brandId)
             localStorage.setItem('growth_os_brand_id', data.brandId)
+            sessionStorage.setItem('onboarding_brand_id', data.brandId)
+            return
           }
         }
       } catch { /* ignore */ }
+
+      // Fallback to cached (only if API fails)
+      const stored = sessionStorage.getItem('onboarding_brand_id') || localStorage.getItem('growth_os_brand_id')
+      if (stored) setBrandId(stored)
     }
     init()
   }, [])
