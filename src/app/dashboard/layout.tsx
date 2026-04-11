@@ -22,15 +22,16 @@ export default async function DashboardLayout({
   const userEmail = user.email ?? null
 
   const ctx = await getBrandContext()
-  const walletBalance = ctx.walletBalance + ctx.freeCredits
+  const brandId = ctx?.brandId ?? null
+  const walletBalance = ctx ? ctx.walletBalance + ctx.freeCredits : 0
 
   return (
     <div className="min-h-screen bg-background">
       {/* Fixed sidebar (desktop) + bottom nav (mobile) */}
-      <Sidebar userEmail={userEmail} brandId={ctx.brandId} walletBalance={walletBalance} />
+      <Sidebar userEmail={userEmail} brandId={brandId} walletBalance={walletBalance} />
 
       {/* Fixed top bar */}
-      <TopBar userEmail={userEmail} brandId={ctx.brandId} walletBalance={walletBalance} />
+      <TopBar userEmail={userEmail} brandId={brandId} walletBalance={walletBalance} />
 
       {/* Main content area */}
       {/* Offset for sidebar (md+) and top bar; bottom padding for mobile nav */}

@@ -107,6 +107,41 @@ function deriveMetrics(skillRuns: Record<string, unknown>[], todayStart: string)
 
 export default async function DashboardPage() {
   const ctx = await getBrandContext()
+
+  if (!ctx) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center max-w-md space-y-6 animate-fade-in">
+          <div className="flex justify-center">
+            <div className="w-16 h-16 rounded-full bg-[#6366f1]/10 flex items-center justify-center">
+              <span className="text-3xl">🏪</span>
+            </div>
+          </div>
+          <div>
+            <h2 className="font-heading font-bold text-2xl text-foreground mb-2">No Store Connected</h2>
+            <p className="text-muted-foreground text-sm leading-relaxed">
+              Connect your Shopify store to unlock your AI marketing agents. Mia and her team need your store data to start working.
+            </p>
+          </div>
+          <div className="flex justify-center gap-3">
+            <a
+              href="/onboarding/connect-store"
+              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg bg-[#6366f1] hover:bg-[#5254cc] text-white font-semibold text-sm transition-colors"
+            >
+              Connect Store
+            </a>
+            <a
+              href="/dashboard/settings"
+              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg border border-border/50 text-muted-foreground hover:text-foreground text-sm transition-colors"
+            >
+              Settings
+            </a>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   const supabase = await createClient()
 
   const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()

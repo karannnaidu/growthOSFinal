@@ -46,6 +46,7 @@ export async function proxy(request: NextRequest) {
   // getUser() that might cause an early return.
   const {
     data: { user },
+    error: authError,
   } = await supabase.auth.getUser()
 
   const { pathname } = request.nextUrl
@@ -59,7 +60,8 @@ export async function proxy(request: NextRequest) {
   }
 
   // Redirect authenticated users away from auth pages to the dashboard
-  if (isPublicPath(pathname) && pathname !== '/' && user) {
+  // Only redirect login/signup, not all public paths — prevents loops
+  if ((pathname === '/login' || pathname === '/signup') && user) {
     const dashboardUrl = request.nextUrl.clone()
     dashboardUrl.pathname = '/dashboard'
     dashboardUrl.searchParams.delete('redirectTo')
