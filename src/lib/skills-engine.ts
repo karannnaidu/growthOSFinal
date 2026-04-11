@@ -56,9 +56,14 @@ async function callLLM(params: LLMCallParams): Promise<Record<string, unknown>> 
     userPrompt: params.userPrompt,
   });
 
-  // Attempt JSON parse; fall back to wrapping raw content
+  // Strip markdown code fences and attempt JSON parse
+  let text = result.content.trim();
+  // Remove ```json ... ``` or ``` ... ``` wrapping
+  const fenceMatch = text.match(/^```(?:json)?\s*\n?([\s\S]*?)\n?\s*```$/);
+  if (fenceMatch) text = fenceMatch[1]!.trim();
+
   try {
-    return JSON.parse(result.content) as Record<string, unknown>;
+    return JSON.parse(text) as Record<string, unknown>;
   } catch {
     return { content: result.content, model: result.model, provider: result.provider };
   }
