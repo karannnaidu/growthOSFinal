@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -69,7 +70,8 @@ export async function GET(request: NextRequest): Promise<NextResponse<SkillRunsR
   const offset = (page - 1) * limit
 
   // 3. Verify user has access to the brand
-  const { data: brand } = await supabase
+  const admin = createServiceClient()
+  const { data: brand } = await admin
     .from('brands')
     .select('id, owner_id')
     .eq('id', brandId)
@@ -78,7 +80,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<SkillRunsR
   if (!brand) return errorResponse('NOT_FOUND', 'Brand not found', 404)
 
   if (brand.owner_id !== user.id) {
-    const { data: membership } = await supabase
+    const { data: membership } = await admin
       .from('brand_members')
       .select('brand_id')
       .eq('brand_id', brandId)
@@ -89,8 +91,6 @@ export async function GET(request: NextRequest): Promise<NextResponse<SkillRunsR
 
   // 4. Query skill_runs table (paginated) — use service client to bypass RLS
   //    (auth check + brand ownership already verified above)
-  const { createServiceClient } = await import('@/lib/supabase/service')
-  const admin = createServiceClient()
   const { data: runs, error: runsError, count } = await admin
     .from('skill_runs')
     .select('*', { count: 'exact' })

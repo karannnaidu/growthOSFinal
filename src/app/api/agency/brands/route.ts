@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
   const supabase = await createClient()
@@ -26,7 +27,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   }
 
   // Verify the requesting user has access to the agency brand
-  const { data: agencyBrand } = await supabase
+  const admin = createServiceClient()
+  const { data: agencyBrand } = await admin
     .from('brands')
     .select('id, owner_id, plan')
     .eq('id', agencyBrandId)
@@ -41,7 +43,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   }
 
   if (agencyBrand.owner_id !== user.id) {
-    const { data: membership } = await supabase
+    const { data: membership } = await admin
       .from('brand_members')
       .select('brand_id')
       .eq('brand_id', agencyBrandId)

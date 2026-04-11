@@ -8,6 +8,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const supabase = await createClient()
@@ -33,7 +34,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
 
   // Verify the user has access to the target brand (owner or member)
-  const { data: brand } = await supabase
+  const admin = createServiceClient()
+  const { data: brand } = await admin
     .from('brands')
     .select('id, name, domain, plan, agency_parent_id, owner_id')
     .eq('id', brandId)
@@ -47,7 +49,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   let hasAccess = isOwner
 
   if (!isOwner) {
-    const { data: membership } = await supabase
+    const { data: membership } = await admin
       .from('brand_members')
       .select('brand_id')
       .eq('brand_id', brandId)

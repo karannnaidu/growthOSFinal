@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { callModel } from '@/lib/model-client'
 
 // ---------------------------------------------------------------------------
@@ -111,7 +112,8 @@ export async function POST(request: NextRequest): Promise<Response> {
   }
 
   // 3. Brand access check
-  const { data: brand } = await supabase
+  const admin = createServiceClient()
+  const { data: brand } = await admin
     .from('brands')
     .select('id, owner_id, name, domain, focus_areas, plan')
     .eq('id', brandId)
@@ -120,7 +122,7 @@ export async function POST(request: NextRequest): Promise<Response> {
   if (!brand) return errorSSE('NOT_FOUND', 'Brand not found')
 
   if (brand.owner_id !== user.id) {
-    const { data: member } = await supabase
+    const { data: member } = await admin
       .from('brand_members')
       .select('brand_id')
       .eq('brand_id', brandId)

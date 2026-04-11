@@ -5,13 +5,14 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 
 // ---------------------------------------------------------------------------
 // Auth + brand access helper
 // ---------------------------------------------------------------------------
 
-async function resolveBrand(supabase: Awaited<ReturnType<typeof createClient>>, userId: string, brandId: string) {
-  const { data: brand } = await supabase
+async function resolveBrand(adminClient: ReturnType<typeof createServiceClient>, userId: string, brandId: string) {
+  const { data: brand } = await adminClient
     .from('brands')
     .select('id, owner_id')
     .eq('id', brandId)
@@ -20,7 +21,7 @@ async function resolveBrand(supabase: Awaited<ReturnType<typeof createClient>>, 
   if (!brand) return { error: 'Brand not found', status: 404 }
 
   if (brand.owner_id !== userId) {
-    const { data: membership } = await supabase
+    const { data: membership } = await adminClient
       .from('brand_members')
       .select('brand_id')
       .eq('brand_id', brandId)
@@ -45,7 +46,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const brandId = searchParams.get('brandId')
   if (!brandId) return NextResponse.json({ error: 'brandId is required' }, { status: 400 })
 
-  const resolved = await resolveBrand(supabase, user.id, brandId)
+  const admin = createServiceClient()
+  const resolved = await resolveBrand(admin, user.id, brandId)
   if (resolved.error) return NextResponse.json({ error: resolved.error }, { status: resolved.status })
 
   const { data: brand, error } = await supabase
@@ -92,7 +94,8 @@ export async function PATCH(request: NextRequest): Promise<NextResponse> {
 
   if (!brandId) return NextResponse.json({ error: 'brandId is required' }, { status: 400 })
 
-  const resolved = await resolveBrand(supabase, user.id, brandId)
+  const admin = createServiceClient()
+  const resolved = await resolveBrand(admin, user.id, brandId)
   if (resolved.error) return NextResponse.json({ error: resolved.error }, { status: resolved.status })
 
   // Build update payload — only include provided fields

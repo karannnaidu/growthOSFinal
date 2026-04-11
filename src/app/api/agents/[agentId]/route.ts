@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import fs from 'fs'
 import path from 'path'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import type { AgentConfig } from '@/lib/agent-spawner'
 
 const AGENTS_JSON_PATH = path.join(process.cwd(), 'skills', 'agents.json')
@@ -37,7 +38,8 @@ export async function GET(
   if (!brandId) return NextResponse.json({ error: 'brandId is required' }, { status: 400 })
 
   // 3. Verify brand access
-  const { data: brand } = await supabase
+  const admin = createServiceClient()
+  const { data: brand } = await admin
     .from('brands')
     .select('id, owner_id')
     .eq('id', brandId)
@@ -46,7 +48,7 @@ export async function GET(
   if (!brand) return NextResponse.json({ error: 'Brand not found' }, { status: 404 })
 
   if (brand.owner_id !== user.id) {
-    const { data: membership } = await supabase
+    const { data: membership } = await admin
       .from('brand_members')
       .select('brand_id')
       .eq('brand_id', brandId)

@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 
 async function checkSuperAdmin(supabase: Awaited<ReturnType<typeof createClient>>, userId: string) {
   const { data: role } = await supabase
@@ -37,7 +38,8 @@ export async function GET(
 
   const { brandId } = await params
 
-  const { data: brand, error: brandError } = await supabase
+  const admin = createServiceClient()
+  const { data: brand, error: brandError } = await admin
     .from('brands')
     .select('*')
     .eq('id', brandId)
@@ -48,14 +50,14 @@ export async function GET(
   }
 
   // Fetch wallet
-  const { data: wallet } = await supabase
+  const { data: wallet } = await admin
     .from('wallets')
     .select('balance, free_credits, auto_recharge')
     .eq('brand_id', brandId)
     .single()
 
   // Recent skill runs
-  const { data: recentRuns } = await supabase
+  const { data: recentRuns } = await admin
     .from('skill_runs')
     .select('id, skill_name, agent, status, credits_used, created_at')
     .eq('brand_id', brandId)
@@ -63,7 +65,7 @@ export async function GET(
     .limit(10)
 
   // Member count
-  const { count: memberCount } = await supabase
+  const { count: memberCount } = await admin
     .from('brand_members')
     .select('brand_id', { count: 'exact', head: true })
     .eq('brand_id', brandId)

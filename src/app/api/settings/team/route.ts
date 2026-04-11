@@ -5,17 +5,18 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 
 // ---------------------------------------------------------------------------
 // Auth + brand access helper
 // ---------------------------------------------------------------------------
 
 async function resolveBrandWithRole(
-  supabase: Awaited<ReturnType<typeof createClient>>,
+  adminClient: ReturnType<typeof createServiceClient>,
   userId: string,
   brandId: string,
 ) {
-  const { data: brand } = await supabase
+  const { data: brand } = await adminClient
     .from('brands')
     .select('id, owner_id')
     .eq('id', brandId)
@@ -25,7 +26,7 @@ async function resolveBrandWithRole(
 
   if (brand.owner_id === userId) return { brand, isOwner: true }
 
-  const { data: membership } = await supabase
+  const { data: membership } = await adminClient
     .from('brand_members')
     .select('brand_id, role')
     .eq('brand_id', brandId)
@@ -50,7 +51,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const brandId = searchParams.get('brandId')
   if (!brandId) return NextResponse.json({ error: 'brandId is required' }, { status: 400 })
 
-  const resolved = await resolveBrandWithRole(supabase, user.id, brandId)
+  const admin = createServiceClient()
+  const resolved = await resolveBrandWithRole(admin, user.id, brandId)
   if (resolved.error) return NextResponse.json({ error: resolved.error }, { status: resolved.status })
 
   // Fetch members, joining with profiles for email/name
@@ -111,7 +113,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const normalizedRole = role === 'admin' ? 'admin' : 'member'
 
   // Access check — only owner or admins can invite
-  const resolved = await resolveBrandWithRole(supabase, user.id, brandId)
+  const admin = createServiceClient()
+  const resolved = await resolveBrandWithRole(admin, user.id, brandId)
   if (resolved.error) return NextResponse.json({ error: resolved.error }, { status: resolved.status })
   if (!resolved.isOwner && resolved.role !== 'admin') {
     return NextResponse.json({ error: 'Only admins can invite members' }, { status: 403 })

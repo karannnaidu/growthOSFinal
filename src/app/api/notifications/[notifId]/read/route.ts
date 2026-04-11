@@ -9,6 +9,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 
 interface RouteContext {
   params: Promise<{ notifId: string }>
@@ -47,7 +48,8 @@ export async function PATCH(
   }
 
   // 4. Verify the user owns the brand
-  const { data: brand } = await supabase
+  const admin = createServiceClient()
+  const { data: brand } = await admin
     .from('brands')
     .select('id, owner_id')
     .eq('id', notification.brand_id)
@@ -58,7 +60,7 @@ export async function PATCH(
   }
 
   if (brand.owner_id !== user.id) {
-    const { data: membership } = await supabase
+    const { data: membership } = await admin
       .from('brand_members')
       .select('brand_id')
       .eq('brand_id', notification.brand_id)

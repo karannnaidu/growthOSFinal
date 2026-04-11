@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { verifyShopifyHmac, pullShopifyProducts, pullShopifyOrdersSummary } from '@/lib/shopify'
 
 // ---------------------------------------------------------------------------
@@ -88,6 +89,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   // state param carries the brandId (set during connect)
   const brandId = state
   const supabase = await createClient()
+  const admin = createServiceClient()
 
   const { error: credError } = await supabase.from('credentials').upsert(
     {
@@ -121,7 +123,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   // 6. Redirect to onboarding or dashboard
   // Check brand onboarding status to decide where to send them
-  const { data: brand } = await supabase
+  const { data: brand } = await admin
     .from('brands')
     .select('onboarding_completed, onboarding_step')
     .eq('id', brandId)

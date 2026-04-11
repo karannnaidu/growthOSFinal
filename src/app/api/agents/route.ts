@@ -12,6 +12,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import fs from 'fs'
 import path from 'path'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { getRevealedAgents } from '@/lib/agent-reveal'
 import type { AgentConfig } from '@/lib/agent-spawner'
 
@@ -54,8 +55,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: 'brandId query param is required' }, { status: 400 })
   }
 
-  // 3. Verify the user has access to this brand
-  const { data: brand } = await supabase
+  // 3. Verify the user has access to this brand (service client bypasses RLS)
+  const admin = createServiceClient()
+  const { data: brand } = await admin
     .from('brands')
     .select('id, owner_id')
     .eq('id', brandId)
@@ -66,7 +68,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   }
 
   if (brand.owner_id !== user.id) {
-    const { data: membership } = await supabase
+    const { data: membership } = await admin
       .from('brand_members')
       .select('brand_id')
       .eq('brand_id', brandId)

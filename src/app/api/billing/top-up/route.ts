@@ -10,6 +10,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 
 // Lazy Stripe client — only instantiated during request handling, not at build time.
 function getStripe() {
@@ -57,7 +58,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
 
   // 3. Verify brand access
-  const { data: brand } = await supabase
+  const admin = createServiceClient()
+  const { data: brand } = await admin
     .from('brands')
     .select('id, owner_id, name')
     .eq('id', brandId)
@@ -68,7 +70,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
 
   if (brand.owner_id !== user.id) {
-    const { data: membership } = await supabase
+    const { data: membership } = await admin
       .from('brand_members')
       .select('brand_id')
       .eq('brand_id', brandId)
