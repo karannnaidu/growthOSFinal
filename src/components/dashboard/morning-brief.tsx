@@ -1,5 +1,8 @@
+'use client'
+
+import { useState } from 'react'
 import Link from 'next/link'
-import { Sparkles, ArrowRight } from 'lucide-react'
+import { Sparkles, ArrowRight, Play, RefreshCw } from 'lucide-react'
 
 interface MorningBriefProps {
   narrative: string
@@ -51,28 +54,73 @@ export function MorningBrief({
       </p>
 
       {/* Actions */}
-      <div className="flex flex-wrap items-center gap-3">
-        <Link
-          href="/dashboard/chat"
+      <MiaActions brandId={brandId} latestRunId={latestRunId} />
+    </div>
+  )
+}
+
+function MiaActions({ brandId, latestRunId }: { brandId?: string; latestRunId?: string }) {
+  const [triggering, setTriggering] = useState(false)
+  const [triggered, setTriggered] = useState(false)
+
+  async function handleTrigger() {
+    if (!brandId || triggering) return
+    setTriggering(true)
+    try {
+      const res = await fetch('/api/mia/trigger', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ brandId }),
+      })
+      if (res.ok) setTriggered(true)
+    } finally {
+      setTriggering(false)
+    }
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-3">
+      {triggered ? (
+        <span className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium bg-[#059669]/15 text-[#059669] border border-[#059669]/20">
+          <Play className="h-4 w-4" />
+          Mia is reviewing your brand...
+        </span>
+      ) : (
+        <button
+          onClick={handleTrigger}
+          disabled={triggering || !brandId}
           className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium
             bg-[#6366f1] text-white hover:bg-[#6366f1]/90 active:scale-[0.98]
-            transition-all duration-150 shadow-lg shadow-[#6366f1]/20"
+            transition-all duration-150 shadow-lg shadow-[#6366f1]/20 disabled:opacity-50"
         >
-          Execute Strategy
-          <ArrowRight className="h-4 w-4" aria-hidden="true" />
-        </Link>
+          {triggering ? (
+            <><RefreshCw className="h-4 w-4 animate-spin" /> Running...</>
+          ) : (
+            <><Play className="h-4 w-4" /> Run Mia&apos;s Review</>
+          )}
+        </button>
+      )}
 
-        {latestRunId && (
-          <Link
-            href={`/dashboard/runs/${latestRunId}`}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium
-              text-foreground border border-white/[0.1] hover:border-white/[0.2] hover:bg-white/[0.04]
-              transition-all duration-150"
-          >
-            View Full Audit
-          </Link>
-        )}
-      </div>
+      <Link
+        href="/dashboard/chat"
+        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium
+          text-foreground border border-white/[0.1] hover:border-white/[0.2] hover:bg-white/[0.04]
+          transition-all duration-150"
+      >
+        Chat with Mia
+        <ArrowRight className="h-4 w-4" />
+      </Link>
+
+      {latestRunId && (
+        <Link
+          href={`/dashboard/runs/${latestRunId}`}
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium
+            text-foreground border border-white/[0.1] hover:border-white/[0.2] hover:bg-white/[0.04]
+            transition-all duration-150"
+        >
+          View Full Audit
+        </Link>
+      )}
     </div>
   )
 }

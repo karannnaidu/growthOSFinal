@@ -91,9 +91,19 @@ export async function POST(
   try {
     await initializeBrandAgents(brandId, focusAreas)
   } catch (err) {
-    // Non-fatal — log and continue; agents can be initialized on next request
     console.error('[set-focus] initializeBrandAgents error:', err)
   }
+
+  // 6. Kick off Scout health-check (fire-and-forget)
+  // This is the first thing Mia needs to make decisions
+  import('@/lib/skills-engine').then(({ runSkill }) => {
+    runSkill({
+      brandId,
+      skillId: 'health-check',
+      triggeredBy: 'user',
+      additionalContext: { source: 'onboarding' },
+    }).catch((err) => console.error('[set-focus] auto health-check failed:', err))
+  }).catch(console.error)
 
   return NextResponse.json({ success: true })
 }
