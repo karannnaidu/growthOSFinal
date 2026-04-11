@@ -351,18 +351,23 @@ export default function BrandDnaPage() {
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [dirty, setDirty] = useState(false)
 
-  // Resolve brand ID
+  // Resolve brand ID via API (bypasses RLS)
   useEffect(() => {
     async function init() {
       const stored = sessionStorage.getItem('onboarding_brand_id') || localStorage.getItem('growth_os_brand_id')
       if (stored) { setBrandId(stored); return }
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-      const { data } = await supabase.from('brands').select('id').eq('owner_id', user.id).limit(1).single()
-      if (data) { setBrandId(data.id as string); localStorage.setItem('growth_os_brand_id', data.id as string) }
+      try {
+        const res = await fetch('/api/brands/me')
+        if (res.ok) {
+          const data = await res.json()
+          if (data.brandId) {
+            setBrandId(data.brandId)
+            localStorage.setItem('growth_os_brand_id', data.brandId)
+          }
+        }
+      } catch { /* ignore */ }
     }
     init()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Fetch brand DNA
