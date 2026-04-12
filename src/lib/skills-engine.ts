@@ -2,6 +2,7 @@ import { loadSkill, type SkillDefinition } from '@/lib/skill-loader';
 import { routeModel as routeModelFn, type Tier } from '@/lib/model-router';
 import { callModel } from '@/lib/model-client';
 import { fetchSkillData, type SkillDataContext } from '@/lib/mcp-client';
+import { preFlightCheck, postFlightDecision, createBlockedDecision, type PreFlightResult } from '@/lib/mia-intelligence';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -260,6 +261,27 @@ export async function runSkill(input: SkillRunInput): Promise<SkillRunResult> {
   // 4. Route to the appropriate model
   const { model, provider } = routeModelForSkill(skill.complexity);
 
+  // 4.5 Pre-flight intelligence check
+  let preFlightResult: PreFlightResult | null = null
+  try {
+    preFlightResult = await preFlightCheck(input.brandId, skill.agent, skill.mcpTools)
+
+    if (preFlightResult.blocked) {
+      await createBlockedDecision(input.brandId, skill.agent, skill.id, preFlightResult.missingPlatforms)
+      return {
+        id: '',
+        status: 'failed',
+        output: {},
+        creditsUsed: 0,
+        modelUsed: 'none',
+        durationMs: Date.now() - startTime,
+        error: `Blocked: missing connections (${preFlightResult.missingPlatforms.join(', ')})`,
+      }
+    }
+  } catch (err) {
+    console.warn('[SkillsEngine] Pre-flight check failed (continuing):', err)
+  }
+
   // 5. Fetch live platform data via MCP client (non-fatal if it fails)
   let liveData: SkillDataContext = {};
   if (skill.mcpTools && skill.mcpTools.length > 0) {
@@ -286,6 +308,21 @@ export async function runSkill(input: SkillRunInput): Promise<SkillRunResult> {
     } catch (err) {
       console.warn('[SkillsEngine] ragQuery failed (continuing without knowledge context):', err);
     }
+  }
+
+  // Inject pre-flight intelligence into context
+  if (preFlightResult) {
+    const enrichedContext = { ...(input.additionalContext ?? {}) }
+    if (preFlightResult.instruction) {
+      enrichedContext._mia_instruction = preFlightResult.instruction
+    }
+    if (Object.keys(preFlightResult.supplementaryData).length > 0) {
+      enrichedContext._supplementary_data = preFlightResult.supplementaryData
+    }
+    if (preFlightResult.dataGapsNote) {
+      enrichedContext._data_gaps = preFlightResult.dataGapsNote
+    }
+    input = { ...input, additionalContext: enrichedContext }
   }
 
   // 6. Build prompt and call the LLM
@@ -421,16 +458,19 @@ export async function runSkill(input: SkillRunInput): Promise<SkillRunResult> {
       });
   }
 
-  // 11. Auto-chaining via Mia orchestration engine
+  // 11. Post-flight intelligence — Mia decides follow-ups
   if (status === 'completed' && runId) {
-    // Fire-and-forget: orchestration is non-blocking and non-fatal
-    import('@/lib/mia-orchestrator')
-      .then(({ miaOrchestrate }) =>
-        miaOrchestrate(input.brandId, runId, input.skillId, output),
-      )
-      .catch((err) => {
-        console.warn('[SkillsEngine] Mia orchestration failed (non-fatal):', err);
-      });
+    postFlightDecision({
+      brandId: input.brandId,
+      agentId: skill.agent,
+      skillId: skill.id,
+      skillRunId: runId,
+      output,
+      chainsTo: skill.chainsTo,
+      dataGapsNote: preFlightResult?.dataGapsNote ?? null,
+    }).catch((err) => {
+      console.warn('[SkillsEngine] Post-flight decision failed (non-fatal):', err)
+    })
   }
 
   // Post-execution: fal.ai image generation for image-brief skill
