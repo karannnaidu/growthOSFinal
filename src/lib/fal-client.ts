@@ -384,6 +384,9 @@ export async function createMediaNode(
     console.warn(`[fal-client] Embedding generation failed for media node "${name}":`, err);
   }
 
+  // source_run_id must be a valid UUID (FK to skill_runs) or null
+  const isValidUUID = sourceRunId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(sourceRunId);
+
   const { data: inserted, error } = await supabase
     .from('knowledge_nodes')
     .insert({
@@ -394,7 +397,7 @@ export async function createMediaNode(
       properties: nodeProperties,
       confidence: 1.0,
       source_skill: sourceSkill,
-      source_run_id: sourceRunId,
+      source_run_id: isValidUUID ? sourceRunId : null,
       embedding,
       is_active: true,
     })
@@ -402,7 +405,9 @@ export async function createMediaNode(
     .single();
 
   if (error || !inserted?.id) {
-    throw new Error(`Failed to insert media knowledge node: ${error?.message ?? 'no id returned'}`);
+    console.error(`[fal-client] createMediaNode insert failed:`, error?.message);
+    // Don't throw — return empty string so pipeline continues
+    return '';
   }
 
   return inserted.id as string;
