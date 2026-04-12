@@ -1,11 +1,8 @@
 'use client'
 
-import { useState } from 'react'
-import { Send, Bot } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { useState, useEffect } from 'react'
+import { Send, CheckCircle2 } from 'lucide-react'
 import { AgentAvatar } from '@/components/agents/agent-avatar'
-import { AGENTS } from '@/lib/agents-data'
 
 interface MiaControlProps {
   agentId: string
@@ -13,85 +10,77 @@ interface MiaControlProps {
   brandId: string
 }
 
-export function MiaControl({ agentId, agentName }: MiaControlProps) {
+export function MiaControl({ agentId, agentName, brandId }: MiaControlProps) {
   const [instruction, setInstruction] = useState('')
+  const [currentInstruction, setCurrentInstruction] = useState<string | null>(null)
   const [isSending, setIsSending] = useState(false)
+  const [saved, setSaved] = useState(false)
 
-  // Find connected agents from the agents chain data
-  const agent = AGENTS.find((a) => a.id === agentId)
-  const connectedIds = agent?.skills?.length
-    ? AGENTS.filter((a) => a.id !== agentId && a.id !== 'mia').slice(0, 4)
-    : []
+  useEffect(() => {
+    if (!brandId) return
+    fetch(`/api/agents/${agentId}/instruct?brandId=${brandId}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.instruction?.text) {
+          setCurrentInstruction(data.instruction.text)
+        }
+      })
+      .catch(() => {})
+  }, [agentId, brandId])
 
   async function handleSend() {
-    if (!instruction.trim() || isSending) return
+    if (!instruction.trim() || isSending || !brandId) return
     setIsSending(true)
-    // Placeholder - in production this would call the Mia instruction API
-    await new Promise((r) => setTimeout(r, 800))
-    setInstruction('')
-    setIsSending(false)
+    try {
+      const res = await fetch(`/api/agents/${agentId}/instruct`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ brandId, instruction: instruction.trim() }),
+      })
+      if (res.ok) {
+        setCurrentInstruction(instruction.trim())
+        setInstruction('')
+        setSaved(true)
+        setTimeout(() => setSaved(false), 3000)
+      }
+    } finally {
+      setIsSending(false)
+    }
   }
 
   return (
-    <div className="glass-panel rounded-xl overflow-hidden">
-      <div className="px-4 py-3 border-b border-white/[0.06] flex items-center gap-2">
+    <div className="glass-panel rounded-2xl p-5">
+      <div className="flex items-center gap-2.5 mb-4">
         <AgentAvatar agentId="mia" size="sm" />
-        <h2 className="text-sm font-heading font-semibold text-foreground">Mia&apos;s Control Panel</h2>
+        <div>
+          <p className="font-heading font-semibold text-sm text-foreground">Mia&apos;s Instructions</p>
+          <p className="text-[10px] text-muted-foreground">Tell Mia how to manage {agentName}</p>
+        </div>
       </div>
 
-      <div className="p-4 space-y-4">
-        {/* Latest instruction placeholder */}
-        <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-3">
-          <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5">
-            Latest Instruction
-          </p>
-          <p className="text-xs text-muted-foreground italic">
-            No recent instructions for {agentName}.
-          </p>
+      {currentInstruction && (
+        <div className="rounded-xl bg-[#6366f1]/10 border border-[#6366f1]/20 px-3 py-2.5 mb-3">
+          <p className="text-[10px] text-[#6366f1] uppercase tracking-wider mb-1">Active Instruction</p>
+          <p className="text-xs text-foreground/80">{currentInstruction}</p>
         </div>
+      )}
 
-        {/* Instruct Mia input */}
-        <div className="flex items-center gap-2">
-          <Input
-            type="text"
-            placeholder={`Instruct Mia about ${agentName}...`}
-            value={instruction}
-            onChange={(e) => setInstruction(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-            className="flex-1 text-xs"
-            disabled={isSending}
-          />
-          <Button
-            size="icon-xs"
-            variant="outline"
-            onClick={handleSend}
-            disabled={!instruction.trim() || isSending}
-            aria-label="Send instruction to Mia"
-          >
-            <Send className="h-3 w-3" />
-          </Button>
-        </div>
-
-        {/* Connected agents */}
-        {connectedIds.length > 0 && (
-          <div className="space-y-2">
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-              <Bot className="h-3 w-3" />
-              Connected Agents
-            </p>
-            <div className="flex items-center gap-2 flex-wrap">
-              {connectedIds.map((a) => (
-                <div
-                  key={a.id}
-                  className="flex items-center gap-1.5 rounded-full px-2 py-1 bg-white/[0.04] border border-white/[0.06]"
-                >
-                  <AgentAvatar agentId={a.id} size="sm" className="!w-4 !h-4" />
-                  <span className="text-[10px] text-foreground font-medium">{a.name}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={instruction}
+          onChange={(e) => setInstruction(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') handleSend() }}
+          placeholder={`e.g. "Focus on product pages first"`}
+          className="flex-1 rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:border-[#6366f1]/40 focus:outline-none"
+        />
+        <button
+          onClick={handleSend}
+          disabled={!instruction.trim() || isSending}
+          className="rounded-lg bg-[#6366f1] px-3 py-2 text-white disabled:opacity-40 hover:bg-[#6366f1]/80 transition-colors"
+        >
+          {saved ? <CheckCircle2 className="h-4 w-4" /> : <Send className="h-4 w-4" />}
+        </button>
       </div>
     </div>
   )
