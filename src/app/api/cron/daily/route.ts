@@ -18,6 +18,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { runSkill } from '@/lib/skills-engine'
+import { runDailyRetention } from '@/lib/knowledge/retention'
 
 // ---------------------------------------------------------------------------
 // Auth
@@ -160,6 +161,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const { updateCreativePerformance } = await import('@/lib/creative-feedback')
   for (const brand of brands) {
     await updateCreativePerformance(brand.id).catch(console.warn)
+  }
+
+  // Knowledge graph retention
+  try {
+    await runDailyRetention()
+  } catch (err) {
+    console.error('[daily cron] retention failed:', err)
   }
 
   return NextResponse.json({ ok: true, processed: brands.length, results })
