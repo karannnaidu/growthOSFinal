@@ -67,7 +67,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const { data: transactions, error, count } = await supabase
     .from('wallet_transactions')
     .select(
-      'id, type, credits, amount_cents, description, stripe_payment_intent_id, created_at',
+      'id, type, amount, balance_after, description, stripe_payment_id, created_at',
       { count: 'exact' },
     )
     .eq('brand_id', brandId)
