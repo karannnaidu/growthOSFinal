@@ -366,26 +366,16 @@ export async function createMediaNode(
     ...properties,
   };
 
-  // Vision: describe the image for richer embedding and future RAG retrieval
-  if (mediaType.startsWith('image/') && properties?.media_url) {
-    try {
-      const visualDescription = await describeImage(properties.media_url);
-      if (visualDescription) {
-        nodeProperties.visual_description = visualDescription;
-      }
-    } catch {
-      // Non-fatal — proceed without visual description
-    }
-  }
+  // Note: Vision description (describeImage) is NOT called here to keep
+  // creative generation fast. It's done by the backfill-embeddings cron later.
+  // The cron finds nodes without visual_description and enriches them.
 
-  // Generate embedding from name + visual description + properties
-  // This makes the node searchable by visual similarity, not just prompt text
+  // Generate embedding from name + prompt + copy (visual_description added later by cron)
   let embedding: number[] | null = null;
   try {
     const textForEmbedding = [
       name,
       nodeType,
-      nodeProperties.visual_description || '',
       properties?.prompt || '',
       properties?.copy_headline || '',
     ].filter(Boolean).join('. ');

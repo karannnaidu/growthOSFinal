@@ -1,34 +1,78 @@
-import { NextRequest, NextResponse } from 'next/server'
+export const maxDuration = 60
 
-export async function POST(request: NextRequest) {
-  const auth = request.headers.get('authorization')
-  if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+import { NextResponse } from 'next/server'
+import { createServiceClient } from '@/lib/supabase/service'
+import { embedText } from '@/lib/knowledge/rag'
+import { describeImage } from '@/lib/fal-client'
 
-  const { createClient } = await import('@/lib/supabase/server')
-  const supabase = await createClient()
-  const { embedText } = await import('@/lib/knowledge/rag')
+export async function GET(): Promise<NextResponse> {
+  const supabase = createServiceClient()
 
-  const { data: nodes } = await supabase
+  let embeddingsBackfilled = 0
+  let visionsBackfilled = 0
+
+  // 1. Backfill missing embeddings (any node without an embedding)
+  const { data: noEmbedding } = await supabase
     .from('knowledge_nodes')
-    .select('id, name, summary, properties')
+    .select('id, name, summary, properties, node_type')
     .is('embedding', null)
-    .limit(50)
+    .eq('is_active', true)
+    .limit(30)
 
-  if (!nodes?.length) {
-    return NextResponse.json({ message: 'No nodes to backfill', count: 0 })
-  }
-
-  let success = 0
-  for (const node of nodes) {
+  for (const node of noEmbedding ?? []) {
     try {
-      const text = `${node.name}. ${node.summary || ''}. ${JSON.stringify(node.properties || {})}`
-      const embedding = await embedText(text)
+      const parts = [
+        node.name,
+        node.summary || '',
+        (node.properties as Record<string, unknown>)?.visual_description as string || '',
+        (node.properties as Record<string, unknown>)?.prompt as string || '',
+      ].filter(Boolean)
+      const embedding = await embedText(parts.join('. '))
       await supabase.from('knowledge_nodes').update({ embedding }).eq('id', node.id)
-      success++
+      embeddingsBackfilled++
     } catch { /* skip */ }
   }
 
-  return NextResponse.json({ message: `Backfilled ${success}/${nodes.length}`, count: success })
+  // 2. Backfill vision descriptions for creative nodes without one
+  const { data: noVision } = await supabase
+    .from('knowledge_nodes')
+    .select('id, properties')
+    .in('node_type', ['ad_creative', 'competitor_creative'])
+    .eq('is_active', true)
+    .limit(10)
+
+  for (const node of noVision ?? []) {
+    const props = node.properties as Record<string, unknown>
+    // Skip if already has visual_description
+    if (props?.visual_description) continue
+
+    const imageUrl = (props?.media_url as string) || (props?.thumbnail_url as string)
+    if (!imageUrl) continue
+
+    try {
+      const description = await describeImage(imageUrl)
+      if (description) {
+        const updatedProps = { ...props, visual_description: description }
+        // Re-embed with richer text
+        const text = [
+          props?.prompt as string || '',
+          description,
+          props?.copy_headline as string || '',
+        ].filter(Boolean).join('. ')
+        const embedding = await embedText(text)
+
+        await supabase
+          .from('knowledge_nodes')
+          .update({ properties: updatedProps, embedding })
+          .eq('id', node.id)
+        visionsBackfilled++
+      }
+    } catch { /* skip */ }
+  }
+
+  return NextResponse.json({
+    embeddings: embeddingsBackfilled,
+    visions: visionsBackfilled,
+    total: embeddingsBackfilled + visionsBackfilled,
+  })
 }
