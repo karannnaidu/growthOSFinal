@@ -105,9 +105,19 @@ function parseLLMJson<T>(raw: string, fallback: T): T {
 export async function gatherCreativeContext(
   brandId: string,
 ): Promise<CreativeContext> {
-  const supabase = await createClient();
+  const { createServiceClient } = await import('@/lib/supabase/service');
+  const admin = createServiceClient();
 
-  // Run queries in parallel
+  // Helper: RAG query with fallback to empty result on failure
+  const safeRagQuery = async (query: string, nodeTypes: string[]) => {
+    try {
+      return await ragQuery({ brandId, query, nodeTypes, limit: 20 });
+    } catch {
+      return { nodes: [], edges: [], snapshots: [], agencyPatterns: [] };
+    }
+  };
+
+  // Run queries in parallel (all resilient)
   const [
     creativeResult,
     personaResult,
@@ -115,40 +125,13 @@ export async function gatherCreativeContext(
     productResult,
     guidelinesResult,
   ] = await Promise.all([
-    // Top-performing ad creatives via RAG (returns nodes + snapshots)
-    ragQuery({
-      brandId,
-      query: 'top performing ad creatives',
-      nodeTypes: ['ad_creative'],
-      limit: 20,
-    }),
+    safeRagQuery('top performing ad creatives', ['ad_creative']),
+    safeRagQuery('target audience persona', ['persona']),
+    safeRagQuery('competitor ad creative', ['competitor_creative']),
+    safeRagQuery('product image', ['product_image']),
 
-    // Personas
-    ragQuery({
-      brandId,
-      query: 'target audience persona',
-      nodeTypes: ['persona'],
-      limit: 10,
-    }),
-
-    // Competitor creatives
-    ragQuery({
-      brandId,
-      query: 'competitor ad creative',
-      nodeTypes: ['competitor_creative'],
-      limit: 10,
-    }),
-
-    // Product images
-    ragQuery({
-      brandId,
-      query: 'product image',
-      nodeTypes: ['product_image'],
-      limit: 20,
-    }),
-
-    // Brand guidelines from dedicated table
-    supabase
+    // Brand guidelines (service client bypasses RLS)
+    admin
       .from('brand_guidelines')
       .select('voice_tone, colors, do_say, dont_say')
       .eq('brand_id', brandId)
