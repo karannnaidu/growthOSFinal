@@ -73,8 +73,8 @@ interface FalVideoResponse {
 async function getFalKey(brandId?: string): Promise<string> {
   if (brandId) {
     try {
-      const { createClient } = await import('@/lib/supabase/server');
-      const supabase = await createClient();
+      const { createServiceClient } = await import('@/lib/supabase/service');
+      const supabase = createServiceClient();
 
       const { data: byokRow } = await supabase
         .from('byok_keys')
@@ -272,8 +272,8 @@ export async function persistToStorage(
   // Build a deterministic storage path scoped to the brand
   const storagePath = `${brandId}/${subPath}`;
 
-  const { createClient } = await import('@/lib/supabase/server');
-  const supabase = await createClient();
+  const { createServiceClient } = await import('@/lib/supabase/service');
+  const supabase = createServiceClient();
 
   const { error } = await supabase.storage
     .from(bucket)
@@ -307,8 +307,8 @@ export async function createMediaNode(
   sourceRunId: string,
   properties?: Record<string, any>,
 ): Promise<string> {
-  const { createClient } = await import('@/lib/supabase/server');
-  const supabase = await createClient();
+  const { createServiceClient } = await import('@/lib/supabase/service');
+  const supabase = createServiceClient();
 
   const nodeProperties: Record<string, any> = {
     storage_path: storagePath,

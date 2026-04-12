@@ -65,13 +65,14 @@ export async function embedText(text: string): Promise<number[]> {
   if (!apiKey) throw new Error('GOOGLE_AI_KEY is not set');
 
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent?key=${apiKey}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'models/text-embedding-004',
+        model: 'models/gemini-embedding-001',
         content: { parts: [{ text }] },
+        outputDimensionality: 768,
       }),
     },
   );
@@ -107,8 +108,8 @@ export async function ragQuery(input: RAGQuery): Promise<RAGResult> {
   const limit = input.limit ?? 10;
   const traverseDepth = input.traverseDepth ?? 1;
 
-  const { createClient } = await import('@/lib/supabase/server');
-  const supabase = await createClient();
+  const { createServiceClient } = await import('@/lib/supabase/service');
+  const supabase = createServiceClient();
 
   // ------------------------------------------------------------------
   // 1. Embed query text

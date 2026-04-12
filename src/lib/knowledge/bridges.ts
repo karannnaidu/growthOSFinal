@@ -1,8 +1,8 @@
-import { createClient } from '@/lib/supabase/server';
+import { createServiceClient } from '@/lib/supabase/service';
 import { embedText } from '@/lib/knowledge/rag';
 
 export async function bridgeTopContent(brandId: string): Promise<number> {
-  const supabase = await createClient();
+  const supabase = createServiceClient();
   const { data: topContent } = await supabase
     .from('top_content')
     .select('*')

@@ -1,5 +1,5 @@
 import crypto from 'crypto'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -93,7 +93,7 @@ export async function pullShopifyProducts(
   shop: string,
   accessToken: string,
 ): Promise<void> {
-  const supabase = await createClient()
+  const supabase = createServiceClient()
 
   // Fetch all products using pagination (limit=250 per page)
   let allProducts: ShopifyProduct[] = []
@@ -230,7 +230,7 @@ export async function pullShopifyOrdersSummary(
   shop: string,
   accessToken: string,
 ): Promise<void> {
-  const supabase = await createClient()
+  const supabase = createServiceClient()
 
   const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString()
 

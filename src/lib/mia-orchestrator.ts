@@ -94,8 +94,8 @@ async function checkGuardrails(brandId: string, chainDepth: number): Promise<Gua
     return { allowed: false, reason: `Max chain depth (${MAX_CHAIN_DEPTH}) reached` };
   }
 
-  const { createClient } = await import('@/lib/supabase/server');
-  const supabase = await createClient();
+  const { createServiceClient } = await import('@/lib/supabase/service');
+  const supabase = createServiceClient();
 
   // 2. Daily credit cap — sum credits used by mia-triggered runs today
   const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
@@ -186,8 +186,8 @@ async function createNotification(
   },
 ): Promise<void> {
   try {
-    const { createClient } = await import('@/lib/supabase/server');
-    const supabase = await createClient();
+    const { createServiceClient } = await import('@/lib/supabase/service');
+    const supabase = createServiceClient();
 
     await supabase.from('notifications').insert({
       brand_id: brandId,
@@ -305,8 +305,8 @@ export async function miaOrchestrate(
   }
 
   // 2. Determine current chain depth from the triggering skill run record
-  const { createClient } = await import('@/lib/supabase/server');
-  const supabase = await createClient();
+  const { createServiceClient } = await import('@/lib/supabase/service');
+  const supabase = createServiceClient();
 
   const { data: runRecord } = await supabase
     .from('skill_runs')

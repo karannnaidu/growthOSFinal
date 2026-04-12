@@ -162,8 +162,8 @@ export async function extractEntities(
   // ------------------------------------------------------------------
   // 3. Persist to Supabase
   // ------------------------------------------------------------------
-  const { createClient } = await import('@/lib/supabase/server');
-  const supabase = await createClient();
+  const { createServiceClient } = await import('@/lib/supabase/service');
+  const supabase = createServiceClient();
 
   let nodesCreated = 0;
   let edgesCreated = 0;

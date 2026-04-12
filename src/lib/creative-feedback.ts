@@ -9,7 +9,7 @@
 // and logs which nodes would be updated.
 // ---------------------------------------------------------------------------
 
-import { createClient } from '@/lib/supabase/server';
+import { createServiceClient } from '@/lib/supabase/service';
 
 const SNAPSHOT_FRESHNESS_MS = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -23,7 +23,7 @@ const SNAPSHOT_FRESHNESS_MS = 24 * 60 * 60 * 1000; // 24 hours
  * 4. Returns count of updated creatives (0 for now since API calls are stubs).
  */
 export async function updateCreativePerformance(brandId: string): Promise<number> {
-  const supabase = await createClient();
+  const supabase = createServiceClient();
 
   // 1. Get creative nodes that have ad platform IDs
   const { data: nodes, error } = await supabase

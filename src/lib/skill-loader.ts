@@ -196,8 +196,8 @@ export async function loadSkill(skillId: string): Promise<SkillDefinition> {
   // 3. Database (custom skills)
   // Lazy-import the server client to avoid pulling in Next.js cookie APIs
   // when this module is loaded at the top level during builds.
-  const { createClient } = await import('@/lib/supabase/server');
-  const supabase = await createClient();
+  const { createServiceClient } = await import('@/lib/supabase/service');
+  const supabase = createServiceClient();
   const { data, error } = await supabase
     .from('custom_skills')
     .select('markdown')
