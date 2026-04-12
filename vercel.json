@@ -3,6 +3,7 @@
     { "path": "/api/cron/daily", "schedule": "0 6 * * *" },
     { "path": "/api/cron/weekly", "schedule": "0 8 * * 1" },
     { "path": "/api/cron/agency-patterns", "schedule": "0 2 * * 0" },
-    { "path": "/api/cron/backfill-embeddings", "schedule": "0 3 * * *" }
+    { "path": "/api/cron/backfill-embeddings", "schedule": "0 3 * * *" },
+    { "path": "/api/cron/chain-processor", "schedule": "0 4 * * *" }
   ]
 }
