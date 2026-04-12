@@ -31,7 +31,7 @@ import {
   type GeneratedMedia,
 } from '@/lib/fal-client'
 
-export const maxDuration = 120 // generous timeout for multi-step pipeline
+export const maxDuration = 300 // Vercel Pro: 300s for full creative pipeline
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -116,7 +116,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       context,
     )
 
-    // 4. Generate 4 image variants (run prompts in parallel, resilient)
+    // 4. Generate 4 image variants (Vercel Pro: 300s timeout)
     const imagePrompts = brief.imagePrompts.slice(0, 4)
     const imageResults = await Promise.allSettled(
       imagePrompts.map((p) =>
