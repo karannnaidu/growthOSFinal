@@ -145,6 +145,22 @@ export default function AgentDetailPage() {
   const [isSavingConfig, setIsSavingConfig] = useState(false)
   const [showConfig, setShowConfig] = useState(false)
 
+  // Setup state
+  const [setupState, setSetupState] = useState<{
+    hasSetup: boolean
+    state: 'inactive' | 'collecting' | 'ready'
+    status: Array<{ key: string; label: string; type: string; required: boolean; met: boolean; value?: unknown }>
+    chatPrompt: string | null
+    allRequiredMet: boolean
+  } | null>(null)
+
+  // Setup form state
+  const [setupValues, setSetupValues] = useState<Record<string, string>>({})
+  const [savingSetup, setSavingSetup] = useState(false)
+
+  // Mia's latest decision for this agent
+  const [latestMiaDecision, setLatestMiaDecision] = useState<{ decision: string; reasoning: string } | null>(null)
+
   const supabase = createClient()
 
   // ---------------------------------------------------------------------------
@@ -197,6 +213,61 @@ export default function AgentDetailPage() {
     load()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [agentId])
+
+  // ---------------------------------------------------------------------------
+  // Fetch setup state
+  // ---------------------------------------------------------------------------
+
+  useEffect(() => {
+    if (!brandId || !agentId) return
+    fetch(`/api/agents/${agentId}/setup?brandId=${brandId}`)
+      .then(r => r.json())
+      .then(data => setSetupState(data))
+      .catch(() => {})
+  }, [brandId, agentId])
+
+  // ---------------------------------------------------------------------------
+  // Fetch Mia's latest decision for this agent
+  // ---------------------------------------------------------------------------
+
+  useEffect(() => {
+    if (!brandId || !agentId) return
+    fetch(`/api/dashboard/context?brandId=${brandId}`)
+      .then(r => r.json())
+      .then(ctx => {
+        const decision = (ctx.miaDecisions as Array<{ decision: string; reasoning: string; target_agent?: string }>)
+          ?.find(d => d.target_agent === agentId)
+        if (decision) setLatestMiaDecision(decision)
+      })
+      .catch(() => {})
+  }, [brandId, agentId])
+
+  // ---------------------------------------------------------------------------
+  // Save setup data
+  // ---------------------------------------------------------------------------
+
+  async function handleSaveSetupData() {
+    if (!brandId) return
+    setSavingSetup(true)
+    try {
+      const entries = Object.entries(setupValues)
+        .filter(([, v]) => v.trim())
+        .map(([key, value]) => ({ key, value }))
+
+      const res = await fetch(`/api/agents/${agentId}/setup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ brandId, entries }),
+      })
+      if (res.ok) {
+        const updated = await res.json()
+        setSetupState(prev => prev ? { ...prev, ...updated } : null)
+        setSetupValues({})
+      }
+    } finally {
+      setSavingSetup(false)
+    }
+  }
 
   // ---------------------------------------------------------------------------
   // Run a skill
@@ -344,150 +415,243 @@ export default function AgentDetailPage() {
         </div>
       )}
 
-      {/* Main content: 2-column layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left: Skills grid + Recent output */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Skills grid */}
+      {/* Setup state determines the view */}
+      {setupState && setupState.hasSetup && setupState.state !== 'ready' ? (
+        // SETUP MODE
+        <div className="glass-panel rounded-2xl p-5 sm:p-6 space-y-4">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="w-2 h-2 rounded-full bg-[#f97316]" />
+            <h3 className="font-heading font-semibold text-sm text-foreground">Setup Required</h3>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {agent.name} needs some information before it can start working.
+          </p>
+
+          {/* Requirements checklist */}
           <div className="space-y-3">
-            <h2 className="text-sm font-heading font-semibold text-foreground flex items-center gap-2">
-              Skills
-              <span
-                className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium"
-                style={{ background: `${agent.color}18`, color: agent.color }}
-              >
-                {agent.skills.length}
-              </span>
-            </h2>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              {agent.skills.map((skillId) => {
-                const lastRunForSkill = recentRuns.find((r) => r.skill_name === skillId)
-                return (
-                  <SkillCard
-                    key={skillId}
-                    skillId={skillId}
-                    agentColor={agent.color}
-                    lastRun={lastRunForSkill ? timeAgo(lastRunForSkill.created_at) : undefined}
-                    isRunning={runningSkill === skillId}
-                    onRun={() => handleRunSkill(skillId)}
-                  />
-                )
-              })}
-            </div>
-            {/* Skill run results */}
-            {Object.entries(skillRunResult).some(([, v]) => v) && (
-              <div className="flex flex-wrap gap-2">
-                {Object.entries(skillRunResult)
-                  .filter(([, v]) => v)
-                  .map(([skillId, result]) => (
-                    <span
-                      key={skillId}
-                      className={cn(
-                        'text-[10px] px-2 py-0.5 rounded-full',
-                        result === 'Done' || result === 'Ran'
-                          ? 'bg-[#10b98118] text-[#10b981]'
-                          : 'bg-[#e11d4818] text-destructive',
-                      )}
-                    >
-                      {skillId}: {result}
-                    </span>
-                  ))}
+            {setupState.status.map((req) => (
+              <div key={req.key} className="flex items-start gap-3 rounded-lg bg-white/5 p-3">
+                <span className={`mt-0.5 w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${
+                  req.met ? 'bg-[#10b981]/20 text-[#10b981]' : 'bg-white/10 text-muted-foreground'
+                }`}>
+                  {req.met ? '\u2713' : '\u25CB'}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground">{req.label}</p>
+                  {req.type === 'connection' && !req.met && (
+                    <a href="/dashboard/settings/platforms" className="text-xs text-[#6366f1] hover:underline">
+                      Connect in Settings &rarr;
+                    </a>
+                  )}
+                  {req.type !== 'connection' && !req.met && (
+                    <input
+                      type={req.type === 'number' ? 'number' : 'text'}
+                      value={setupValues[req.key] ?? ''}
+                      onChange={(e) => setSetupValues(prev => ({ ...prev, [req.key]: e.target.value }))}
+                      placeholder={`Enter ${req.label.toLowerCase()}`}
+                      className="mt-1.5 w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:border-[#6366f1]/40 focus:outline-none"
+                    />
+                  )}
+                  {req.met && req.value != null && (
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {typeof req.value === 'object' ? JSON.stringify((req.value as Record<string, unknown>).value ?? req.value) : String(req.value)}
+                    </p>
+                  )}
+                </div>
               </div>
-            )}
+            ))}
           </div>
 
-          {/* Recent output */}
-          <div className="glass-panel rounded-xl overflow-hidden">
-            <div className="px-4 py-3 border-b border-white/[0.06]">
-              <h2 className="text-sm font-heading font-semibold text-foreground">Latest Output</h2>
+          {/* Save button */}
+          {Object.values(setupValues).some(v => v.trim()) && (
+            <button
+              onClick={handleSaveSetupData}
+              disabled={savingSetup}
+              className="rounded-lg bg-[#6366f1] px-4 py-2 text-sm font-medium text-white hover:bg-[#6366f1]/80 disabled:opacity-50"
+            >
+              {savingSetup ? 'Saving...' : 'Save & Continue'}
+            </button>
+          )}
+
+          {/* Chat option */}
+          {setupState.chatPrompt && (
+            <div className="pt-2 border-t border-white/[0.06]">
+              <a
+                href={`/dashboard/chat?agent=${agentId}`}
+                className="text-xs text-[#6366f1] hover:underline flex items-center gap-1"
+              >
+                Or chat with {agent.name} to provide data conversationally
+              </a>
             </div>
-            <div className="p-4">
-              <AgentOutput
+          )}
+        </div>
+      ) : null}
+
+      {/* Active / no-setup content */}
+      {(!setupState || !setupState.hasSetup || setupState.state === 'ready') && (
+        <>
+          {/* Mia's latest decision */}
+          {latestMiaDecision && (
+            <div className="glass-panel rounded-2xl p-5">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2">Mia&apos;s Latest</p>
+              <p className="text-sm text-foreground/80">{latestMiaDecision.reasoning}</p>
+              <span className={`inline-block mt-2 rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                latestMiaDecision.decision === 'auto_run' ? 'bg-[#10b981]/15 text-[#10b981]' :
+                latestMiaDecision.decision === 'blocked' ? 'bg-[#ef4444]/15 text-[#ef4444]' :
+                latestMiaDecision.decision === 'needs_review' ? 'bg-[#f97316]/15 text-[#f97316]' :
+                'bg-white/10 text-muted-foreground'
+              }`}>
+                {latestMiaDecision.decision.replace('_', ' ')}
+              </span>
+            </div>
+          )}
+
+          {/* Main content: 2-column layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Left: Skills grid + Recent output */}
+            <div className="lg:col-span-2 space-y-6">
+              {/* Skills grid */}
+              <div className="space-y-3">
+                <h2 className="text-sm font-heading font-semibold text-foreground flex items-center gap-2">
+                  Skills
+                  <span
+                    className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium"
+                    style={{ background: `${agent.color}18`, color: agent.color }}
+                  >
+                    {agent.skills.length}
+                  </span>
+                </h2>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {agent.skills.map((skillId) => {
+                    const lastRunForSkill = recentRuns.find((r) => r.skill_name === skillId)
+                    return (
+                      <SkillCard
+                        key={skillId}
+                        skillId={skillId}
+                        agentColor={agent.color}
+                        lastRun={lastRunForSkill ? timeAgo(lastRunForSkill.created_at) : undefined}
+                        isRunning={runningSkill === skillId}
+                        onRun={() => handleRunSkill(skillId)}
+                      />
+                    )
+                  })}
+                </div>
+                {/* Skill run results */}
+                {Object.entries(skillRunResult).some(([, v]) => v) && (
+                  <div className="flex flex-wrap gap-2">
+                    {Object.entries(skillRunResult)
+                      .filter(([, v]) => v)
+                      .map(([skillId, result]) => (
+                        <span
+                          key={skillId}
+                          className={cn(
+                            'text-[10px] px-2 py-0.5 rounded-full',
+                            result === 'Done' || result === 'Ran'
+                              ? 'bg-[#10b98118] text-[#10b981]'
+                              : 'bg-[#e11d4818] text-destructive',
+                          )}
+                        >
+                          {skillId}: {result}
+                        </span>
+                      ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Recent output */}
+              <div className="glass-panel rounded-xl overflow-hidden">
+                <div className="px-4 py-3 border-b border-white/[0.06]">
+                  <h2 className="text-sm font-heading font-semibold text-foreground">Latest Output</h2>
+                </div>
+                <div className="p-4">
+                  <AgentOutput
+                    agentId={agent.id}
+                    output={latestCompletedRun?.output ?? null}
+                  />
+                </div>
+              </div>
+
+              {/* Recent runs history */}
+              <div className="glass-panel rounded-xl overflow-hidden">
+                <div className="px-4 py-3 border-b border-white/[0.06]">
+                  <h2 className="text-sm font-heading font-semibold text-foreground">Recent Runs</h2>
+                </div>
+
+                {recentRuns.length === 0 ? (
+                  <div className="px-4 py-10 text-center">
+                    <p className="text-xs text-muted-foreground">
+                      No skill runs yet for this agent.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-white/[0.04]">
+                    {recentRuns.map((run) => {
+                      const isExpanded = expandedRun === run.id
+                      return (
+                        <div key={run.id} className="px-4 py-3">
+                          <button
+                            type="button"
+                            className="w-full flex items-center gap-3 text-left"
+                            onClick={() => setExpandedRun(isExpanded ? null : run.id)}
+                            aria-expanded={isExpanded}
+                          >
+                            <div className="min-w-0 flex-1 grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-1 items-center">
+                              <p className="text-xs font-medium text-foreground truncate col-span-2 sm:col-span-1">
+                                {run.skill_name ?? run.id}
+                              </p>
+                              <div className="flex items-center">
+                                <StatusBadge status={run.status} />
+                              </div>
+                              <p className="text-[10px] text-muted-foreground hidden sm:block truncate">
+                                {run.model_used ?? '\u2014'}
+                                {run.credits_used != null && ` \u00b7 ${run.credits_used}cr`}
+                              </p>
+                              <p className="text-[10px] text-muted-foreground hidden sm:block">
+                                {formatDuration(run.duration_ms)} \u00b7 {timeAgo(run.created_at)}
+                              </p>
+                            </div>
+                            {isExpanded ? (
+                              <ChevronUp className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                            ) : (
+                              <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                            )}
+                          </button>
+
+                          {isExpanded && (
+                            <div className="mt-3 rounded-lg bg-white/[0.03] border border-white/[0.06] p-3">
+                              {run.error ? (
+                                <p className="text-xs text-destructive font-mono break-all">{run.error}</p>
+                              ) : (
+                                <AgentOutput agentId={agent.id} output={run.output} />
+                              )}
+                              <div className="mt-2 flex flex-wrap gap-3 text-[10px] text-muted-foreground border-t border-white/[0.06] pt-2">
+                                {run.model_used && <span>Model: {run.model_used}</span>}
+                                {run.credits_used != null && <span>Credits: {run.credits_used}</span>}
+                                {run.duration_ms != null && <span>Duration: {formatDuration(run.duration_ms)}</span>}
+                                {run.triggered_by && <span>By: {run.triggered_by}</span>}
+                                <span>{new Date(run.created_at).toLocaleString()}</span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Right column: Mia control */}
+            <div className="lg:col-span-1 space-y-6">
+              <MiaControl
                 agentId={agent.id}
-                output={latestCompletedRun?.output ?? null}
+                agentName={agent.name}
+                brandId={brandId ?? ''}
               />
             </div>
           </div>
-
-          {/* Recent runs history */}
-          <div className="glass-panel rounded-xl overflow-hidden">
-            <div className="px-4 py-3 border-b border-white/[0.06]">
-              <h2 className="text-sm font-heading font-semibold text-foreground">Recent Runs</h2>
-            </div>
-
-            {recentRuns.length === 0 ? (
-              <div className="px-4 py-10 text-center">
-                <p className="text-xs text-muted-foreground">
-                  No skill runs yet for this agent.
-                </p>
-              </div>
-            ) : (
-              <div className="divide-y divide-white/[0.04]">
-                {recentRuns.map((run) => {
-                  const isExpanded = expandedRun === run.id
-                  return (
-                    <div key={run.id} className="px-4 py-3">
-                      <button
-                        type="button"
-                        className="w-full flex items-center gap-3 text-left"
-                        onClick={() => setExpandedRun(isExpanded ? null : run.id)}
-                        aria-expanded={isExpanded}
-                      >
-                        <div className="min-w-0 flex-1 grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-1 items-center">
-                          <p className="text-xs font-medium text-foreground truncate col-span-2 sm:col-span-1">
-                            {run.skill_name ?? run.id}
-                          </p>
-                          <div className="flex items-center">
-                            <StatusBadge status={run.status} />
-                          </div>
-                          <p className="text-[10px] text-muted-foreground hidden sm:block truncate">
-                            {run.model_used ?? '\u2014'}
-                            {run.credits_used != null && ` \u00b7 ${run.credits_used}cr`}
-                          </p>
-                          <p className="text-[10px] text-muted-foreground hidden sm:block">
-                            {formatDuration(run.duration_ms)} \u00b7 {timeAgo(run.created_at)}
-                          </p>
-                        </div>
-                        {isExpanded ? (
-                          <ChevronUp className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                        ) : (
-                          <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                        )}
-                      </button>
-
-                      {isExpanded && (
-                        <div className="mt-3 rounded-lg bg-white/[0.03] border border-white/[0.06] p-3">
-                          {run.error ? (
-                            <p className="text-xs text-destructive font-mono break-all">{run.error}</p>
-                          ) : (
-                            <AgentOutput agentId={agent.id} output={run.output} />
-                          )}
-                          <div className="mt-2 flex flex-wrap gap-3 text-[10px] text-muted-foreground border-t border-white/[0.06] pt-2">
-                            {run.model_used && <span>Model: {run.model_used}</span>}
-                            {run.credits_used != null && <span>Credits: {run.credits_used}</span>}
-                            {run.duration_ms != null && <span>Duration: {formatDuration(run.duration_ms)}</span>}
-                            {run.triggered_by && <span>By: {run.triggered_by}</span>}
-                            <span>{new Date(run.created_at).toLocaleString()}</span>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Right column: Mia control */}
-        <div className="lg:col-span-1 space-y-6">
-          <MiaControl
-            agentId={agent.id}
-            agentName={agent.name}
-            brandId={brandId ?? ''}
-          />
-        </div>
-      </div>
+        </>
+      )}
     </div>
   )
 }
