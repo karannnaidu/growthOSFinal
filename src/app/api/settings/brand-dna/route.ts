@@ -38,12 +38,25 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     if (!membership) return NextResponse.json({ error: 'Access denied' }, { status: 403 })
   }
 
+  // Also fetch competitors from knowledge graph
+  const { data: competitors } = await admin
+    .from('knowledge_nodes')
+    .select('name, properties')
+    .eq('brand_id', brandId)
+    .eq('node_type', 'competitor')
+    .eq('is_active', true)
+    .limit(20)
+
   return NextResponse.json({
     brandId: brand.id,
     name: brand.name,
     domain: brand.domain,
     dna: brand.brand_guidelines ?? null,
     products: brand.product_context ?? [],
+    competitors: (competitors ?? []).map(c => ({
+      name: c.name,
+      ...(c.properties as Record<string, unknown>),
+    })),
   })
 }
 

@@ -346,6 +346,7 @@ export default function BrandDnaPage() {
   const [dna, setDna] = useState<BrandDna | null>(null)
   const [brandName, setBrandName] = useState('')
   const [brandDomain, setBrandDomain] = useState('')
+  const [competitors, setCompetitors] = useState<Array<{ name: string; domain?: string; type?: string; why_competitor?: string }>>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
@@ -387,6 +388,7 @@ export default function BrandDnaPage() {
         setBrandName(data.name ?? '')
         setBrandDomain(data.domain ?? '')
         setDna(data.dna as BrandDna | null)
+        if (data.competitors) setCompetitors(data.competitors)
       } finally {
         setIsLoading(false)
       }
@@ -685,6 +687,31 @@ export default function BrandDnaPage() {
             onSave={(v) => update((d) => ({ ...d, brand_story: v }))} placeholder="Add your brand story..." />
         </CardContent>
       </Card>
+
+      {/* Competitors */}
+      {competitors.length > 0 && (
+        <Card className="glass-panel">
+          <CardContent className="pt-5 pb-5">
+            <h3 className="text-xs uppercase tracking-widest text-muted-foreground font-medium mb-3">
+              Competitors ({competitors.length})
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {competitors.map((c, i) => (
+                <div key={i} className="rounded-lg bg-white/5 p-3 space-y-1">
+                  <p className="text-sm font-medium text-foreground">{c.name}</p>
+                  {c.domain && <p className="text-[10px] font-metric text-muted-foreground">{c.domain}</p>}
+                  {c.why_competitor && <p className="text-xs text-muted-foreground line-clamp-2">{c.why_competitor}</p>}
+                  {c.type && (
+                    <span className={`inline-block text-[9px] px-1.5 py-0.5 rounded-full ${c.type === 'direct' ? 'bg-[#0d9488]/10 text-[#0d9488]' : 'bg-[#7c3aed]/10 text-[#7c3aed]'}`}>
+                      {c.type === 'direct' ? 'Direct' : 'Market'}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Sticky save bar when dirty */}
       {dirty && (

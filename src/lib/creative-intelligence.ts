@@ -316,8 +316,8 @@ Generate the creative brief as JSON.`;
 
   try {
     const result = await callModel({
-      model: 'claude-sonnet-4-6',
-      provider: 'anthropic',
+      model: 'gemini-2.5-flash',
+      provider: 'google',
       systemPrompt: BRIEF_SYSTEM_PROMPT,
       userPrompt,
       maxTokens: 4096,
@@ -405,8 +405,8 @@ Score the creative as JSON.`;
 
   try {
     const result = await callModel({
-      model: 'claude-sonnet-4-6',
-      provider: 'anthropic',
+      model: 'gemini-2.5-flash',
+      provider: 'google',
       systemPrompt: SCORE_SYSTEM_PROMPT,
       userPrompt,
       maxTokens: 2048,
