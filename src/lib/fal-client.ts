@@ -10,6 +10,55 @@
 import { embedText } from '@/lib/knowledge/rag';
 
 // ---------------------------------------------------------------------------
+// Vision: describe image content for RAG embedding
+// ---------------------------------------------------------------------------
+
+/**
+ * Use Gemini 2.5 Flash vision to generate a detailed alt-text description
+ * of an image. This description is stored alongside the node and embedded
+ * so RAG can find "visually similar" creatives.
+ *
+ * Returns null on failure (non-fatal).
+ */
+export async function describeImage(imageUrl: string): Promise<string | null> {
+  const apiKey = process.env.GOOGLE_AI_KEY;
+  if (!apiKey) return null;
+
+  try {
+    // Fetch image as base64
+    const imgRes = await fetch(imageUrl, { signal: AbortSignal.timeout(10000) });
+    if (!imgRes.ok) return null;
+    const buffer = Buffer.from(await imgRes.arrayBuffer());
+    const base64 = buffer.toString('base64');
+    const mimeType = imgRes.headers.get('content-type') || 'image/png';
+
+    // Call Gemini Vision
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{
+            parts: [
+              { text: 'Describe this ad creative image in one paragraph. Include: visual style, composition, dominant colors, subjects/objects, text overlays if any, mood/tone, and ad format. Be specific and factual.' },
+              { inlineData: { mimeType, data: base64 } },
+            ],
+          }],
+          generationConfig: { maxOutputTokens: 256, temperature: 0.2 },
+        }),
+      },
+    );
+
+    if (!res.ok) return null;
+    const data = await res.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
+    return data.candidates?.[0]?.content?.parts?.[0]?.text ?? null;
+  } catch {
+    return null;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
@@ -317,14 +366,32 @@ export async function createMediaNode(
     ...properties,
   };
 
-  // Generate embedding so the node is immediately searchable via RAG
+  // Vision: describe the image for richer embedding and future RAG retrieval
+  if (mediaType.startsWith('image/') && properties?.media_url) {
+    try {
+      const visualDescription = await describeImage(properties.media_url);
+      if (visualDescription) {
+        nodeProperties.visual_description = visualDescription;
+      }
+    } catch {
+      // Non-fatal — proceed without visual description
+    }
+  }
+
+  // Generate embedding from name + visual description + properties
+  // This makes the node searchable by visual similarity, not just prompt text
   let embedding: number[] | null = null;
   try {
-    const textForEmbedding = `${name}. ${nodeType}. ${JSON.stringify(nodeProperties)}`;
+    const textForEmbedding = [
+      name,
+      nodeType,
+      nodeProperties.visual_description || '',
+      properties?.prompt || '',
+      properties?.copy_headline || '',
+    ].filter(Boolean).join('. ');
     embedding = await embedText(textForEmbedding);
   } catch (err) {
     console.warn(`[fal-client] Embedding generation failed for media node "${name}":`, err);
-    // Continue with null embedding — backfill job will catch it
   }
 
   const { data: inserted, error } = await supabase
