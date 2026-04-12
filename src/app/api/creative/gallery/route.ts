@@ -55,9 +55,11 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   }
 
   // 3. Query knowledge_nodes for creatives with latest snapshot data
+  //    Use service client to avoid RLS circular dependency (brands ↔ brand_members).
+  //    Brand access was already verified above.
   const offset = (page - 1) * limit
 
-  const { data: nodes, error: nodesError, count } = await supabase
+  const { data: nodes, error: nodesError, count } = await admin
     .from('knowledge_nodes')
     .select('id, name, node_type, properties, created_at, source_skill, source_run_id', {
       count: 'exact',
@@ -82,21 +84,21 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     })
   }
 
-  // 4. Fetch latest snapshots for returned nodes
+  // 4. Fetch latest snapshots for returned nodes (service client — same reason)
   const nodeIds = nodes.map((n) => n.id)
-  const { data: snapshots } = await supabase
+  const { data: snapshots } = await admin
     .from('knowledge_snapshots')
-    .select('node_id, metrics, captured_at')
+    .select('node_id, metrics, snapshot_at')
     .in('node_id', nodeIds)
-    .order('captured_at', { ascending: false })
+    .order('snapshot_at', { ascending: false })
 
   // Build a map of nodeId -> latest snapshot metrics
-  const snapshotMap = new Map<string, { metrics: any; captured_at: string }>()
+  const snapshotMap = new Map<string, { metrics: any; snapshot_at: string }>()
   for (const snap of snapshots ?? []) {
     if (!snapshotMap.has(snap.node_id)) {
       snapshotMap.set(snap.node_id, {
         metrics: snap.metrics,
-        captured_at: snap.captured_at,
+        snapshot_at: snap.snapshot_at,
       })
     }
   }
@@ -114,7 +116,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       sourceSkill: node.source_skill,
       sourceRunId: node.source_run_id,
       performance: snapshot?.metrics ?? null,
-      performanceUpdatedAt: snapshot?.captured_at ?? null,
+      performanceUpdatedAt: snapshot?.snapshot_at ?? null,
     }
   })
 
