@@ -106,18 +106,23 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   try {
     // 2. Gather creative context
+    console.log(`[creative/generate] Step 2: gathering context for brand ${brandId}`)
     const context = await gatherCreativeContext(brandId)
+    console.log(`[creative/generate] Step 2 done. Creatives: ${context.topPerformingCreatives?.length}, Personas: ${context.personas?.length}`)
 
     // 3. Generate intelligent brief
+    console.log(`[creative/generate] Step 3: generating brief via Claude`)
     const brief: CreativeBrief = await generateIntelligentBrief(
       brandId,
       customPrompt ? `${campaignGoal}\n\nAdditional instructions: ${customPrompt}` : campaignGoal,
       targetPersonas || 'general audience',
       context,
     )
+    console.log(`[creative/generate] Step 3 done. Image prompts: ${brief.imagePrompts?.length}, Reasoning: ${brief.reasoning?.slice(0, 50)}`)
 
     // 4. Generate 4 image variants (Vercel Pro: 300s timeout)
     const imagePrompts = brief.imagePrompts.slice(0, 4)
+    console.log(`[creative/generate] Step 4: generating ${imagePrompts.length} images via fal.ai`)
     const imageResults = await Promise.allSettled(
       imagePrompts.map((p) =>
         generateImage({

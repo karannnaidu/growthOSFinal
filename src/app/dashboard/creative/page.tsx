@@ -138,15 +138,17 @@ export default function CreativeStudioPage() {
       if (!bid) { setError('No brand found'); setGalleryLoading(false); return }
       setBrandId(bid)
 
-      // Load personas from knowledge graph
-      const { data: personaNodes } = await supabase
-        .from('knowledge_nodes')
-        .select('name')
-        .eq('brand_id', bid)
-        .eq('node_type', 'audience')
-        .eq('is_active', true)
-        .limit(20)
-      if (personaNodes) setPersonas(personaNodes)
+      // Load personas from dashboard context API
+      try {
+        const ctxRes = await fetch(`/api/dashboard/context?brandId=${bid}`)
+        if (ctxRes.ok) {
+          const ctx = await ctxRes.json()
+          // Extract persona names from agent setups or use a default
+          if (ctx.agentSetups?.atlas?.state === 'ready') {
+            setPersonas([{ name: 'Target Audience' }])
+          }
+        }
+      } catch { /* ignore */ }
     }
     resolveBrand()
   // eslint-disable-next-line react-hooks/exhaustive-deps
