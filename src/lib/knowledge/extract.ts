@@ -140,7 +140,7 @@ export async function extractEntities(
   let extracted: ExtractedGraph;
   try {
     const result = await callModel({
-      model: 'gemini-2.0-flash-lite',
+      model: 'gemini-2.5-flash-lite',
       provider: 'google',
       systemPrompt: EXTRACTION_SYSTEM_PROMPT + producesHint,
       userPrompt: `## Skill Output\n${outputJson.slice(0, 8000)}`, // cap to avoid token limit
