@@ -4,11 +4,18 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { Sparkles, ArrowRight, Play, RefreshCw } from 'lucide-react'
 
+interface MiaDecision {
+  decision: string
+  reasoning: string
+  target_agent?: string
+}
+
 interface MorningBriefProps {
   narrative: string
   metricsContext: string
   latestRunId?: string
   brandId?: string
+  miaDecisions?: MiaDecision[]
 }
 
 export function MorningBrief({
@@ -16,7 +23,20 @@ export function MorningBrief({
   metricsContext,
   latestRunId,
   brandId,
+  miaDecisions,
 }: MorningBriefProps) {
+  // Build smarter narrative from Mia decisions when available
+  const displayNarrative = (() => {
+    if (!miaDecisions || miaDecisions.length === 0) return narrative
+    const activeCount = miaDecisions.filter(d => d.decision === 'auto_run').length
+    const blockedCount = miaDecisions.filter(d => d.decision === 'blocked').length
+    const latestReasoning = miaDecisions[0]?.reasoning
+    const parts: string[] = []
+    if (activeCount > 0) parts.push(`${activeCount} agent${activeCount > 1 ? 's' : ''} active`)
+    if (latestReasoning) parts.push(latestReasoning.slice(0, 120))
+    if (blockedCount > 0) parts.push(`${blockedCount} agent${blockedCount > 1 ? 's' : ''} need attention`)
+    return parts.length > 0 ? parts.join('. ') + '.' : narrative
+  })()
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
     month: 'long',
@@ -45,7 +65,7 @@ export function MorningBrief({
 
       {/* Narrative */}
       <h2 className="font-heading text-xl md:text-2xl font-bold text-foreground leading-snug mb-3">
-        {narrative}
+        {displayNarrative}
       </h2>
 
       {/* Metrics context */}

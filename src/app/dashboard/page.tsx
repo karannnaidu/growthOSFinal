@@ -7,7 +7,7 @@ import { AgentChains, type ChainNode } from '@/components/dashboard/agent-chains
 import { InternalLog, type LogEntry } from '@/components/dashboard/internal-log'
 import { RecommendationCard } from '@/components/dashboard/recommendation-card'
 import { ChatFAB } from '@/components/dashboard/chat-fab'
-import { AGENT_MAP } from '@/lib/agents-data'
+import { AGENTS, AGENT_MAP } from '@/lib/agents-data'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -73,15 +73,41 @@ function deriveChainNodes(skillRuns: Record<string, unknown>[]): ChainNode[] {
   return nodes
 }
 
-function deriveLogEntries(skillRuns: Record<string, unknown>[]): LogEntry[] {
-  return skillRuns
-    .filter((r) => r.agent && r.skill_name)
-    .slice(0, 15)
-    .map((r) => ({
-      agent: (r.agent as string) ?? 'system',
-      message: `${r.skill_name} — ${r.status}${r.credits_used ? ` (${r.credits_used} credits)` : ''}`,
+function deriveLogEntries(skillRuns: Record<string, unknown>[], miaDecisions: Array<{ decision: string; reasoning: string; target_agent?: string; created_at: string }>): LogEntry[] {
+  const entries: LogEntry[] = []
+
+  // Add skill run entries
+  for (const r of skillRuns.filter((r) => r.agent && r.skill_name).slice(0, 15)) {
+    const agent = (r.agent as string) ?? 'system'
+    const skill = (r.skill_name as string) ?? ''
+    const status = (r.status as string) ?? ''
+    entries.push({
+      agent,
+      message: `${skill} — ${status}${r.credits_used ? ` (${r.credits_used} credits)` : ''}`,
       timestamp: (r.created_at as string) ?? new Date().toISOString(),
-    }))
+    })
+  }
+
+  // Add Mia decision entries
+  for (const d of miaDecisions.slice(0, 10)) {
+    entries.push({
+      agent: 'mia',
+      message: d.decision === 'blocked'
+        ? `Blocked ${d.target_agent || 'agent'}`
+        : d.decision === 'auto_run'
+          ? `Dispatching follow-ups for ${d.target_agent || 'agent'}`
+          : `Reviewed ${d.target_agent || 'agent'} — ${d.decision}`,
+      timestamp: d.created_at,
+      decision: d.decision,
+      reasoning: d.reasoning,
+      actionUrl: d.decision === 'blocked' ? '/dashboard/settings/platforms' : undefined,
+      actionLabel: d.decision === 'blocked' ? 'Connect' : undefined,
+    })
+  }
+
+  // Sort by timestamp descending
+  entries.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+  return entries.slice(0, 20)
 }
 
 function deriveMetrics(skillRuns: Record<string, unknown>[], todayStart: string) {
@@ -148,7 +174,7 @@ export default async function DashboardPage() {
   const today = new Date().toISOString().split('T')[0]
   const todayStart = `${today}T00:00:00.000Z`
 
-  const [skillRunsRes, notificationsRes, metricsHistoryRes] = await Promise.all([
+  const [skillRunsRes, notificationsRes, metricsHistoryRes, miaDecisionsRes, agentSetupsRes] = await Promise.all([
     supabase
       .from('skill_runs')
       .select('*')
@@ -169,17 +195,37 @@ export default async function DashboardPage() {
       .eq('brand_id', ctx.brandId)
       .order('recorded_at', { ascending: false })
       .limit(50),
+    supabase
+      .from('mia_decisions')
+      .select('*')
+      .eq('brand_id', ctx.brandId)
+      .gte('created_at', twentyFourHoursAgo)
+      .order('created_at', { ascending: false })
+      .limit(20),
+    supabase
+      .from('knowledge_nodes')
+      .select('node_type, meta')
+      .eq('brand_id', ctx.brandId)
+      .eq('node_type', 'agent_setup'),
   ])
 
   const skillRuns = (skillRunsRes.data ?? []) as Record<string, unknown>[]
   const notifications = (notificationsRes.data ?? []) as Record<string, unknown>[]
   const metricsHistory = (metricsHistoryRes.data ?? []) as Record<string, unknown>[]
+  const miaDecisions = (miaDecisionsRes.data ?? []) as Array<{ decision: string; reasoning: string; target_agent?: string; created_at: string }>
+  const agentSetupRows = (agentSetupsRes.data ?? []) as Array<{ node_type: string; meta: Record<string, unknown> }>
+  const agentSetups: Record<string, { state: string }> = {}
+  for (const row of agentSetupRows) {
+    const agentId = row.meta?.agent_id as string | undefined
+    const state = (row.meta?.state as string) ?? 'inactive'
+    if (agentId) agentSetups[agentId] = { state }
+  }
 
   // Derive data
   const { narrative, metricsContext } = deriveMorningNarrative(skillRuns, ctx.brandName)
   const metrics = deriveMetrics(skillRuns, todayStart)
   const chainNodes = deriveChainNodes(skillRuns)
-  const logEntries = deriveLogEntries(skillRuns)
+  const logEntries = deriveLogEntries(skillRuns, miaDecisions)
 
   // Latest run ID for "View Full Audit" link
   const latestRunId = skillRuns[0]?.id as string | undefined
@@ -212,6 +258,7 @@ export default async function DashboardPage() {
         metricsContext={metricsContext}
         latestRunId={latestRunId}
         brandId={ctx.brandId}
+        miaDecisions={miaDecisions}
       />
 
       {/* 12-col grid: main (8) + sidebar (4) */}
@@ -242,6 +289,24 @@ export default async function DashboardPage() {
               sparklineData={revenueSparkline.length > 0 ? revenueSparkline : [2, 4, 3, 5, 4]}
               status="stable"
             />
+          </div>
+
+          {/* Agent Status Bar */}
+          <div className="glass-panel rounded-xl p-4">
+            <p className="text-[10px] uppercase tracking-widest text-muted-foreground/60 mb-3">Agent Status</p>
+            <div className="flex flex-wrap gap-3">
+              {AGENTS.map(agent => {
+                const setup = agentSetups[agent.id]
+                const isBlocked = miaDecisions.some(d => d.target_agent === agent.id && d.decision === 'blocked')
+                const color = isBlocked ? '#ef4444' : setup?.state === 'ready' ? '#10b981' : setup?.state === 'collecting' ? '#f97316' : '#4b5563'
+                return (
+                  <a key={agent.id} href={`/dashboard/agents/${agent.id}`} className="flex items-center gap-1.5 group" title={agent.name}>
+                    <span className="w-2 h-2 rounded-full" style={{ background: color }} />
+                    <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">{agent.name}</span>
+                  </a>
+                )
+              })}
+            </div>
           </div>
 
           {/* Internal Log */}
