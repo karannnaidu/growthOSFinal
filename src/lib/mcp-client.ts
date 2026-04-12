@@ -119,9 +119,9 @@ async function maybeRefreshGoogleToken(
 
     // Persist refreshed token to the database
     try {
-      const { createClient } = await import('@/lib/supabase/server');
-      const supabase = await createClient();
-      await supabase
+      const { createServiceClient } = await import('@/lib/supabase/service');
+      const admin = createServiceClient();
+      await admin
         .from('credentials')
         .update({ access_token: json.access_token, expires_at: newExpiresAt })
         .eq('brand_id', brandId)
@@ -491,10 +491,10 @@ async function loadCredential(
   platform: string,
 ): Promise<Credential | null> {
   try {
-    const { createClient } = await import('@/lib/supabase/server');
-    const supabase = await createClient();
+    const { createServiceClient } = await import('@/lib/supabase/service');
+    const admin = createServiceClient();
 
-    const { data, error } = await supabase
+    const { data, error } = await admin
       .from('credentials')
       .select('platform, access_token, refresh_token, expires_at, metadata')
       .eq('brand_id', brandId)
