@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { syncPlatformStatus } from '@/lib/knowledge/intelligence'
 
 // ---------------------------------------------------------------------------
 // GET /api/platforms/google/callback
@@ -110,6 +111,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     console.error('[Google Callback] Failed to store credentials:', credError)
     return NextResponse.redirect(new URL(failUrl, request.url))
   }
+
+  await syncPlatformStatus(brandId).catch(err =>
+    console.warn('[callback] Platform status sync failed:', err)
+  )
 
   // 3. Redirect to settings
   return NextResponse.redirect(new URL('/dashboard/settings?connected=google', request.url))

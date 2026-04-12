@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { verifyShopifyHmac, pullShopifyProducts, pullShopifyOrdersSummary } from '@/lib/shopify'
+import { syncPlatformStatus } from '@/lib/knowledge/intelligence'
 
 // ---------------------------------------------------------------------------
 // GET /api/platforms/shopify/callback
@@ -105,6 +106,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     console.error('[Shopify Callback] Failed to store credentials:', credError)
     return NextResponse.redirect(new URL(failUrl, request.url))
   }
+
+  await syncPlatformStatus(brandId).catch(err =>
+    console.warn('[callback] Platform status sync failed:', err)
+  )
 
   // 5. Pull initial data (non-fatal — redirect to success even if partial failure)
   try {

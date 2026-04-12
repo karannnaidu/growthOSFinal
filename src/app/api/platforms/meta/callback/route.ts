@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { syncPlatformStatus } from '@/lib/knowledge/intelligence'
 
 // ---------------------------------------------------------------------------
 // GET /api/platforms/meta/callback
@@ -169,6 +170,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     console.error('[Meta Callback] Failed to store credentials:', credError)
     return NextResponse.redirect(new URL(failUrl, request.url))
   }
+
+  await syncPlatformStatus(brandId).catch(err =>
+    console.warn('[callback] Platform status sync failed:', err)
+  )
 
   // 5. Redirect back to where the user came from
   return NextResponse.redirect(new URL(`${returnTo}?connected=meta`, request.url))

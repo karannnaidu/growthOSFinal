@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
+import { syncPlatformStatus } from '@/lib/knowledge/intelligence'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -126,6 +127,10 @@ export async function POST(request: NextRequest): Promise<NextResponse<ConnectRe
     console.error('[Klaviyo Connect] Failed to store credentials:', credError)
     return errorResponse('DB_ERROR', 'Failed to store credentials', 500)
   }
+
+  await syncPlatformStatus(brandId).catch(err =>
+    console.warn('[callback] Platform status sync failed:', err)
+  )
 
   return NextResponse.json({ success: true, data: { status: 'connected', lists: listsCount } })
 }
