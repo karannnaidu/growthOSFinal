@@ -71,6 +71,8 @@ export interface ImageGenerationOptions {
   num_images?: number;  // default 1
   seed?: number;
   brandId?: string;     // for BYOK key lookup
+  referenceImageUrl?: string;  // product image for img2img
+  strength?: number;    // 0-1, how much to deviate from reference (default 0.65)
 }
 
 export interface VideoGenerationOptions {
@@ -174,9 +176,17 @@ export async function generateImage(
     num_images = 1,
     seed,
     brandId,
+    referenceImageUrl,
+    strength = 0.65,
   } = options;
 
   const apiKey = await getFalKey(brandId);
+
+  // If reference image provided, use image-to-image (keeps product visible)
+  const useImg2Img = !!referenceImageUrl;
+  const endpoint = useImg2Img
+    ? 'https://fal.run/fal-ai/flux/dev/image-to-image'
+    : `https://fal.run/${model}`;
 
   const body: Record<string, unknown> = {
     prompt,
@@ -184,10 +194,14 @@ export async function generateImage(
     num_images,
   };
 
+  if (useImg2Img) {
+    body.image_url = referenceImageUrl;
+    body.strength = strength;
+  }
   if (negativePrompt) body.negative_prompt = negativePrompt;
   if (seed !== undefined) body.seed = seed;
 
-  const res = await fetch(`https://fal.run/${model}`, {
+  const res = await fetch(endpoint, {
     method: 'POST',
     headers: {
       Authorization: `Key ${apiKey}`,

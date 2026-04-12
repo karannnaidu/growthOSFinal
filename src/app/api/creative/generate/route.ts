@@ -120,18 +120,32 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     )
     console.log(`[creative/generate] Step 3 done. Image prompts: ${brief.imagePrompts?.length}, Reasoning: ${brief.reasoning?.slice(0, 50)}`)
 
-    // 4. Generate 4 image variants (Vercel Pro: 300s timeout)
+    // 3.5 Fetch product images from Brand DNA for image-to-image reference
+    const { data: brandData } = await admin
+      .from('brands')
+      .select('brand_guidelines, product_context')
+      .eq('id', brandId)
+      .single()
+
+    const products = (brandData?.brand_guidelines as Record<string, unknown>)?.products as Array<{ name: string; image_url?: string }> ?? brandData?.product_context as Array<{ name: string; image_url?: string }> ?? []
+    const productImages = products.filter(p => p.image_url).map(p => p.image_url!)
+    console.log(`[creative/generate] Product images available: ${productImages.length}`)
+
+    // 4. Generate 4 image variants using product images as references
     const imagePrompts = brief.imagePrompts.slice(0, 4)
-    console.log(`[creative/generate] Step 4: generating ${imagePrompts.length} images via fal.ai`)
+    console.log(`[creative/generate] Step 4: generating ${imagePrompts.length} images via fal.ai (img2img with product refs)`)
     const imageResults = await Promise.allSettled(
-      imagePrompts.map((p) =>
+      imagePrompts.map((p, idx) =>
         generateImage({
-          prompt: p.prompt,
-          negativePrompt: p.negativePrompt,
+          prompt: p.prompt + '. Feature the actual product prominently. Professional product photography for D2C social media ad.',
+          negativePrompt: (p.negativePrompt || '') + ', blurry product, missing product, no product visible',
           width: p.width || 1024,
           height: p.height || 1024,
           num_images: 1,
           brandId,
+          // Cycle through product images as references
+          referenceImageUrl: productImages.length > 0 ? productImages[idx % productImages.length] : undefined,
+          strength: 0.6, // Keep product recognizable but allow creative context
         }),
       ),
     )
