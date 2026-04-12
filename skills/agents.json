@@ -46,7 +46,11 @@
     "schedule": "0 8 * * 1",
     "is_manager": false,
     "can_spawn": false,
-    "description": "Manages email/SMS flows, recovers abandoned carts, collects reviews, prevents churn, and designs loyalty programs."
+    "description": "Manages email/SMS flows, recovers abandoned carts, collects reviews, prevents churn, and designs loyalty programs.",
+    "setup": {
+      "requirements": [{"key":"data:email_list_size","label":"Email List Size","type":"number","required":true,"fallback":"manual"}],
+      "chat_prompt": "I'm Luna, your email & retention specialist. How large is your current email list?"
+    }
   },
   {
     "id": "hugo",
@@ -70,7 +74,11 @@
     "schedule": null,
     "is_manager": false,
     "can_spawn": false,
-    "description": "Optimizes conversion rates, designs A/B tests, and finds pricing opportunities to improve margins."
+    "description": "Optimizes conversion rates, designs A/B tests, and finds pricing opportunities to improve margins.",
+    "setup": {
+      "requirements": [{"key":"data:primary_landing_page","label":"Primary Landing Page URL","type":"text","required":true,"fallback":"manual"}],
+      "chat_prompt": "I'm Sage, your CRO specialist. What's your main landing page URL?"
+    }
   },
   {
     "id": "max",
@@ -82,7 +90,11 @@
     "schedule": "0 9 * * *",
     "is_manager": false,
     "can_spawn": false,
-    "description": "Optimizes budget across channels, decides when to scale, and advises on channel expansion."
+    "description": "Optimizes budget across channels, decides when to scale, and advises on channel expansion.",
+    "setup": {
+      "requirements": [{"key":"platform:meta","label":"Meta Ads","type":"connection","required":true},{"key":"data:monthly_ad_spend","label":"Monthly Ad Spend","type":"number","required":true,"fallback":"manual"}],
+      "chat_prompt": "I'm Max, your budget optimizer. What's your current monthly ad spend across all channels?"
+    }
   },
   {
     "id": "atlas",
@@ -94,7 +106,11 @@
     "schedule": "0 8 * * 3",
     "is_manager": false,
     "can_spawn": false,
-    "description": "Builds audience segments, creates customer personas from real data, simulates persona reactions to creatives, designs retargeting funnels, finds micro-influencers, and tracks creator ROI."
+    "description": "Builds audience segments, creates customer personas from real data, simulates persona reactions to creatives, designs retargeting funnels, finds micro-influencers, and tracks creator ROI.",
+    "setup": {
+      "requirements": [{"key":"data:target_audience_notes","label":"Target Audience Notes","type":"text","required":true,"fallback":"manual"}],
+      "chat_prompt": "I'm Atlas, your audience specialist. Tell me about your ideal customer — who are they?"
+    }
   },
   {
     "id": "echo",
@@ -130,7 +146,11 @@
     "schedule": "0 7 * * *",
     "is_manager": false,
     "can_spawn": false,
-    "description": "Monitors stock levels, calculates reorder points, pauses ads for out-of-stock, and audits legal compliance."
+    "description": "Monitors stock levels, calculates reorder points, pauses ads for out-of-stock, and audits legal compliance.",
+    "setup": {
+      "requirements": [{"key":"platform:shopify","label":"Shopify Store","type":"connection","required":true}],
+      "chat_prompt": "I'm Navi. I need your Shopify store connected to monitor inventory and compliance."
+    }
   },
   {
     "id": "penny",
@@ -142,6 +162,10 @@
     "schedule": "0 8 * * *",
     "is_manager": false,
     "can_spawn": false,
-    "description": "Tracks wallet balance, calculates true unit economics (CAC, LTV, margins), and forecasts 90-day cash flow."
+    "description": "Tracks wallet balance, calculates true unit economics (CAC, LTV, margins), and forecasts 90-day cash flow.",
+    "setup": {
+      "requirements": [{"key":"platform:shopify","label":"Shopify Store","type":"connection","required":true},{"key":"data:monthly_revenue","label":"Monthly Revenue","type":"number","required":true,"fallback":"manual"},{"key":"data:cac","label":"Customer Acquisition Cost","type":"number","required":false,"fallback":"manual"},{"key":"data:gross_margin","label":"Gross Margin %","type":"number","required":false,"fallback":"manual"}],
+      "chat_prompt": "I'm Penny, your finance agent. I need some numbers to get started. What's your approximate monthly revenue?"
+    }
   }
 ]
