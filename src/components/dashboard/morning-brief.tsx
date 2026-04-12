@@ -81,10 +81,13 @@ function MiaActions({ brandId, latestRunId }: { brandId?: string; latestRunId?: 
   return (
     <div className="flex flex-wrap items-center gap-3">
       {triggered ? (
-        <span className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium bg-[#059669]/15 text-[#059669] border border-[#059669]/20">
+        <button
+          onClick={() => window.location.reload()}
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium bg-[#059669]/15 text-[#059669] border border-[#059669]/20 hover:bg-[#059669]/25 transition-colors"
+        >
           <Play className="h-4 w-4" />
-          Mia is reviewing your brand...
-        </span>
+          Done! Refresh to see results
+        </button>
       ) : (
         <button
           onClick={handleTrigger}

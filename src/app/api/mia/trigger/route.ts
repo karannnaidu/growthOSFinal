@@ -1,3 +1,5 @@
+export const maxDuration = 60 // Allow up to 60s for LLM call
+
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
@@ -34,13 +36,24 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     if (!member) return NextResponse.json({ error: 'Access denied' }, { status: 403 })
   }
 
-  // Fire-and-forget: run health-check (Mia auto-chains from it)
-  runSkill({
-    brandId,
-    skillId: 'health-check',
-    triggeredBy: 'mia',
-    additionalContext: { source: 'manual_trigger' },
-  }).catch((err) => console.error('[mia/trigger] health-check failed:', err))
-
-  return NextResponse.json({ success: true, message: 'Mia is reviewing your brand. Check back in ~30 seconds.' })
+  // Run health-check synchronously (Vercel kills async work after response)
+  try {
+    const result = await runSkill({
+      brandId,
+      skillId: 'health-check',
+      triggeredBy: 'mia',
+      additionalContext: { source: 'manual_trigger' },
+    })
+    return NextResponse.json({
+      success: true,
+      runId: result.id,
+      status: result.status,
+      message: result.status === 'completed'
+        ? 'Health check complete. Mia is reviewing findings.'
+        : `Health check ${result.status}: ${result.error || 'unknown'}`,
+    })
+  } catch (err) {
+    console.error('[mia/trigger] health-check failed:', err)
+    return NextResponse.json({ error: 'Health check failed' }, { status: 500 })
+  }
 }
