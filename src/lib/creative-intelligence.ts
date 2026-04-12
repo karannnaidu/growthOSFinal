@@ -84,10 +84,17 @@ export function getVideoDuration(campaignGoal: string): number {
 function parseLLMJson<T>(raw: string, fallback: T): T {
   let cleaned = raw.trim();
 
-  // Strip markdown code fences (```json ... ``` or ``` ... ```)
-  const fenceMatch = cleaned.match(/```(?:json)?\s*([\s\S]*?)```/);
+  // Strip markdown code fences — handle various formats:
+  // ```json\n{...}\n```  or  ```\n{...}\n```  or  ```json{...}```
+  const fenceMatch = cleaned.match(/^```(?:json)?\s*\n?([\s\S]*?)\n?\s*```$/);
   if (fenceMatch) {
     cleaned = (fenceMatch[1] ?? '').trim();
+  } else {
+    // Also try non-anchored match (fence might be surrounded by other text)
+    const innerMatch = cleaned.match(/```(?:json)?\s*\n([\s\S]*?)\n\s*```/);
+    if (innerMatch) {
+      cleaned = (innerMatch[1] ?? '').trim();
+    }
   }
 
   try {
