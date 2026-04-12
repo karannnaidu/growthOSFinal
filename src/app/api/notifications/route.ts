@@ -58,8 +58,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     }
   }
 
-  // 4. Fetch notifications
-  const { data: notifications, error } = await supabase
+  // 4. Fetch notifications (service client bypasses RLS recursive policy)
+  const { data: notifications, error } = await admin
     .from('notifications')
     .select('id, type, title, body, read, created_at, action_url, agent_id, skill_run_id')
     .eq('brand_id', brandId)
@@ -72,7 +72,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   }
 
   // 5. Unread count (separate query for accuracy across pages)
-  const { count: unreadCount } = await supabase
+  const { count: unreadCount } = await admin
     .from('notifications')
     .select('id', { count: 'exact', head: true })
     .eq('brand_id', brandId)
