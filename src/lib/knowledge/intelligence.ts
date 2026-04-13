@@ -152,66 +152,78 @@ export async function getAllInstructions(brandId: string): Promise<Record<string
 }
 
 // ---------------------------------------------------------------------------
-// Write helpers
+// Write helpers — use select+insert/update instead of upsert (no unique index)
 // ---------------------------------------------------------------------------
 
-export async function upsertPlatformStatus(brandId: string, status: PlatformStatus): Promise<void> {
+async function safeUpsertNode(
+  brandId: string,
+  nodeType: string,
+  name: string,
+  fields: { summary: string; properties: Record<string, unknown>; confidence?: number },
+): Promise<void> {
   const admin = createServiceClient()
+
+  // Check if node exists
+  const { data: existing } = await admin
+    .from('knowledge_nodes')
+    .select('id')
+    .eq('brand_id', brandId)
+    .eq('name', name)
+    .eq('is_active', true)
+    .limit(1)
+    .single()
+
+  if (existing) {
+    // Update
+    await admin.from('knowledge_nodes').update({
+      summary: fields.summary,
+      properties: fields.properties,
+      confidence: fields.confidence ?? 1.0,
+      updated_at: new Date().toISOString(),
+    }).eq('id', existing.id)
+  } else {
+    // Insert
+    await admin.from('knowledge_nodes').insert({
+      brand_id: brandId,
+      node_type: nodeType,
+      name,
+      summary: fields.summary,
+      properties: fields.properties,
+      is_active: true,
+      confidence: fields.confidence ?? 1.0,
+    })
+  }
+}
+
+export async function upsertPlatformStatus(brandId: string, status: PlatformStatus): Promise<void> {
   const connected = Object.entries(status)
     .filter(([k, v]) => k !== 'updated_at' && v === true)
     .map(([k]) => k)
-  await admin.from('knowledge_nodes').upsert({
-    brand_id: brandId,
-    node_type: 'platform_status',
-    name: 'platform_status',
+  await safeUpsertNode(brandId, 'platform_status', 'platform_status', {
     summary: `Connected: ${connected.join(', ') || 'none'}`,
     properties: { ...status, updated_at: new Date().toISOString() },
-    is_active: true,
-    confidence: 1.0,
-    updated_at: new Date().toISOString(),
-  }, { onConflict: 'brand_id,name', ignoreDuplicates: false })
+  })
 }
 
 export async function upsertInstruction(brandId: string, agentId: string, text: string): Promise<void> {
-  const admin = createServiceClient()
-  await admin.from('knowledge_nodes').upsert({
-    brand_id: brandId,
-    node_type: 'instruction',
-    name: `instruction:${agentId}`,
+  await safeUpsertNode(brandId, 'instruction', `instruction:${agentId}`, {
     summary: text.slice(0, 200),
     properties: { text, target_agent: agentId, acknowledged: false },
-    is_active: true,
-    confidence: 1.0,
-    updated_at: new Date().toISOString(),
-  }, { onConflict: 'brand_id,name', ignoreDuplicates: false })
+  })
 }
 
 export async function upsertAgentSetup(brandId: string, agentId: string, state: AgentSetupState): Promise<void> {
-  const admin = createServiceClient()
-  await admin.from('knowledge_nodes').upsert({
-    brand_id: brandId,
-    node_type: 'agent_setup',
-    name: `agent_setup:${agentId}`,
+  await safeUpsertNode(brandId, 'agent_setup', `agent_setup:${agentId}`, {
     summary: `${agentId}: ${state.state} (${state.requirements_met.length} met, ${state.requirements_pending.length} pending)`,
-    properties: state,
-    is_active: true,
-    confidence: 1.0,
-    updated_at: new Date().toISOString(),
-  }, { onConflict: 'brand_id,name', ignoreDuplicates: false })
+    properties: { ...state } as Record<string, unknown>,
+  })
 }
 
 export async function upsertBrandData(brandId: string, dataType: string, data: Record<string, unknown>, source: 'manual' | 'upload' | 'chat' = 'manual'): Promise<void> {
-  const admin = createServiceClient()
-  await admin.from('knowledge_nodes').upsert({
-    brand_id: brandId,
-    node_type: 'brand_data',
-    name: `brand_data:${dataType}`,
+  await safeUpsertNode(brandId, 'brand_data', `brand_data:${dataType}`, {
     summary: `${dataType} (${source})`,
     properties: { source, data_type: dataType, data },
-    is_active: true,
-    confidence: 1.0,
-    updated_at: new Date().toISOString(),
-  }, { onConflict: 'brand_id,name', ignoreDuplicates: false })
+  })
 }
 
 export async function createMiaDecision(brandId: string, decision: MiaDecision): Promise<string> {
