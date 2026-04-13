@@ -31,27 +31,29 @@ export interface CreativeContext {
 
 export interface CreativeBrief {
   imagePrompts: Array<{
-    prompt: string;
-    negativePrompt?: string;
-    width: number;
-    height: number;
-    style: string;
-    reasoning: string;
-  }>;
+    prompt: string
+    negativePrompt?: string
+    width?: number
+    height?: number
+    style?: string
+    reasoning?: string
+  }>
   videoPrompts: Array<{
-    prompt: string;
-    duration: number;
-    style: string;
-    reasoning: string;
-  }>;
+    prompt: string
+    duration?: number
+    style?: string
+    reasoning?: string
+  }>
   copyVariants: Array<{
-    headline: string;
-    body: string;
-    cta: string;
-    targetPersona: string;
-    reasoning: string;
-  }>;
-  reasoning: string;
+    headline: string
+    body: string
+    cta: string
+    offerText?: string
+    sceneDescription: string
+    targetPersona?: string
+    reasoning?: string
+  }>
+  reasoning: string
 }
 
 export interface CreativeScore {
@@ -238,6 +240,8 @@ You MUST respond with valid JSON matching this exact schema:
       "headline": "attention-grabbing headline",
       "body": "persuasive body copy",
       "cta": "call to action",
+      "offerText": "optional offer or discount text (e.g. '20% off today only')",
+      "sceneDescription": "lifestyle setting description for the product scene",
       "targetPersona": "persona name this targets",
       "reasoning": "why this copy was crafted this way"
     }
@@ -261,7 +265,17 @@ Guidelines:
 - Copy should match the brand voice tone and avoid anything in the "don't say" list.
 - Reference top-performing creative styles when relevant.
 - Target specific personas with copy variants.
-- All reasoning fields must explain how the data informed the choice.`;
+- All reasoning fields must explain how the data informed the choice.
+
+Campaign Types and Creative Patterns:
+- URGENCY/FOMO: Headlines like "Only X left", "Ends tonight", "Last chance". CTA: "Shop Now". Visual: bold contrast, warm/red accents, timer feeling.
+- OFFER: Headlines like "X% off", "Buy 1 Get 1", "Free shipping". CTA: "Claim Offer". Visual: price slash, bright accents, offer badge.
+- RETARGETING: Headlines like "Still thinking?", "Come back", "Don't miss out". CTA: "Complete Purchase". Visual: warm, product-centered, familiar.
+- AWARENESS: Headlines like "Discover", "Meet your new...", "Why thousands trust...". CTA: "Learn More". Visual: lifestyle, aspirational, clean.
+
+Match the campaign type from the user's goal to these patterns. Each copyVariant MUST include a "sceneDescription" field describing the lifestyle setting for the product.
+
+If competitor creatives marked as inspiration are provided, reference their format and visual style in your image prompts.`;
 
 export async function generateIntelligentBrief(
   brandId: string,
@@ -291,7 +305,7 @@ export async function generateIntelligentBrief(
 
   const videoDuration = getVideoDuration(safeGoal);
 
-  const userPrompt = `Generate a creative brief.
+  let userPrompt = `Generate a creative brief.
 
 ## Campaign Goal
 ${safeGoal}
@@ -318,6 +332,15 @@ ${JSON.stringify(slimCompetitors)}
 ${JSON.stringify(slimProducts)}
 
 Generate the creative brief as JSON.`;
+
+  // Add inspiration creatives (if any marked by user)
+  const inspirationCreatives = context.competitorCreatives
+    .filter((c: Record<string, unknown>) => (c as Record<string, unknown>).isInspiration === true)
+    .slice(0, 3)
+
+  if (inspirationCreatives.length > 0) {
+    userPrompt += `\n\n## Inspiration Creatives (match their style)\n${JSON.stringify(inspirationCreatives.map((c: Record<string, unknown>) => ({ name: c.name, style: c.style, description: c.visual_description })))}`
+  }
 
   const fallback: CreativeBrief = {
     imagePrompts: [],
