@@ -7,16 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-
-async function checkSuperAdmin(supabase: Awaited<ReturnType<typeof createClient>>, userId: string) {
-  const { data: role } = await supabase
-    .from('platform_roles')
-    .select('role')
-    .eq('user_id', userId)
-    .eq('role', 'super_admin')
-    .single()
-  return !!role
-}
+import { createServiceClient } from '@/lib/supabase/service'
 
 export async function GET(_request: NextRequest): Promise<NextResponse> {
   const supabase = await createClient()
@@ -28,20 +19,28 @@ export async function GET(_request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
   }
 
-  const isAdmin = await checkSuperAdmin(supabase, user.id)
-  if (!isAdmin) {
+  // Check admin role using service client (platform_roles may have RLS too)
+  const admin = createServiceClient()
+  const { data: role } = await admin
+    .from('platform_roles')
+    .select('role')
+    .eq('user_id', user.id)
+    .eq('role', 'super_admin')
+    .single()
+
+  if (!role) {
     return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
   }
 
-  // Run all counts in parallel
+  // Use service client for all data queries — bypasses RLS circular dependency
   const [brandsRes, skillRunsRes, creditsRes, agencyBrandsRes] = await Promise.all([
-    supabase.from('brands').select('id', { count: 'exact', head: true }),
-    supabase.from('skill_runs').select('id', { count: 'exact', head: true }),
-    supabase
+    admin.from('brands').select('id', { count: 'exact', head: true }),
+    admin.from('skill_runs').select('id', { count: 'exact', head: true }),
+    admin
       .from('wallet_transactions')
       .select('amount')
       .eq('type', 'debit'),
-    supabase
+    admin
       .from('brands')
       .select('id', { count: 'exact', head: true })
       .eq('plan', 'agency'),

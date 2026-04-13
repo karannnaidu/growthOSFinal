@@ -5,11 +5,12 @@
 // Super-admin only (enforced by layout.tsx).
 // ---------------------------------------------------------------------------
 
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { AdminClientPage } from './client'
 
 export default async function AdminPage() {
-  const supabase = await createClient()
+  // Service client bypasses RLS — admin access is enforced by layout.tsx
+  const supabase = createServiceClient()
 
   // Fetch all data in parallel
   const [brandsRes, skillRunsRes, creditsRes, errorsRes, agencyCountRes] = await Promise.all([
