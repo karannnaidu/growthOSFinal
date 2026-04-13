@@ -27,9 +27,11 @@ export interface SkillDataContext {
     adSets?: unknown[];
   };
   google?: {
-    analytics?: unknown;
-    searchConsole?: unknown;
     ads?: unknown;
+  };
+  google_analytics?: {
+    ga4?: unknown;
+    searchConsole?: unknown;
   };
   klaviyo?: {
     lists?: unknown[];
@@ -69,6 +71,7 @@ interface Credential {
 async function maybeRefreshGoogleToken(
   cred: Credential,
   brandId: string,
+  platform: string = 'google',
 ): Promise<Credential> {
   if (!cred.refresh_token) return cred;
   if (!cred.expires_at) return cred;
@@ -125,7 +128,7 @@ async function maybeRefreshGoogleToken(
         .from('credentials')
         .update({ access_token: json.access_token, expires_at: newExpiresAt })
         .eq('brand_id', brandId)
-        .eq('platform', 'google');
+        .eq('platform', platform);
     } catch (dbErr) {
       console.warn('[MCP] Failed to persist refreshed Google token:', dbErr);
     }
@@ -191,11 +194,9 @@ async function fetchMetaAdSets(cred: Credential): Promise<unknown> {
 }
 
 async function fetchGA4Report(cred: Credential): Promise<unknown> {
-  // TODO: GA4 requires a propertyId stored in cred.metadata.ga4_property_id
-  // POST https://analyticsdata.googleapis.com/v1beta/properties/{propertyId}:runReport
-  const propertyId = cred.metadata?.ga4_property_id;
+  const propertyId = cred.metadata?.property_id;
   if (!propertyId) {
-    return { stub: true, message: 'GA4 integration requires ga4_property_id in credential metadata' };
+    return { stub: true, message: 'GA4 integration requires property_id in credential metadata' };
   }
   try {
     const res = await fetch(
@@ -477,8 +478,8 @@ const TOOL_PLATFORM: Record<string, string> = {
   'shopify.shop.get': 'shopify',
   'meta_ads.campaigns.insights': 'meta',
   'meta_ads.adsets.list': 'meta',
-  'ga4.report.run': 'google',
-  'gsc.performance': 'google',
+  'ga4.report.run': 'google_analytics',
+  'gsc.performance': 'google_analytics',
   'google_ads.campaigns': 'google',
   'klaviyo.lists.get': 'klaviyo',
   'klaviyo.flows.get': 'klaviyo',
@@ -545,8 +546,8 @@ export async function fetchSkillData(
       if (!cred) return;
 
       // Refresh Google access token if expired
-      if (platform === 'google') {
-        cred = await maybeRefreshGoogleToken(cred, brandId);
+      if (platform === 'google' || platform === 'google_analytics') {
+        cred = await maybeRefreshGoogleToken(cred, brandId, platform);
       }
 
       credentials.set(platform, cred);
@@ -608,18 +609,20 @@ export async function fetchSkillData(
           context.meta.adSets = (result as { data?: unknown[] }).data ?? [];
           break;
 
-        // Google
-        case 'ga4.report.run':
-          context.google = context.google ?? {};
-          context.google.analytics = result;
-          break;
-        case 'gsc.performance':
-          context.google = context.google ?? {};
-          context.google.searchConsole = result;
-          break;
+        // Google Ads
         case 'google_ads.campaigns':
           context.google = context.google ?? {};
           context.google.ads = result;
+          break;
+
+        // Google Analytics (GA4 + Search Console)
+        case 'ga4.report.run':
+          context.google_analytics = context.google_analytics ?? {};
+          context.google_analytics.ga4 = result;
+          break;
+        case 'gsc.performance':
+          context.google_analytics = context.google_analytics ?? {};
+          context.google_analytics.searchConsole = result;
           break;
 
         // Klaviyo

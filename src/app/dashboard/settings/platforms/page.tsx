@@ -57,6 +57,16 @@ const PLATFORMS: PlatformConfig[] = [
     ],
   },
   {
+    id: 'google_analytics',
+    label: 'Google Analytics',
+    description: 'GA4 website traffic and conversion data',
+    color: '#e37400',
+    connectFields: [
+      { key: 'property_id', label: 'GA4 Property ID', placeholder: '123456789' },
+      { key: 'refresh_token', label: 'OAuth refresh token', placeholder: '1//...' },
+    ],
+  },
+  {
     id: 'klaviyo',
     label: 'Klaviyo',
     description: 'Email marketing flows and lists',

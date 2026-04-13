@@ -17,7 +17,7 @@ interface StatusResponse {
 }
 
 // Known platforms — extend as more are added
-const KNOWN_PLATFORMS = ['shopify', 'meta', 'google', 'klaviyo', 'snapchat', 'chatgpt_ads'] as const
+const KNOWN_PLATFORMS = ['shopify', 'meta', 'google', 'google_analytics', 'klaviyo', 'snapchat', 'chatgpt_ads'] as const
 
 type KnownPlatform = (typeof KNOWN_PLATFORMS)[number]
 
@@ -59,6 +59,12 @@ function buildPlatformStatus(
         connected: true,
         connectedAt,
         listsCount: (meta.lists_count as number | undefined) ?? null,
+      }
+    case 'google_analytics':
+      return {
+        connected: true,
+        connectedAt,
+        propertyId: (meta.property_id as string | undefined) ?? null,
       }
     default:
       return { connected: true, connectedAt }
