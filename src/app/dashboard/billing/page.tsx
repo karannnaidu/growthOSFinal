@@ -292,8 +292,9 @@ export default function BillingPage() {
 
   const totalCredits = balance ? balance.balance + balance.freeCredits : 0
   const usedThisMonth = balance?.creditsUsedThisMonth ?? 0
-  const maxCredits = totalCredits + usedThisMonth
-  const usagePercent = maxCredits > 0 ? Math.min(100, Math.round((usedThisMonth / maxCredits) * 100)) : 0
+  // Usage % = credits used vs total pool (remaining + used). Don't inflate denominator.
+  const totalPool = totalCredits + usedThisMonth // total that was available at start of month
+  const usagePercent = totalPool > 0 ? Math.min(100, Math.round((usedThisMonth / totalPool) * 100)) : 0
   const totalPages = transactions ? Math.ceil(transactions.total / transactions.limit) : 1
 
   return (

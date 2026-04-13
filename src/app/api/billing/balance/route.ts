@@ -64,8 +64,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     }
   }
 
-  // 4. Fetch wallet
-  const { data: wallet } = await supabase
+  // 4. Fetch wallet (use service client — user client hits recursive RLS)
+  const { data: wallet } = await admin
     .from('wallets')
     .select(
       'balance, free_credits, free_credits_expires_at, auto_recharge, auto_recharge_threshold, auto_recharge_amount',
@@ -78,29 +78,29 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString()
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
 
-  // Credits used today (sum of negative 'usage' transactions)
-  const { data: todayRows } = await supabase
+  // Credits used today (sum of 'debit' transactions — skills engine writes type='debit')
+  const { data: todayRows } = await admin
     .from('wallet_transactions')
-    .select('credits')
+    .select('amount')
     .eq('brand_id', brandId)
-    .eq('type', 'usage')
+    .eq('type', 'debit')
     .gte('created_at', startOfToday)
 
   const creditsUsedToday = (todayRows ?? []).reduce(
-    (sum, row) => sum + Math.abs(row.credits ?? 0),
+    (sum, row) => sum + Math.abs(row.amount ?? 0),
     0,
   )
 
   // Credits used this month
-  const { data: monthRows } = await supabase
+  const { data: monthRows } = await admin
     .from('wallet_transactions')
-    .select('credits')
+    .select('amount')
     .eq('brand_id', brandId)
-    .eq('type', 'usage')
+    .eq('type', 'debit')
     .gte('created_at', startOfMonth)
 
   const creditsUsedThisMonth = (monthRows ?? []).reduce(
-    (sum, row) => sum + Math.abs(row.credits ?? 0),
+    (sum, row) => sum + Math.abs(row.amount ?? 0),
     0,
   )
 

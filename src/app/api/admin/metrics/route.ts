@@ -39,8 +39,8 @@ export async function GET(_request: NextRequest): Promise<NextResponse> {
     supabase.from('skill_runs').select('id', { count: 'exact', head: true }),
     supabase
       .from('wallet_transactions')
-      .select('credits')
-      .eq('type', 'usage'),
+      .select('amount')
+      .eq('type', 'debit'),
     supabase
       .from('brands')
       .select('id', { count: 'exact', head: true })
@@ -52,7 +52,7 @@ export async function GET(_request: NextRequest): Promise<NextResponse> {
   const totalAgencyBrands = agencyBrandsRes.count ?? 0
 
   const totalCreditsUsed = (creditsRes.data ?? []).reduce(
-    (sum, row) => sum + Math.abs((row.credits as number) ?? 0),
+    (sum, row) => sum + Math.abs((row.amount as number) ?? 0),
     0,
   )
 

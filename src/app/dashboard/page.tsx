@@ -393,7 +393,7 @@ export default async function DashboardPage() {
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Balance</span>
-                <span className="font-mono text-foreground">${ctx.walletBalance.toFixed(2)}</span>
+                <span className="font-mono text-foreground">{ctx.walletBalance.toLocaleString()} cr</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Free Credits</span>

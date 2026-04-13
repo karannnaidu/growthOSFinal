@@ -141,18 +141,21 @@ async function handleCheckoutCompleted(
     return
   }
 
+  const newBalance = (wallet.balance ?? 0) + credits
+
   await supabase
     .from('wallets')
-    .update({ balance: (wallet.balance ?? 0) + credits })
+    .update({ balance: newBalance, updated_at: new Date().toISOString() })
     .eq('brand_id', brandId)
 
-  // 2. Record transaction
+  // 2. Record transaction (column names must match schema: amount, stripe_payment_id, wallet_id, balance_after)
   await supabase.from('wallet_transactions').insert({
     brand_id: brandId,
+    wallet_id: wallet.id,
     type: 'deposit',
-    credits,
-    amount_cents: amountPaid,
-    stripe_payment_intent_id: typeof session.payment_intent === 'string'
+    amount: credits,
+    balance_after: newBalance,
+    stripe_payment_id: typeof session.payment_intent === 'string'
       ? session.payment_intent
       : (session.payment_intent?.id ?? null),
     description: `Credit pack purchase (${credits.toLocaleString()} credits)`,
@@ -196,20 +199,46 @@ async function handleChargeRefunded(
     return
   }
 
-  // Calculate credits to deduct (proportional refund based on amount_refunded)
-  // We record the refund as-is; exact credit deduction requires product knowledge.
-  // Store the refunded amount in cents and record the transaction.
+  // Calculate credits to deduct by looking up the original deposit transaction
   const amountRefunded = charge.amount_refunded // in cents
+  const paymentIntentId = typeof charge.payment_intent === 'string'
+    ? charge.payment_intent
+    : (charge.payment_intent?.id ?? null)
+
+  // Find the original deposit to determine credit-to-cents ratio
+  let creditsToDeduct = 0
+  if (paymentIntentId) {
+    const { data: originalTx } = await supabase
+      .from('wallet_transactions')
+      .select('amount')
+      .eq('brand_id', wallet.brand_id)
+      .eq('type', 'deposit')
+      .eq('stripe_payment_id', paymentIntentId)
+      .single()
+
+    if (originalTx && charge.amount > 0) {
+      // Proportional: if original was 1000 credits for 2500 cents, refund 1250 cents → 500 credits
+      creditsToDeduct = Math.round((originalTx.amount ?? 0) * (amountRefunded / charge.amount))
+    }
+  }
+
+  // Deduct credits from wallet balance
+  const newBalance = Math.max(0, (wallet.balance ?? 0) - creditsToDeduct)
+  if (creditsToDeduct > 0) {
+    await supabase
+      .from('wallets')
+      .update({ balance: newBalance, updated_at: new Date().toISOString() })
+      .eq('id', wallet.id)
+  }
 
   await supabase.from('wallet_transactions').insert({
     brand_id: wallet.brand_id,
+    wallet_id: wallet.id,
     type: 'refund',
-    credits: 0, // credits cannot be reliably recalculated here without original purchase record
-    amount_cents: -amountRefunded,
-    stripe_payment_intent_id: typeof charge.payment_intent === 'string'
-      ? charge.payment_intent
-      : (charge.payment_intent?.id ?? null),
-    description: `Refund of $${(amountRefunded / 100).toFixed(2)}`,
+    amount: -creditsToDeduct,
+    balance_after: newBalance,
+    stripe_payment_id: paymentIntentId,
+    description: `Refund of $${(amountRefunded / 100).toFixed(2)}${creditsToDeduct > 0 ? ` (${creditsToDeduct} credits deducted)` : ''}`,
   })
 
   // Optionally notify the brand

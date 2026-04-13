@@ -63,8 +63,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     }
   }
 
-  // 4. Fetch paginated transactions
-  const { data: transactions, error, count } = await supabase
+  // 4. Fetch paginated transactions (service client — RLS recursion on user client)
+  const { data: rawTransactions, error, count } = await admin
     .from('wallet_transactions')
     .select(
       'id, type, amount, balance_after, description, stripe_payment_id, created_at',
@@ -74,13 +74,24 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1)
 
+  // Map DB column names to what the frontend expects
+  const transactions = (rawTransactions ?? []).map((tx) => ({
+    id: tx.id,
+    type: tx.type === 'debit' ? 'usage' : tx.type,
+    credits: tx.amount ?? 0,
+    balance_after: tx.balance_after,
+    description: tx.description,
+    stripe_payment_intent_id: tx.stripe_payment_id,
+    created_at: tx.created_at,
+  }))
+
   if (error) {
     console.error('[GET /api/billing/transactions] DB error:', error)
     return NextResponse.json({ error: 'Failed to fetch transactions' }, { status: 500 })
   }
 
   return NextResponse.json({
-    transactions: transactions ?? [],
+    transactions,
     page,
     limit,
     total: count ?? 0,
