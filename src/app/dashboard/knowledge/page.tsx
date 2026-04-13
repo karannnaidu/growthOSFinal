@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Search, X, ChevronDown, ChevronUp } from 'lucide-react'
@@ -42,26 +41,54 @@ export default function KnowledgeBrowserPage() {
   const [filterType, setFilterType] = useState('all')
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
-  const supabase = useMemo(() => createClient(), [])
-
   useEffect(() => {
     async function fetchData() {
-      const [nodesRes, edgesRes] = await Promise.all([
-        supabase.from('knowledge_nodes').select('*').order('updated_at', { ascending: false }),
-        supabase.from('knowledge_edges').select('*'),
-      ])
-      if (nodesRes.data) setNodes(nodesRes.data as KnowledgeNode[])
-      if (edgesRes.data) setEdges(edgesRes.data as KnowledgeEdge[])
+      // Resolve brand ID from storage or API
+      let brandId: string | null =
+        sessionStorage.getItem('onboarding_brand_id') || localStorage.getItem('growth_os_brand_id')
+
+      if (!brandId) {
+        try {
+          const res = await fetch('/api/brands/me')
+          if (res.ok) {
+            const data = await res.json()
+            if (data.brandId) {
+              brandId = data.brandId
+              localStorage.setItem('growth_os_brand_id', data.brandId)
+            }
+          }
+        } catch { /* ignore */ }
+      }
+
+      if (!brandId) {
+        setLoading(false)
+        return
+      }
+
+      try {
+        const res = await fetch(`/api/knowledge/browser?brandId=${brandId}`)
+        if (res.ok) {
+          const data = await res.json()
+          setNodes(data.nodes ?? [])
+          setEdges(data.edges ?? [])
+        }
+      } catch { /* ignore */ }
+
       setLoading(false)
     }
-    fetchData()
-  }, [supabase])
 
-  const filtered = nodes.filter((node) => {
-    const matchesType = filterType === 'all' || node.node_type === filterType
-    const matchesSearch = !search || node.name.toLowerCase().includes(search.toLowerCase())
-    return matchesType && matchesSearch
-  })
+    fetchData()
+  }, [])
+
+  const filtered = useMemo(
+    () =>
+      nodes.filter((node) => {
+        const matchesType = filterType === 'all' || node.node_type === filterType
+        const matchesSearch = !search || node.name.toLowerCase().includes(search.toLowerCase())
+        return matchesType && matchesSearch
+      }),
+    [nodes, filterType, search],
+  )
 
   function getRelatedEdges(nodeId: string) {
     return edges.filter((e) => e.source_id === nodeId || e.target_id === nodeId)
