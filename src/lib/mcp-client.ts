@@ -379,7 +379,7 @@ const TOOL_HANDLERS: Record<string, ToolHandler> = {
       .eq('brand_id', brandId)
       .eq('node_type', 'competitor')
       .eq('is_active', true)
-      .limit(5);
+      .limit(20);
     const allResults = [];
     for (const node of nodes ?? []) {
       // Full pipeline: fetch + download media + analyze + store as knowledge nodes
@@ -398,7 +398,7 @@ const TOOL_HANDLERS: Record<string, ToolHandler> = {
       .eq('brand_id', brandId)
       .eq('node_type', 'competitor')
       .eq('is_active', true)
-      .limit(5);
+      .limit(20);
     const allProducts = [];
     for (const node of nodes ?? []) {
       const domain = (node.properties as Record<string, unknown>)?.domain as string;
@@ -418,7 +418,7 @@ const TOOL_HANDLERS: Record<string, ToolHandler> = {
       .eq('brand_id', brandId)
       .eq('node_type', 'competitor')
       .eq('is_active', true)
-      .limit(5);
+      .limit(20);
     const results = [];
     for (const node of nodes ?? []) {
       const domain = (node.properties as Record<string, unknown>)?.domain as string;
@@ -438,7 +438,7 @@ const TOOL_HANDLERS: Record<string, ToolHandler> = {
       .eq('brand_id', brandId)
       .eq('node_type', 'competitor')
       .eq('is_active', true)
-      .limit(5);
+      .limit(20);
     const results = [];
     for (const node of nodes ?? []) {
       const domain = (node.properties as Record<string, unknown>)?.domain as string;

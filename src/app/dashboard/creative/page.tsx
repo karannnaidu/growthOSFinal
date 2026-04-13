@@ -1011,9 +1011,20 @@ export default function CreativeStudioPage() {
 // ---------------------------------------------------------------------------
 // Competitor Insights Panel
 // ---------------------------------------------------------------------------
+function CompetitorThumb({ src, alt, className }: { src: string; alt: string; className?: string }) {
+  const [failed, setFailed] = useState(false)
+  if (failed) return (
+    <div className="absolute inset-0 flex items-center justify-center">
+      <ImageIcon className="h-6 w-6 text-muted-foreground/30" />
+    </div>
+  )
+  return <Image src={src} alt={alt} fill className={className ?? 'object-cover'} unoptimized onError={() => setFailed(true)} />
+}
+
 function CompetitorInsightsPanel({ brandId }: { brandId: string | null }) {
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [expandedId, setExpandedId] = useState<string | null>(null)
 
   useEffect(() => {
     if (!brandId) return
@@ -1032,6 +1043,8 @@ function CompetitorInsightsPanel({ brandId }: { brandId: string | null }) {
     </div>
   )
 
+  const expandedItem = expandedId ? (data.items as any[])?.find((i: any) => i.id === expandedId) : null
+
   async function toggleInspiration(creativeId: string, inspire: boolean) {
     if (!brandId) return
     await fetch('/api/creative/competitor-insights', {
@@ -1046,6 +1059,83 @@ function CompetitorInsightsPanel({ brandId }: { brandId: string | null }) {
 
   return (
     <div className="space-y-6">
+      {/* ---- Expanded lightbox ---- */}
+      {expandedItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setExpandedId(null)}>
+          <div className="glass-panel rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 space-y-4 relative" onClick={e => e.stopPropagation()}>
+            <button onClick={() => setExpandedId(null)} className="absolute top-4 right-4 text-muted-foreground hover:text-foreground z-10">
+              <X className="h-5 w-5" />
+            </button>
+
+            {/* Media */}
+            {(expandedItem.videoUrl || expandedItem.thumbnailUrl) && (
+              <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-muted/30">
+                {expandedItem.videoUrl ? (
+                  <video src={expandedItem.videoUrl} poster={expandedItem.thumbnailUrl || undefined} controls className="w-full h-full object-contain" />
+                ) : (
+                  <CompetitorThumb src={expandedItem.thumbnailUrl} alt={expandedItem.competitorName} className="object-contain" />
+                )}
+              </div>
+            )}
+
+            <h2 className="font-heading text-lg font-bold text-foreground">{expandedItem.competitorName}</h2>
+            <p className="text-xs text-muted-foreground">
+              {expandedItem.daysActive} days active | Format: {expandedItem.format} | Style: {expandedItem.visualStyle}
+            </p>
+
+            {expandedItem.adBody && (
+              <div className="glass-panel rounded-xl p-4">
+                <p className="text-xs font-medium text-muted-foreground mb-1">Ad Copy</p>
+                <p className="text-sm text-foreground/80">{expandedItem.adBody}</p>
+                {expandedItem.ctaText && <p className="text-sm text-indigo-400 font-medium mt-1">{expandedItem.ctaText}</p>}
+              </div>
+            )}
+
+            {expandedItem.visualDescription && (
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-1">Visual Analysis</p>
+                <p className="text-sm text-foreground/70">{expandedItem.visualDescription}</p>
+              </div>
+            )}
+
+            <div className="flex flex-wrap gap-1.5">
+              {expandedItem.format !== 'unknown' && <span className="text-[10px] bg-white/10 rounded-full px-2 py-0.5 text-muted-foreground">{expandedItem.format}</span>}
+              {expandedItem.messagingApproach !== 'unknown' && <span className="text-[10px] bg-white/10 rounded-full px-2 py-0.5 text-muted-foreground">{expandedItem.messagingApproach}</span>}
+              {expandedItem.estimatedPerformance !== 'unknown' && (
+                <span className={`text-[10px] rounded-full px-2 py-0.5 ${
+                  expandedItem.estimatedPerformance === 'high' ? 'bg-[#10b981]/15 text-[#10b981]' :
+                  expandedItem.estimatedPerformance === 'medium' ? 'bg-[#f59e0b]/15 text-[#f59e0b]' :
+                  'bg-white/10 text-muted-foreground'
+                }`}>{expandedItem.estimatedPerformance} performer</span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => toggleInspiration(expandedItem.id, !expandedItem.isInspiration)}
+                className={`text-[10px] px-2.5 py-1 rounded-full transition-colors ${
+                  expandedItem.isInspiration
+                    ? 'bg-[#f97316]/15 text-[#f97316]'
+                    : 'bg-white/5 text-muted-foreground hover:bg-[#f97316]/10 hover:text-[#f97316]'
+                }`}
+              >
+                {expandedItem.isInspiration ? '\u2605 Inspiration' : '\u2606 Use as Inspiration'}
+              </button>
+              {expandedItem.adSnapshotUrl && (
+                <a href={expandedItem.adSnapshotUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] px-2.5 py-1 rounded-full bg-white/5 text-muted-foreground hover:text-foreground transition-colors">
+                  View on Meta &rarr;
+                </a>
+              )}
+              {(expandedItem.thumbnailUrl || expandedItem.videoUrl) && (
+                <a href={expandedItem.videoUrl || expandedItem.thumbnailUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[10px] text-indigo-400 hover:text-indigo-300">
+                  <Download className="h-3 w-3" /> Download
+                </a>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Trend summary */}
       {data.trends && (
         <div className="glass-panel rounded-xl p-4">
@@ -1066,17 +1156,20 @@ function CompetitorInsightsPanel({ brandId }: { brandId: string | null }) {
           <h3 className="text-xs uppercase tracking-widest text-muted-foreground font-medium mb-3">Top Performers</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {data.topPerformers.map((item: any) => (
-              <div key={item.id} className="glass-panel rounded-xl overflow-hidden">
+              <button key={item.id} onClick={() => setExpandedId(item.id)} className="glass-panel rounded-xl overflow-hidden text-left transition-all duration-200 hover:bg-white/[0.03] hover:ring-1 hover:ring-indigo-500/20">
                 {/* Media — video or thumbnail */}
                 {item.videoUrl ? (
                   <div className="relative aspect-video bg-black">
                     <video src={item.videoUrl} poster={item.thumbnailUrl || undefined}
-                      controls muted preload="metadata"
+                      muted preload="metadata"
                       className="absolute inset-0 w-full h-full object-contain" />
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                      <Play className="h-8 w-8 text-white/80" />
+                    </div>
                   </div>
                 ) : item.thumbnailUrl ? (
                   <div className="relative aspect-video bg-muted/30">
-                    <Image src={item.thumbnailUrl} alt={item.competitorName} fill className="object-cover" unoptimized />
+                    <CompetitorThumb src={item.thumbnailUrl} alt={item.competitorName} />
                   </div>
                 ) : (
                   <div className="aspect-video bg-muted/20 flex items-center justify-center">
@@ -1098,25 +1191,8 @@ function CompetitorInsightsPanel({ brandId }: { brandId: string | null }) {
                     {item.format !== 'unknown' && <span className="text-[9px] bg-white/10 rounded px-1.5 py-0.5 text-muted-foreground">{item.format}</span>}
                     {item.messagingApproach !== 'unknown' && <span className="text-[9px] bg-white/10 rounded px-1.5 py-0.5 text-muted-foreground">{item.messagingApproach}</span>}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => toggleInspiration(item.id, !item.isInspiration)}
-                      className={`text-[10px] px-2.5 py-1 rounded-full transition-colors ${
-                        item.isInspiration
-                          ? 'bg-[#f97316]/15 text-[#f97316]'
-                          : 'bg-white/5 text-muted-foreground hover:bg-[#f97316]/10 hover:text-[#f97316]'
-                      }`}
-                    >
-                      {item.isInspiration ? '\u2605 Inspiration' : '\u2606 Use as Inspiration'}
-                    </button>
-                    {item.adSnapshotUrl && (
-                      <a href={item.adSnapshotUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] px-2.5 py-1 rounded-full bg-white/5 text-muted-foreground hover:text-foreground transition-colors">
-                        View on Meta &rarr;
-                      </a>
-                    )}
-                  </div>
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         </div>
@@ -1127,17 +1203,20 @@ function CompetitorInsightsPanel({ brandId }: { brandId: string | null }) {
         <h3 className="text-xs uppercase tracking-widest text-muted-foreground font-medium mb-3">All Competitor Creatives ({data.total})</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {data.items?.map((item: any) => (
-            <div key={item.id} className="glass-panel rounded-xl overflow-hidden">
+            <button key={item.id} onClick={() => setExpandedId(item.id)} className="glass-panel rounded-xl overflow-hidden text-left transition-all duration-200 hover:bg-white/[0.03] hover:ring-1 hover:ring-indigo-500/20">
               {/* Media — video or thumbnail */}
               {item.videoUrl ? (
                 <div className="relative aspect-video bg-black">
                   <video src={item.videoUrl} poster={item.thumbnailUrl || undefined}
-                    controls muted preload="metadata"
+                    muted preload="metadata"
                     className="absolute inset-0 w-full h-full object-contain" />
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                    <Play className="h-6 w-6 text-white/80" />
+                  </div>
                 </div>
               ) : item.thumbnailUrl ? (
                 <div className="relative aspect-video bg-muted/30">
-                  <Image src={item.thumbnailUrl} alt={item.competitorName} fill className="object-cover" unoptimized />
+                  <CompetitorThumb src={item.thumbnailUrl} alt={item.competitorName} />
                 </div>
               ) : (
                 <div className="aspect-video bg-muted/20 flex items-center justify-center">
@@ -1152,13 +1231,8 @@ function CompetitorInsightsPanel({ brandId }: { brandId: string | null }) {
                   <span>{'\u2022'}</span>
                   <span>{item.format}</span>
                 </div>
-                {item.adSnapshotUrl && (
-                  <a href={item.adSnapshotUrl} target="_blank" rel="noopener noreferrer" className="inline-block text-[10px] text-[#6366f1] hover:text-[#818cf8] transition-colors">
-                    View on Meta &rarr;
-                  </a>
-                )}
               </div>
-            </div>
+            </button>
           ))}
         </div>
       </div>

@@ -3,18 +3,20 @@
 -- Run this in your Supabase SQL editor (or via supabase db push).
 -- ---------------------------------------------------------------------------
 
--- Create storage buckets (private by default)
+-- Create storage buckets
+-- brand-assets: private (may contain logos, internal docs)
+-- generated-assets & competitor-assets: public (ad creatives served via getPublicUrl)
 INSERT INTO storage.buckets (id, name, public)
   VALUES ('brand-assets', 'brand-assets', false)
-  ON CONFLICT (id) DO NOTHING;
+  ON CONFLICT (id) DO UPDATE SET public = false;
 
 INSERT INTO storage.buckets (id, name, public)
-  VALUES ('generated-assets', 'generated-assets', false)
-  ON CONFLICT (id) DO NOTHING;
+  VALUES ('generated-assets', 'generated-assets', true)
+  ON CONFLICT (id) DO UPDATE SET public = true;
 
 INSERT INTO storage.buckets (id, name, public)
-  VALUES ('competitor-assets', 'competitor-assets', false)
-  ON CONFLICT (id) DO NOTHING;
+  VALUES ('competitor-assets', 'competitor-assets', true)
+  ON CONFLICT (id) DO UPDATE SET public = true;
 
 -- ---------------------------------------------------------------------------
 -- RLS policies
