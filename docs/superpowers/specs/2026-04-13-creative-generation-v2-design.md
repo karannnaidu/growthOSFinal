@@ -123,30 +123,38 @@ For each approved variant:
    - Input: product photo (transparent if available) + scene prompt
    - The model SEES the product and generates it faithfully in the described scene
    - Fallback: Imagen 4.0 Fast for text-to-image if Nano Banana fails
-2. **Programmatic text overlay** (sharp/canvas):
-   - Headline text (top or center, brand font, brand colors)
-   - CTA button (bottom, contrasting color)
-   - Price/offer badge (corner, if applicable)
-   - Brand logo watermark (small, corner)
-3. Save both versions:
-   - Raw lifestyle image (no text) → for social media posts
-   - Ad-ready image (with text) → for Meta/Instagram ads
+2. **Text overlays handled by Nano Banana 2** — included in the same generation prompt:
+   - Headline text, CTA button text, price/offer badge, brand colors
+   - All text is specified in the prompt, Nano Banana renders it on the image
+   - No separate text overlay step or `sharp` dependency needed
+3. Save the ad-ready image (product + scene + text in one generation)
 
 ### Image Generation Models
 
 | Model | Use Case | Method | Cost |
 |-------|----------|--------|------|
-| Nano Banana 2 (`gemini-3.1-flash-image-preview`) | Primary: product + scene generation | `generateContent` with image input + output | Free |
-| Imagen 4.0 Fast (`imagen-4.0-fast-generate-001`) | Fallback: text-to-image scenes | `predict` | Free |
-| Imagen 4.0 Ultra (`imagen-4.0-ultra-generate-001`) | Premium: highest quality | `predict` | Free |
+| Nano Banana 2 (`gemini-3.1-flash-image-preview`) | Primary: product + scene + text overlay, all in one | `generateContent` with image input + output | Free |
+| Imagen 4.0 Fast (`imagen-4.0-fast-generate-001`) | Fallback: text-to-image if Nano Banana fails | `predict` | Free |
+| Imagen 4.0 Ultra (`imagen-4.0-ultra-generate-001`) | Premium: highest quality fallback | `predict` | Free |
 
-### Text Overlay Implementation
+### Nano Banana 2 Prompt Structure
 
-Use `sharp` (Node.js image processing, already in Next.js ecosystem):
-- Composite text as SVG overlays onto the generated image
-- Brand fonts loaded from Brand DNA (or system fallback)
-- Colors from Brand DNA `visual_identity.primary_colors`
-- Responsive text sizing based on image dimensions
+```
+[Product image provided as input]
+
+Create a professional D2C social media ad featuring this exact product.
+
+Scene: {scene description from brief}
+Brand colors: {primary_colors from Brand DNA}
+
+Text overlay requirements:
+- Headline (top): "{user-edited headline}"
+- CTA button (bottom): "{user-edited CTA}"  
+- Offer badge (corner): "{price/offer text}"
+
+Style: {campaign type visual approach — bold/warm/clean/aspirational}
+Keep the product label and branding EXACTLY as shown in the reference.
+```
 
 ---
 
@@ -179,7 +187,6 @@ When Echo discovers a high-performing competitor ad (14+ days active, new format
 | File | Purpose | Est. Lines |
 |------|---------|-----------|
 | `src/lib/imagen-client.ts` | Imagen 4.0 + Nano Banana 2 API wrapper (replaces fal.ai for image gen) | 150 |
-| `src/lib/text-overlay.ts` | Programmatic text overlay using sharp | 120 |
 | `src/app/api/creative/competitor-insights/route.ts` | GET competitor creative data for the Insights tab | 80 |
 
 ### Modified Files
@@ -192,13 +199,13 @@ When Echo discovers a high-performing competitor ad (14+ days active, new format
 | `src/lib/competitor-intel.ts` | Add visual analysis to fetchCompetitorAds output | 40 |
 | `skills/diagnosis/competitor-creative-library.md` | Update skill to use Gemini Vision for analysis | 20 |
 
-**Total: ~770 lines new/changed across 8 files.**
+**Total: ~650 lines new/changed across 7 files.**
 
 ---
 
 ## 6. Dependencies
 
-- `sharp` — Node.js image processing (needs to be added to package.json)
 - Google AI Key — already configured (Gemini, Imagen, Nano Banana all use same key)
 - Meta Ad Library API — already configured (META_APP_ID/SECRET)
-- fal.ai — kept as fallback for background removal (birefnet), no longer used for image generation
+- fal.ai — kept for background removal (birefnet) only, no longer used for image generation
+- No new npm packages needed
