@@ -8,6 +8,9 @@ import { ChatInput } from '@/components/chat/chat-input'
 import { ChatSidebar } from '@/components/chat/chat-sidebar'
 import { ActiveContext } from '@/components/chat/active-context'
 import { cn } from '@/lib/utils'
+import { ActionCard, type ActionState } from '@/components/chat/action-card'
+import { CollectCard } from '@/components/chat/collect-card'
+import { type MiaAction, type SkillAction, type CollectAction } from '@/lib/mia-actions'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -46,6 +49,12 @@ export default function ChatPage() {
   const [inputValue, setInputValue] = useState('')
   const [isStreaming, setIsStreaming] = useState(false)
   const [isLoadingHistory, setIsLoadingHistory] = useState(false)
+
+  // Action execution state — keyed by message ID
+  const [messageActions, setMessageActions] = useState<Record<string, MiaAction[]>>({})
+  const [actionStates, setActionStates] = useState<Record<string, ActionState>>({})
+  const [executingMessageId, setExecutingMessageId] = useState<string | null>(null)
+
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const supabase = createClient()
 
@@ -134,6 +143,18 @@ export default function ChatPage() {
   const startNewConversation = useCallback(() => {
     setActiveConversationId(null)
     setMessages([])
+  }, [])
+
+  const handleActionsFound = useCallback((messageId: string, actions: MiaAction[]) => {
+    setMessageActions((prev) => {
+      if (prev[messageId]) return prev
+      return { ...prev, [messageId]: actions }
+    })
+    const initialStates: Record<string, ActionState> = {}
+    for (const a of actions) {
+      initialStates[a.id] = { status: 'pending' }
+    }
+    setActionStates((prev) => ({ ...prev, ...initialStates }))
   }, [])
 
   // Send a message
@@ -271,6 +292,128 @@ export default function ChatPage() {
     [brandId, activeConversationId, isStreaming],
   )
 
+  const handleRunActions = useCallback(
+    async (messageId: string) => {
+      if (!brandId || !activeConversationId || executingMessageId) return
+      const actions = messageActions[messageId]
+      if (!actions) return
+
+      const skillActions = actions.filter((a): a is SkillAction => a.type === 'skill')
+      if (skillActions.length === 0) return
+
+      setExecutingMessageId(messageId)
+
+      try {
+        const res = await fetch('/api/mia/actions/execute', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            brandId,
+            conversationId: activeConversationId,
+            actions: skillActions,
+          }),
+        })
+
+        if (!res.ok || !res.body) {
+          throw new Error(`HTTP ${res.status}`)
+        }
+
+        const reader = res.body.getReader()
+        const decoder = new TextDecoder()
+        let buffer = ''
+
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+
+          buffer += decoder.decode(value, { stream: true })
+          const lines = buffer.split('\n')
+          buffer = lines.pop() ?? ''
+
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue
+            const raw = line.slice(6).trim()
+            if (!raw) continue
+
+            let event: Record<string, unknown>
+            try {
+              event = JSON.parse(raw)
+            } catch {
+              continue
+            }
+
+            if (event.type === 'action_start') {
+              setActionStates((prev) => ({
+                ...prev,
+                [event.actionId as string]: { status: 'running' },
+              }))
+            }
+
+            if (event.type === 'action_complete') {
+              setActionStates((prev) => ({
+                ...prev,
+                [event.actionId as string]: {
+                  status: 'complete',
+                  output: event.output as Record<string, unknown>,
+                  creditsUsed: event.creditsUsed as number,
+                },
+              }))
+            }
+
+            if (event.type === 'action_failed') {
+              setActionStates((prev) => ({
+                ...prev,
+                [event.actionId as string]: {
+                  status: 'failed',
+                  error: event.error as string,
+                },
+              }))
+            }
+
+            if (event.type === 'summary') {
+              const summaryMsg: Message = {
+                id: `summary-${Date.now()}`,
+                role: 'mia',
+                content: event.content as string,
+                timestamp: new Date(),
+              }
+              setMessages((prev) => [...prev, summaryMsg])
+            }
+          }
+        }
+      } catch (err) {
+        console.error('[Chat] Execute error:', err)
+      } finally {
+        setExecutingMessageId(null)
+      }
+    },
+    [brandId, activeConversationId, executingMessageId, messageActions],
+  )
+
+  const handleSkipActions = useCallback((messageId: string) => {
+    const actions = messageActions[messageId]
+    if (!actions) return
+    const skipped: Record<string, ActionState> = {}
+    for (const a of actions) {
+      skipped[a.id] = { status: 'failed', error: 'Skipped by user' }
+    }
+    setActionStates((prev) => ({ ...prev, ...skipped }))
+  }, [messageActions])
+
+  const handleCollected = useCallback((_actionId: string, _value: string) => {
+    setActionStates((prev) => ({
+      ...prev,
+      [_actionId]: { status: 'complete' },
+    }))
+  }, [])
+
+  const handleSkipCollect = useCallback((actionId: string) => {
+    setActionStates((prev) => ({
+      ...prev,
+      [actionId]: { status: 'failed', error: 'Skipped' },
+    }))
+  }, [])
+
   // ---------------------------------------------------------------------------
   // Render — 3-panel layout
   // ---------------------------------------------------------------------------
@@ -355,15 +498,52 @@ export default function ChatPage() {
               </div>
             </div>
           ) : (
-            messages.map((msg) => (
-              <ChatMessage
-                key={msg.id}
-                role={msg.role}
-                content={msg.content}
-                timestamp={msg.timestamp}
-                streaming={msg.streaming}
-              />
-            ))
+            messages.map((msg) => {
+              const msgActions = messageActions[msg.id]
+              const skillActions = msgActions?.filter((a): a is SkillAction => a.type === 'skill') ?? []
+              const collectActions = msgActions?.filter((a): a is CollectAction => a.type === 'collect') ?? []
+              const totalCredits = skillActions.length // ~1 credit per skill estimate
+
+              return (
+                <div key={msg.id}>
+                  <ChatMessage
+                    role={msg.role}
+                    content={msg.content}
+                    timestamp={msg.timestamp}
+                    streaming={msg.streaming}
+                    onActionClick={(skillId) => sendMessage(`Run ${skillId}`)}
+                    onActionsFound={(actions) => handleActionsFound(msg.id, actions)}
+                  />
+
+                  {/* Collect cards */}
+                  {collectActions.map((ca) => (
+                    <div key={ca.id} className="ml-11">
+                      <CollectCard
+                        action={ca}
+                        brandId={brandId ?? ''}
+                        onCollected={handleCollected}
+                        onSkip={handleSkipCollect}
+                        disabled={!!executingMessageId}
+                      />
+                    </div>
+                  ))}
+
+                  {/* Action card */}
+                  {skillActions.length > 0 && (
+                    <div className="ml-11">
+                      <ActionCard
+                        actions={skillActions}
+                        actionStates={actionStates}
+                        totalCredits={totalCredits}
+                        onRunAll={() => handleRunActions(msg.id)}
+                        onSkip={() => handleSkipActions(msg.id)}
+                        disabled={!!executingMessageId}
+                      />
+                    </div>
+                  )}
+                </div>
+              )
+            })
           )}
           <div ref={messagesEndRef} />
         </div>
