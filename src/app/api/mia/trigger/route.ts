@@ -131,13 +131,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     } catch {
       // If JSON parse fails, try to extract skill IDs from text
       console.warn('[mia/trigger] Failed to parse Mia LLM response, using fallback')
-      skillsToRun = ['seo-audit', 'competitor-scan', 'ad-copy']
+      skillsToRun = ['seo-audit', 'competitor-scan', 'ad-copy', 'ad-performance-analyzer']
       reasoning = 'Fallback: standard daily cycle'
       messageToUser = 'Running standard daily review.'
     }
   } catch (err) {
     console.error('[mia/trigger] Mia LLM call failed:', err)
-    skillsToRun = ['seo-audit', 'competitor-scan', 'ad-copy']
+    skillsToRun = ['seo-audit', 'competitor-scan', 'ad-copy', 'ad-performance-analyzer']
     reasoning = 'Fallback: LLM unavailable, running standard cycle'
     messageToUser = 'Running standard daily review.'
   }
