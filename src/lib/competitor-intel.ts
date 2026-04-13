@@ -598,3 +598,101 @@ export async function analyzeCompetitorCreative(
     return null
   }
 }
+
+// ---------------------------------------------------------------------------
+// Full Scan: Fetch + Download Media + Store as Knowledge Nodes
+// ---------------------------------------------------------------------------
+
+/**
+ * Complete competitor ad scan pipeline:
+ * 1. Fetch ads via ScrapeCreators
+ * 2. Download images/videos to Supabase Storage (permanent)
+ * 3. Optionally analyze with Gemini Vision
+ * 4. Create/update competitor_creative knowledge nodes
+ *
+ * Called by Echo's competitor-scan and competitor-creative-library skills.
+ */
+export async function scanAndStoreCompetitorAds(
+  brandId: string,
+  competitorName: string,
+): Promise<{ stored: number; errors: number }> {
+  const { createServiceClient } = await import('@/lib/supabase/service')
+  const admin = createServiceClient()
+
+  // 1. Fetch ads
+  const ads = await fetchCompetitorAds(competitorName)
+  if (ads.length === 0) return { stored: 0, errors: 0 }
+
+  const competitorSlug = competitorName.toLowerCase().replace(/[^a-z0-9]+/g, '-')
+  let stored = 0
+  let errors = 0
+
+  for (const ad of ads.slice(0, 15)) {
+    try {
+      const adId = ad.id || `ad-${Date.now()}`
+
+      // 2. Download thumbnail to permanent storage
+      let storedThumbUrl: string | null = null
+      if (ad.thumbnail_url) {
+        try {
+          const imgRes = await fetch(ad.thumbnail_url, { signal: AbortSignal.timeout(15000) })
+          if (imgRes.ok) {
+            const buffer = Buffer.from(await imgRes.arrayBuffer())
+            const contentType = imgRes.headers.get('content-type') || 'image/jpeg'
+            const ext = contentType.includes('png') ? 'png' : 'jpg'
+            const path = `${brandId}/competitors/${competitorSlug}/${adId}-thumb.${ext}`
+            const { error: uploadErr } = await admin.storage
+              .from('competitor-assets')
+              .upload(path, buffer, { contentType, upsert: true })
+            if (!uploadErr) {
+              const { data: urlData } = admin.storage.from('competitor-assets').getPublicUrl(path)
+              storedThumbUrl = urlData?.publicUrl ?? null
+            }
+          }
+        } catch { /* non-fatal */ }
+      }
+
+      // 3. Analyze with Gemini Vision (if thumbnail available)
+      let analysis: CreativeAnalysis | null = null
+      const imageToAnalyze = storedThumbUrl || ad.thumbnail_url
+      if (imageToAnalyze) {
+        analysis = await analyzeCompetitorCreative(imageToAnalyze, ad.estimated_days_active)
+      }
+
+      // 4. Create competitor_creative knowledge node
+      const { error: insertErr } = await admin.from('knowledge_nodes').insert({
+        brand_id: brandId,
+        node_type: 'competitor_creative',
+        name: `${competitorName} — ${(ad.ad_creative_body || adId).slice(0, 40)}`,
+        summary: (ad.ad_creative_body || '').slice(0, 300),
+        properties: {
+          competitor_name: competitorName,
+          ad_id: adId,
+          page_name: ad.page_name,
+          ad_creative_body: ad.ad_creative_body,
+          thumbnail_url: ad.thumbnail_url,
+          stored_thumbnail_url: storedThumbUrl,
+          cta_text: ad.ad_creative_link_title,
+          estimated_days_active: ad.estimated_days_active,
+          is_active: !ad.ad_delivery_stop_time,
+          format: analysis?.format || ad.media_type || 'unknown',
+          messaging_approach: analysis?.messaging_approach || 'benefit_led',
+          visual_style: analysis?.visual_style || 'unknown',
+          visual_description: analysis?.visual_description || null,
+          key_elements: analysis?.key_elements || [],
+          estimated_performance: ad.estimated_days_active >= 14 ? 'high' : ad.estimated_days_active >= 7 ? 'medium' : 'low',
+        },
+        is_active: true,
+        confidence: 0.7,
+      })
+
+      if (!insertErr) stored++
+      else errors++
+    } catch (err) {
+      console.warn(`[competitor-intel] scanAndStore failed for ad:`, err)
+      errors++
+    }
+  }
+
+  return { stored, errors }
+}

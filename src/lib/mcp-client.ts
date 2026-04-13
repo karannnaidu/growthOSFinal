@@ -370,7 +370,7 @@ const TOOL_HANDLERS: Record<string, ToolHandler> = {
 
   // Competitor Intelligence (no platform credential needed — uses env vars)
   'competitor.ads': async (brandId) => {
-    const { fetchCompetitorAds } = await import('@/lib/competitor-intel');
+    const { scanAndStoreCompetitorAds, fetchCompetitorAds } = await import('@/lib/competitor-intel');
     const admin = (await import('@/lib/supabase/service')).createServiceClient();
     const { data: nodes } = await admin
       .from('knowledge_nodes')
@@ -379,12 +379,14 @@ const TOOL_HANDLERS: Record<string, ToolHandler> = {
       .eq('node_type', 'competitor')
       .eq('is_active', true)
       .limit(5);
-    const allAds = [];
+    const allResults = [];
     for (const node of nodes ?? []) {
+      // Full pipeline: fetch + download media + analyze + store as knowledge nodes
+      const result = await scanAndStoreCompetitorAds(brandId, node.name);
       const ads = await fetchCompetitorAds(node.name);
-      allAds.push({ competitor: node.name, ads });
+      allResults.push({ competitor: node.name, ads, stored: result.stored, errors: result.errors });
     }
-    return allAds;
+    return allResults;
   },
   'competitor.products': async (brandId) => {
     const { detectBestSellers } = await import('@/lib/competitor-intel');
