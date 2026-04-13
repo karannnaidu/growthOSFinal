@@ -6,6 +6,7 @@ const nextConfig: NextConfig = {
       { protocol: 'https', hostname: '**.supabase.co' },
       { protocol: 'https', hostname: '**.fal.media' },
       { protocol: 'https', hostname: '**.calmosis.com' },
+      { protocol: 'https', hostname: '**.fbcdn.net' },
     ],
   },
 };

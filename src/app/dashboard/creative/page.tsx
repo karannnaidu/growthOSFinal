@@ -1067,19 +1067,20 @@ function CompetitorInsightsPanel({ brandId }: { brandId: string | null }) {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {data.topPerformers.map((item: any) => (
               <div key={item.id} className="glass-panel rounded-xl overflow-hidden">
-                {/* Thumbnail */}
-                {item.thumbnailUrl ? (
+                {/* Media — video or thumbnail */}
+                {item.videoUrl ? (
+                  <div className="relative aspect-video bg-black">
+                    <video src={item.videoUrl} poster={item.thumbnailUrl || undefined}
+                      controls muted preload="metadata"
+                      className="absolute inset-0 w-full h-full object-contain" />
+                  </div>
+                ) : item.thumbnailUrl ? (
                   <div className="relative aspect-video bg-muted/30">
                     <Image src={item.thumbnailUrl} alt={item.competitorName} fill className="object-cover" unoptimized />
-                    {item.format === 'video' && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                        <Play className="h-8 w-8 text-white/80" />
-                      </div>
-                    )}
                   </div>
                 ) : (
                   <div className="aspect-video bg-muted/20 flex items-center justify-center">
-                    {item.format === 'video' ? <Play className="h-8 w-8 text-muted-foreground/30" /> : <ImageIcon className="h-8 w-8 text-muted-foreground/30" />}
+                    <ImageIcon className="h-8 w-8 text-muted-foreground/30" />
                   </div>
                 )}
                 <div className="p-3 space-y-2">
@@ -1127,19 +1128,20 @@ function CompetitorInsightsPanel({ brandId }: { brandId: string | null }) {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {data.items?.map((item: any) => (
             <div key={item.id} className="glass-panel rounded-xl overflow-hidden">
-              {/* Thumbnail */}
-              {item.thumbnailUrl ? (
+              {/* Media — video or thumbnail */}
+              {item.videoUrl ? (
+                <div className="relative aspect-video bg-black">
+                  <video src={item.videoUrl} poster={item.thumbnailUrl || undefined}
+                    controls muted preload="metadata"
+                    className="absolute inset-0 w-full h-full object-contain" />
+                </div>
+              ) : item.thumbnailUrl ? (
                 <div className="relative aspect-video bg-muted/30">
                   <Image src={item.thumbnailUrl} alt={item.competitorName} fill className="object-cover" unoptimized />
-                  {item.format === 'video' && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                      <Play className="h-6 w-6 text-white/80" />
-                    </div>
-                  )}
                 </div>
               ) : (
                 <div className="aspect-video bg-muted/20 flex items-center justify-center">
-                  {item.format === 'video' ? <Play className="h-6 w-6 text-muted-foreground/30" /> : <ImageIcon className="h-6 w-6 text-muted-foreground/30" />}
+                  <ImageIcon className="h-6 w-6 text-muted-foreground/30" />
                 </div>
               )}
               <div className="p-3 space-y-1.5">
