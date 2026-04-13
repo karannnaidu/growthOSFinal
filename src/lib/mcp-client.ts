@@ -142,11 +142,12 @@ async function maybeRefreshGoogleToken(
 // ---------------------------------------------------------------------------
 
 async function fetchMetaInsights(cred: Credential): Promise<unknown> {
-  const adAccountId = cred.metadata?.ad_account_id;
-  if (!adAccountId) {
+  const rawId = cred.metadata?.ad_account_id;
+  if (!rawId) {
     console.warn('[MCP] Meta: ad_account_id not set in credential metadata');
     return null;
   }
+  const adAccountId = rawId.startsWith('act_') ? rawId : `act_${rawId}`;
   try {
     const res = await fetch(
       `https://graph.facebook.com/v19.0/${adAccountId}/insights` +
@@ -166,11 +167,12 @@ async function fetchMetaInsights(cred: Credential): Promise<unknown> {
 }
 
 async function fetchMetaAdSets(cred: Credential): Promise<unknown> {
-  const adAccountId = cred.metadata?.ad_account_id;
-  if (!adAccountId) {
+  const rawId = cred.metadata?.ad_account_id;
+  if (!rawId) {
     console.warn('[MCP] Meta: ad_account_id not set in credential metadata');
     return null;
   }
+  const adAccountId = rawId.startsWith('act_') ? rawId : `act_${rawId}`;
   try {
     const res = await fetch(
       `https://graph.facebook.com/v19.0/${adAccountId}/adsets` +

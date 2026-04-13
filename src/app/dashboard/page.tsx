@@ -19,7 +19,7 @@ function deriveMorningNarrative(
 ): { narrative: string; metricsContext: string } {
   // Try to find a scout health-check output
   const healthCheck = skillRuns.find(
-    (r) => r.agent === 'scout' && r.skill_name === 'health-check' && r.status === 'completed',
+    (r) => r.agent_id === 'scout' && r.skill_id === 'health-check' && r.status === 'completed',
   )
 
   if (healthCheck && typeof healthCheck.output === 'string') {
@@ -55,7 +55,7 @@ function deriveChainNodes(skillRuns: Record<string, unknown>[]): ChainNode[] {
 
   const seenAgents = new Set<string>(['mia'])
   for (const run of skillRuns) {
-    const agentId = run.agent as string | undefined
+    const agentId = run.agent_id as string | undefined
     if (!agentId || seenAgents.has(agentId)) continue
     seenAgents.add(agentId)
 
@@ -77,9 +77,9 @@ function deriveLogEntries(skillRuns: Record<string, unknown>[], miaDecisions: Ar
   const entries: LogEntry[] = []
 
   // Add skill run entries
-  for (const r of skillRuns.filter((r) => r.agent && r.skill_name).slice(0, 15)) {
-    const agent = (r.agent as string) ?? 'system'
-    const skill = (r.skill_name as string) ?? ''
+  for (const r of skillRuns.filter((r) => r.agent_id && r.skill_id).slice(0, 15)) {
+    const agent = (r.agent_id as string) ?? 'system'
+    const skill = (r.skill_id as string) ?? ''
     const status = (r.status as string) ?? ''
     entries.push({
       agent,
@@ -196,15 +196,17 @@ export default async function DashboardPage() {
       .order('recorded_at', { ascending: false })
       .limit(50),
     supabase
-      .from('mia_decisions')
-      .select('*')
+      .from('knowledge_nodes')
+      .select('id, properties, created_at')
       .eq('brand_id', ctx.brandId)
+      .eq('node_type', 'mia_decision')
+      .eq('is_active', true)
       .gte('created_at', twentyFourHoursAgo)
       .order('created_at', { ascending: false })
       .limit(20),
     supabase
       .from('knowledge_nodes')
-      .select('node_type, meta')
+      .select('node_type, properties')
       .eq('brand_id', ctx.brandId)
       .eq('node_type', 'agent_setup'),
   ])
@@ -212,12 +214,20 @@ export default async function DashboardPage() {
   const skillRuns = (skillRunsRes.data ?? []) as Record<string, unknown>[]
   const notifications = (notificationsRes.data ?? []) as Record<string, unknown>[]
   const metricsHistory = (metricsHistoryRes.data ?? []) as Record<string, unknown>[]
-  const miaDecisions = (miaDecisionsRes.data ?? []) as Array<{ decision: string; reasoning: string; target_agent?: string; created_at: string }>
-  const agentSetupRows = (agentSetupsRes.data ?? []) as Array<{ node_type: string; meta: Record<string, unknown> }>
+  const miaDecisions = (miaDecisionsRes.data ?? []).map((n: Record<string, unknown>) => {
+    const props = (n.properties ?? {}) as Record<string, unknown>
+    return {
+      decision: (props.decision as string) ?? 'skip',
+      reasoning: (props.reasoning as string) ?? '',
+      target_agent: props.target_agent as string | undefined,
+      created_at: n.created_at as string,
+    }
+  })
+  const agentSetupRows = (agentSetupsRes.data ?? []) as Array<{ node_type: string; properties: Record<string, unknown> }>
   const agentSetups: Record<string, { state: string }> = {}
   for (const row of agentSetupRows) {
-    const agentId = row.meta?.agent_id as string | undefined
-    const state = (row.meta?.state as string) ?? 'inactive'
+    const agentId = row.properties?.agent_id as string | undefined
+    const state = (row.properties?.state as string) ?? 'inactive'
     if (agentId) agentSetups[agentId] = { state }
   }
 
@@ -239,10 +249,10 @@ export default async function DashboardPage() {
 
   // Derive recommendations from notifications & recent scout runs
   const recommendations = notifications
-    .filter((n) => n.type === 'needs_review' && n.agent)
+    .filter((n) => n.type === 'needs_review' && n.agent_id)
     .slice(0, 3)
     .map((n) => ({
-      agentId: (n.agent as string) ?? 'mia',
+      agentId: (n.agent_id as string) ?? 'mia',
       title: (n.title as string) ?? 'Review needed',
       description: (n.body as string) ?? 'An agent has a recommendation for you.',
       ctaLabel: 'Run Now',

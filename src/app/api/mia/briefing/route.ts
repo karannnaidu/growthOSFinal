@@ -88,7 +88,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<BriefingRe
 
   const skillRuns = recentRuns ?? []
 
-  // b. Unread notifications
+  // b. Unread notifications (column is 'read' per schema)
   const { data: unreadNotifications } = await supabase
     .from('notifications')
     .select('*')
@@ -115,9 +115,9 @@ export async function GET(request: NextRequest): Promise<NextResponse<BriefingRe
     (r: Record<string, unknown>) => r.triggered_by === 'mia' && r.status === 'completed',
   )
 
-  // f. Recent insights: skill runs where agent='scout'
+  // f. Recent insights: skill runs where agent_id='scout'
   const recentInsights = skillRuns.filter(
-    (r: Record<string, unknown>) => r.agent === 'scout',
+    (r: Record<string, unknown>) => r.agent_id === 'scout',
   )
 
   // g. Credits used today by all runs
@@ -132,7 +132,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<BriefingRe
   // h. Active agents: unique agent IDs from today's runs
   const agentSet = new Set<string>()
   for (const run of skillRuns) {
-    const agent = (run as Record<string, unknown>).agent
+    const agent = (run as Record<string, unknown>).agent_id
     if (agent && typeof agent === 'string') {
       const createdAt = (run as Record<string, unknown>).created_at as string | undefined
       if (createdAt && createdAt >= todayStart) {

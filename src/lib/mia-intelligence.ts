@@ -166,16 +166,16 @@ export async function postFlightDecision(input: PostFlightInput): Promise<MiaDec
   const notifDecision: MiaDecision['decision'] = miaDecision.decision
   await admin.from('notifications').insert({
     brand_id: brandId,
-    type: notifDecision === 'blocked' ? 'alert' : notifDecision === 'needs_review' ? 'needs_review' : 'activity',
+    type: notifDecision === 'blocked' ? 'alert' : notifDecision === 'needs_review' ? 'needs_review' : 'auto_completed',
     agent_id: agentId,
-    skill_id: skillId,
+    skill_run_id: skillRunId,
     title: notifDecision === 'auto_run'
       ? `Mia dispatching follow-ups for ${skillId}`
       : notifDecision === 'needs_review'
         ? `${skillId} needs your review`
         : `${skillId} completed — all healthy`,
     body: reasoning,
-    is_read: false,
+    read: false,
   })
 
   return miaDecision
@@ -207,9 +207,8 @@ export async function createBlockedDecision(
     brand_id: brandId,
     type: 'alert',
     agent_id: agentId,
-    skill_id: skillId,
     title: `${skillId} blocked — connect ${missingPlatforms.join(', ')}`,
     body: reasoning,
-    is_read: false,
+    read: false,
   })
 }
