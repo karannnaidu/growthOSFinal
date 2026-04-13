@@ -205,6 +205,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           subPath,
         )
 
+        console.log(`[creative/generate] Step 6: persisted image ${idx} to ${storagePath}`)
         const copyVariant = brief.copyVariants[idx] ?? brief.copyVariants[0]
         const nodeId = await createMediaNode(
           brandId,

@@ -452,10 +452,11 @@ export async function createMediaNode(
     .single();
 
   if (error || !inserted?.id) {
-    console.error(`[fal-client] createMediaNode insert failed:`, error?.message);
+    console.error(`[fal-client] createMediaNode insert failed:`, error?.message, error?.code, error?.details, 'nodeType:', nodeType, 'brandId:', brandId);
     // Don't throw — return empty string so pipeline continues
     return '';
   }
 
+  console.log(`[fal-client] createMediaNode OK: ${inserted.id} (${nodeType}: ${name.slice(0, 40)})`);
   return inserted.id as string;
 }
