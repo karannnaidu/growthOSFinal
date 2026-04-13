@@ -5,7 +5,7 @@ agent: luna
 category: creative
 complexity: premium
 credits: 3
-mcp_tools: [shopify.products.list, shopify.orders.list]
+mcp_tools: [shopify.orders.list]
 chains_to: [persona-creative-review]
 knowledge:
   needs: [email_flow, persona, product, brand_guidelines, top_content, insight]

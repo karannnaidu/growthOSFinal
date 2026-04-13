@@ -5,7 +5,7 @@ agent: sage
 category: optimization
 complexity: mid
 credits: 2
-mcp_tools: [shopify.products.list, shopify.orders.list]
+mcp_tools: [shopify.orders.list]
 chains_to: [ab-test-design]
 knowledge:
   needs: [product, competitor, metric, persona, insight]

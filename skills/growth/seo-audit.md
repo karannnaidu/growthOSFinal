@@ -5,7 +5,7 @@ agent: hugo
 category: growth
 complexity: cheap
 credits: 1
-mcp_tools: [shopify.products.list]
+mcp_tools: []
 chains_to: [keyword-strategy]
 schedule: "0 8 * * 2"
 knowledge:

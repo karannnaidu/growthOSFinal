@@ -5,7 +5,7 @@ agent: mia
 category: _foundation
 complexity: cheap
 credits: 1
-mcp_tools: [shopify.shop.get, shopify.products.list]
+mcp_tools: [shopify.shop.get]
 chains_to: []
 knowledge:
   needs: [product, content, creative]

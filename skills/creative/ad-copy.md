@@ -5,7 +5,7 @@ agent: aria
 category: creative
 complexity: premium
 credits: 3
-mcp_tools: [shopify.products.list]
+mcp_tools: []
 chains_to: [persona-creative-review, image-brief, ab-test-design]
 knowledge:
   needs: [product, audience, competitor, top_content, insight, persona]

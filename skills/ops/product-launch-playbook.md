@@ -5,7 +5,7 @@ agent: mia
 category: ops
 complexity: premium
 credits: 3
-mcp_tools: [shopify.products.list]
+mcp_tools: []
 chains_to: [ad-copy, email-copy, social-content-calendar, audience-targeting, keyword-strategy, page-cro]
 knowledge:
   needs: [product, persona, competitor, brand_guidelines, metric, campaign]

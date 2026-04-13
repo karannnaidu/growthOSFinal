@@ -5,7 +5,7 @@ agent: navi
 category: ops
 complexity: free
 credits: 0
-mcp_tools: [shopify.products.list]
+mcp_tools: []
 chains_to: []
 schedule: "0 8 1 * *"
 knowledge:

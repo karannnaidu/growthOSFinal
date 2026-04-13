@@ -5,7 +5,7 @@ agent: aria
 category: creative
 complexity: premium
 credits: 3
-mcp_tools: [shopify.products.list]
+mcp_tools: []
 chains_to: [ad-copy, email-copy, social-content-calendar]
 knowledge:
   needs: [product, brand_guidelines, top_content, review_theme]

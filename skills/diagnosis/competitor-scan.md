@@ -5,7 +5,7 @@ agent: echo
 category: diagnosis
 complexity: cheap
 credits: 1
-mcp_tools: [shopify.products.list, competitor.ads, competitor.products, competitor.traffic, competitor.seo, competitor.status]
+mcp_tools: [competitor.ads, competitor.products, competitor.traffic, competitor.seo, competitor.status]
 chains_to: [competitor-creative-library]
 schedule: "0 8 * * 4"
 visual_capture: true

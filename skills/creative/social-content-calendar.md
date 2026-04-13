@@ -5,7 +5,7 @@ agent: aria
 category: creative
 complexity: cheap
 credits: 1
-mcp_tools: [shopify.products.list]
+mcp_tools: []
 chains_to: [image-brief]
 knowledge:
   needs: [product, persona, top_content, brand_guidelines, campaign]
