@@ -382,9 +382,13 @@ const TOOL_HANDLERS: Record<string, ToolHandler> = {
       .limit(20);
     const allResults = [];
     for (const node of nodes ?? []) {
+      const props = node.properties as Record<string, unknown> | null;
+      const domain = props?.domain as string | undefined;
+      const socialLinks = props?.social_links as Record<string, string> | undefined;
+      const hints = (domain || socialLinks?.facebook) ? { domain, facebookUrl: socialLinks?.facebook ?? socialLinks?.meta } : undefined;
       // Full pipeline: fetch + download media + analyze + store as knowledge nodes
-      const result = await scanAndStoreCompetitorAds(brandId, node.name);
-      const ads = await fetchCompetitorAds(node.name);
+      const result = await scanAndStoreCompetitorAds(brandId, node.name, props ?? undefined);
+      const ads = await fetchCompetitorAds(node.name, 'US', hints);
       allResults.push({ competitor: node.name, ads, stored: result.stored, errors: result.errors });
     }
     return allResults;

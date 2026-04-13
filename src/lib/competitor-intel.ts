@@ -92,16 +92,21 @@ export interface StatusCheck {
 /**
  * Fetch competitor ads using ScrapeCreators API (scrapes Meta Ad Library).
  * Falls back to Meta's official API if ScrapeCreators key is not set.
+ *
+ * @param searchTerm - Company name to search for
+ * @param countryCode - Country code for Meta API fallback
+ * @param hints - Optional domain/Facebook page URL to improve matching
  */
 export async function fetchCompetitorAds(
   searchTerm: string,
   countryCode: string = 'US',
+  hints?: { domain?: string; facebookUrl?: string },
 ): Promise<AdCreative[]> {
   // Try ScrapeCreators first (works for all commercial ads)
   const scrapeKey = process.env.SCRAPECREATORS_API_KEY
   if (scrapeKey) {
     try {
-      const result = await fetchViaScrapCreators(searchTerm, scrapeKey)
+      const result = await fetchViaScrapCreators(searchTerm, scrapeKey, hints)
       if (result.length > 0) return result
     } catch (err) {
       console.warn('[competitor-intel] ScrapeCreators failed, trying Meta API:', err)
@@ -112,10 +117,21 @@ export async function fetchCompetitorAds(
   return fetchViaMetaApi(searchTerm, countryCode)
 }
 
-async function fetchViaScrapCreators(searchTerm: string, apiKey: string): Promise<AdCreative[]> {
+async function fetchViaScrapCreators(
+  searchTerm: string,
+  apiKey: string,
+  hints?: { domain?: string; facebookUrl?: string },
+): Promise<AdCreative[]> {
+  // If we have a Facebook page URL, try to extract the page name for a more targeted search
+  let effectiveSearch = searchTerm
+  if (hints?.facebookUrl) {
+    const fbMatch = hints.facebookUrl.match(/facebook\.com\/([^/?]+)/)
+    if (fbMatch?.[1]) effectiveSearch = fbMatch[1].replace(/[.-]/g, ' ')
+  }
+
   // Step 1: Search for the company to get pageId
   const searchRes = await fetch(
-    `https://api.scrapecreators.com/v1/facebook/adLibrary/search/companies?query=${encodeURIComponent(searchTerm)}`,
+    `https://api.scrapecreators.com/v1/facebook/adLibrary/search/companies?query=${encodeURIComponent(effectiveSearch)}`,
     { headers: { 'x-api-key': apiKey } },
   )
   if (!searchRes.ok) {
@@ -123,12 +139,28 @@ async function fetchViaScrapCreators(searchTerm: string, apiKey: string): Promis
     return []
   }
 
-  const searchData = await searchRes.json() as { searchResults?: Array<{ page_id?: string; name?: string }> }
-  const pageId = searchData.searchResults?.[0]?.page_id
+  const searchData = await searchRes.json() as { searchResults?: Array<{ page_id?: string; name?: string; url?: string }> }
+  const results = searchData.searchResults ?? []
+
+  // Pick the best matching company — validate against domain/FB URL to avoid false matches
+  let bestMatch = results[0]
+  if (results.length > 1 && hints?.domain) {
+    const domainLower = hints.domain.replace(/^www\./, '').toLowerCase()
+    const domainMatch = results.find(r => {
+      const name = (r.name ?? '').toLowerCase()
+      const url = (r.url ?? '').toLowerCase()
+      const domainBase = domainLower.split('.')[0] ?? domainLower
+      return url.includes(domainLower) || name.includes(domainBase)
+    })
+    if (domainMatch) bestMatch = domainMatch
+  }
+
+  const pageId = bestMatch?.page_id
   if (!pageId) {
-    console.warn('[competitor-intel] No pageId found for:', searchTerm)
+    console.warn('[competitor-intel] No pageId found for:', effectiveSearch)
     return []
   }
+  console.info(`[competitor-intel] Matched "${searchTerm}" → "${bestMatch?.name}" (pageId: ${pageId})`)
 
   // Step 2: Fetch ads for this company
   const adsRes = await fetch(
@@ -615,12 +647,19 @@ export async function analyzeCompetitorCreative(
 export async function scanAndStoreCompetitorAds(
   brandId: string,
   competitorName: string,
+  competitorProps?: Record<string, unknown>,
 ): Promise<{ stored: number; errors: number }> {
   const { createServiceClient } = await import('@/lib/supabase/service')
   const admin = createServiceClient()
 
-  // 1. Fetch ads
-  const ads = await fetchCompetitorAds(competitorName)
+  // Build search hints from competitor properties
+  const domain = competitorProps?.domain as string | undefined
+  const socialLinks = competitorProps?.social_links as Record<string, string> | undefined
+  const facebookUrl = socialLinks?.facebook ?? socialLinks?.meta ?? undefined
+  const hints = (domain || facebookUrl) ? { domain, facebookUrl } : undefined
+
+  // 1. Fetch ads (with domain/FB hints for accurate matching)
+  const ads = await fetchCompetitorAds(competitorName, 'US', hints)
   if (ads.length === 0) return { stored: 0, errors: 0 }
 
   const competitorSlug = competitorName.toLowerCase().replace(/[^a-z0-9]+/g, '-')
@@ -628,6 +667,9 @@ export async function scanAndStoreCompetitorAds(
   let errors = 0
 
   for (const ad of ads.slice(0, 15)) {
+    // Skip ads without any thumbnail — they show blank in Creative Studio
+    if (!ad.thumbnail_url) continue
+
     try {
       const adId = ad.id || `ad-${Date.now()}`
 
