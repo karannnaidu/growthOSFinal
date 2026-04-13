@@ -6,6 +6,7 @@ category: ops
 complexity: free
 credits: 0
 mcp_tools: [shopify.products.list, shopify.orders.list]
+requires: [shopify]
 chains_to: [cash-flow-forecast]
 knowledge:
   needs: [product, metric]

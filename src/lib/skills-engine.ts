@@ -264,7 +264,7 @@ export async function runSkill(input: SkillRunInput): Promise<SkillRunResult> {
   // 4.5 Pre-flight intelligence check
   let preFlightResult: PreFlightResult | null = null
   try {
-    preFlightResult = await preFlightCheck(input.brandId, skill.agent, skill.mcpTools, skill.requiredTools)
+    preFlightResult = await preFlightCheck(input.brandId, skill.agent, skill.mcpTools, skill.requires)
 
     if (preFlightResult.blocked) {
       await createBlockedDecision(input.brandId, skill.agent, skill.id, preFlightResult.missingPlatforms)

@@ -6,6 +6,7 @@ category: ops
 complexity: free
 credits: 0
 mcp_tools: [shopify.products.list]
+requires: [shopify]
 chains_to: [reorder-calculator]
 schedule: "0 7 * * *"
 knowledge:

@@ -44,15 +44,15 @@ export async function preFlightCheck(
   brandId: string,
   agentId: string,
   mcpTools: string[],
-  requiredTools: string[] = [],
+  /** Direct platform names from the skill's `requires` field (e.g. ['meta', 'shopify']). */
+  requires: string[] = [],
 ): Promise<PreFlightResult> {
-  // 1. Check platform status
+  // 1. Check which optional platforms are missing (for data gap notes only)
   let platformStatus = await getPlatformStatus(brandId)
   if (!platformStatus) {
     platformStatus = await syncPlatformStatus(brandId)
   }
 
-  // Build the set of ALL platforms used by this skill (for data gap notes)
   const allPlatforms = new Set<string>()
   for (const tool of mcpTools) {
     const platform = TOOL_PLATFORM_MAP[tool]
@@ -76,18 +76,14 @@ export async function preFlightCheck(
     }
   }
 
-  // 3. Only block if a REQUIRED tool's platform is missing (no fallback).
-  //    mcp_tools = "use if available", required_tools = "must have".
-  //    Most skills have no required_tools and run with partial data.
-  const requiredPlatforms = new Set<string>()
-  for (const tool of requiredTools) {
-    const platform = TOOL_PLATFORM_MAP[tool]
-    if (platform) requiredPlatforms.add(platform)
-  }
-
+  // 3. Check skill-level `requires` — these are direct platform names
+  //    declared in the skill .md file. Only block if a required platform
+  //    has no credential AND no manual fallback.
   const missingRequired: string[] = []
-  for (const platform of requiredPlatforms) {
-    if (missingPlatforms.includes(platform) && !supplementaryData[platform]) {
+  for (const platform of requires) {
+    const key = platform as keyof PlatformStatus
+    const isConnected = key !== 'updated_at' && platformStatus[key]
+    if (!isConnected && !supplementaryData[platform]) {
       missingRequired.push(platform)
     }
   }
@@ -97,7 +93,7 @@ export async function preFlightCheck(
   // 4. Check user instruction
   const instruction = await getInstruction(brandId, agentId)
 
-  // 5. Build data gaps note (all missing, not just required)
+  // 5. Data gaps = all missing optional platforms (informational, not blocking)
   let dataGapsNote: string | null = null
   if (missingPlatforms.length > 0) {
     const gaps = missingPlatforms.filter(p => !supplementaryData[p])

@@ -14,8 +14,8 @@ export interface SkillDefinition {
   complexity: 'free' | 'cheap' | 'mid' | 'premium';
   credits: number;
   mcpTools: string[];
-  /** Tools that MUST be available for this skill to run. If empty, skill runs with partial data. */
-  requiredTools: string[];
+  /** Platform connections this skill REQUIRES to function (e.g. ['meta', 'shopify']). If empty, skill runs with partial data. */
+  requires: string[];
   chainsTo: string[];
   schedule?: string;
   knowledge?: {
@@ -130,7 +130,7 @@ export function parseSkillMarkdown(raw: string): SkillDefinition {
     complexity: data.complexity ?? 'cheap',
     credits: data.credits ?? 1,
     mcpTools: data.mcp_tools ?? [],
-    requiredTools: data.required_tools ?? [],
+    requires: data.requires ?? [],
     chainsTo: data.chains_to ?? [],
     schedule: data.schedule,
     knowledge: data.knowledge

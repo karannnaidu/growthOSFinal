@@ -6,7 +6,7 @@ category: optimization
 complexity: mid
 credits: 2
 mcp_tools: [meta_ads.campaigns.insights, ga4.report.run]
-required_tools: [meta_ads.campaigns.insights]
+requires: [meta]
 chains_to: [ad-scaling]
 schedule: "0 9 * * *"
 knowledge:
