@@ -2,6 +2,8 @@ import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { callModel } from '@/lib/model-client'
+import { buildSkillsCatalog } from '@/lib/mia-actions'
+import agentsJson from '../../../../../skills/agents.json'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -24,7 +26,7 @@ Your personality:
 - Warm, confident, proactive
 - You speak like a senior marketing strategist who genuinely cares about the brand
 - You reference specific data and agent findings when available
-- You suggest actions using the available skills when relevant
+- You can trigger agent skills to take action — not just talk
 
 Brand context:
 - Name: {brandName}
@@ -35,15 +37,10 @@ Brand context:
 Recent activity:
 {recentSkillRunsSummary}
 
-Available actions you can suggest:
-- Run any skill (e.g., "Let me run a health check" → triggers health-check skill)
-- Review pending items
-- Check specific metrics
+{skillsCatalog}
 
-When suggesting actions, format them as:
-[ACTION:skill-id] to indicate a triggerable skill
-
-Keep responses concise but insightful. You're a busy marketing manager, not a verbose chatbot.`
+Keep responses concise but insightful. You're a busy marketing manager, not a verbose chatbot.
+When you include an actions block, still write a natural message explaining what you're about to do and why.`
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -55,6 +52,7 @@ function buildSystemPrompt(
   focusAreas: string,
   plan: string,
   recentSkillRunsSummary: string,
+  skillsCatalog: string,
 ): string {
   return MIA_CHAT_SYSTEM_PROMPT
     .replace(/{brandName}/g, brandName)
@@ -62,6 +60,7 @@ function buildSystemPrompt(
     .replace(/{focusAreas}/g, focusAreas)
     .replace(/{plan}/g, plan)
     .replace(/{recentSkillRunsSummary}/g, recentSkillRunsSummary)
+    .replace(/{skillsCatalog}/g, skillsCatalog)
 }
 
 function sseEvent(data: Record<string, unknown>): Uint8Array {
@@ -183,9 +182,9 @@ export async function POST(request: NextRequest): Promise<Response> {
 
   // 7. Build recent skill runs summary for Mia's context
   const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
-  const { data: recentRuns } = await supabase
+  const { data: recentRuns } = await admin
     .from('skill_runs')
-    .select('skill_id, status, triggered_by, created_at, agent')
+    .select('skill_id, status, triggered_by, created_at, agent_id')
     .eq('brand_id', brandId)
     .gte('created_at', twentyFourHoursAgo)
     .order('created_at', { ascending: false })
@@ -196,12 +195,16 @@ export async function POST(request: NextRequest): Promise<Response> {
       ? recentRuns
           .map(
             (r: Record<string, unknown>) =>
-              `- ${r.skill_id} (${r.status}) by ${r.triggered_by ?? 'user'} via ${r.agent ?? 'unknown'} agent`,
+              `- ${r.skill_id} (${r.status}) by ${r.triggered_by ?? 'user'} via ${r.agent_id ?? 'unknown'} agent`,
           )
           .join('\n')
       : 'No recent skill runs in the last 24 hours.'
 
   // 8. Build system prompt with brand context
+  const skillsCatalog = buildSkillsCatalog(
+    (agentsJson as Array<{ id: string; name: string; skills: string[] }>),
+  )
+
   const systemPrompt = buildSystemPrompt(
     (brand.name as string) ?? 'your brand',
     (brand.domain as string) ?? 'unknown',
@@ -210,6 +213,7 @@ export async function POST(request: NextRequest): Promise<Response> {
       : (brand.focus_areas as string) ?? 'general marketing',
     (brand.plan as string) ?? 'standard',
     recentSkillRunsSummary,
+    skillsCatalog,
   )
 
   // 9. Build conversation history as user prompt context
