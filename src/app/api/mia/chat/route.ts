@@ -136,7 +136,7 @@ export async function POST(request: NextRequest): Promise<Response> {
 
   if (incomingConversationId) {
     // Verify the conversation exists and belongs to this brand/user
-    const { data: existingConv } = await supabase
+    const { data: existingConv } = await admin
       .from('conversations')
       .select('id')
       .eq('id', incomingConversationId)
@@ -146,8 +146,8 @@ export async function POST(request: NextRequest): Promise<Response> {
     if (!existingConv) return errorSSE('NOT_FOUND', 'Conversation not found')
     conversationId = existingConv.id as string
   } else {
-    // Create a new conversation
-    const { data: newConv, error: convError } = await supabase
+    // Create a new conversation (service client bypasses RLS)
+    const { data: newConv, error: convError } = await admin
       .from('conversations')
       .insert({
         brand_id: brandId,
@@ -165,7 +165,7 @@ export async function POST(request: NextRequest): Promise<Response> {
   }
 
   // 5. Load conversation history
-  const { data: history } = await supabase
+  const { data: history } = await admin
     .from('conversation_messages')
     .select('role, content')
     .eq('conversation_id', conversationId)
@@ -175,7 +175,7 @@ export async function POST(request: NextRequest): Promise<Response> {
   const conversationHistory = (history ?? []) as Array<{ role: string; content: string }>
 
   // 6. Store user message
-  await supabase.from('conversation_messages').insert({
+  await admin.from('conversation_messages').insert({
     conversation_id: conversationId,
     role: 'user',
     content: message.trim(),
@@ -243,7 +243,7 @@ export async function POST(request: NextRequest): Promise<Response> {
 
         // Store Mia's response in conversation_messages
         try {
-          await supabase.from('conversation_messages').insert({
+          await admin.from('conversation_messages').insert({
             conversation_id: conversationId,
             role: 'assistant',
             content: result.content,
