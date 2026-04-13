@@ -311,7 +311,7 @@ export async function generateVideo(
   }
 
   return {
-    url: videoUrl,
+    url: videoUrl!,
     width: data.video?.width ?? width,
     height: data.video?.height ?? height,
     content_type: data.video?.content_type ?? 'video/mp4',
