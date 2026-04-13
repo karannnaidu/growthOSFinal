@@ -58,6 +58,35 @@ export async function describeImage(imageUrl: string): Promise<string | null> {
   }
 }
 
+/**
+ * Remove background from an image using fal.ai BiRefNet.
+ * Returns the URL of the transparent PNG.
+ */
+export async function removeBackground(imageUrl: string, brandId?: string): Promise<string> {
+  const apiKey = await getFalKey(brandId);
+
+  const res = await fetch('https://fal.run/fal-ai/birefnet/v2', {
+    method: 'POST',
+    headers: {
+      Authorization: `Key ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ image_url: imageUrl }),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`fal.ai background removal error ${res.status}: ${errText}`);
+  }
+
+  const data = (await res.json()) as { image?: { url: string } };
+  if (!data.image?.url) {
+    throw new Error('fal.ai background removal returned no image');
+  }
+
+  return data.image.url;
+}
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -237,6 +266,10 @@ export async function generateImage(
 export async function generateVideo(
   options: VideoGenerationOptions,
 ): Promise<GeneratedMedia> {
+  // Video generation temporarily disabled — coming soon
+  console.warn('[fal-client] Video generation is temporarily disabled');
+  return [] as any;
+
   const {
     prompt,
     duration = 5,
