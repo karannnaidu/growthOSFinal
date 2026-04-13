@@ -65,9 +65,9 @@ export async function GET(
   // 5. Query recent skill runs for this agent + brand
   const { data: recentRuns } = await supabase
     .from('skill_runs')
-    .select('id, skill_name, status, output, model_used, credits_used, duration_ms, created_at, triggered_by, error')
+    .select('id, skill_id, status, output, model_used, credits_used, duration_ms, created_at, triggered_by, error_message')
     .eq('brand_id', brandId)
-    .eq('agent', agentId)
+    .eq('agent_id', agentId)
     .order('created_at', { ascending: false })
     .limit(10)
 

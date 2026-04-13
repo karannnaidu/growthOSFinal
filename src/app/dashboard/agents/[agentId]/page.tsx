@@ -18,7 +18,7 @@ import type { AgentConfig } from '@/lib/agents-data'
 
 interface SkillRun {
   id: string
-  skill_name: string
+  skill_id: string
   status: 'completed' | 'failed' | 'running'
   output: Record<string, unknown> | string | null
   model_used: string | null
@@ -26,7 +26,7 @@ interface SkillRun {
   duration_ms: number | null
   created_at: string
   triggered_by: string | null
-  error: string | null
+  error_message: string | null
 }
 
 interface BrandAgentConfig {
@@ -503,6 +503,31 @@ export default function AgentDetailPage() {
               }`}>
                 {latestMiaDecision.decision.replace('_', ' ')}
               </span>
+              {/* Missing platforms — show connect buttons */}
+              {latestMiaDecision.reasoning?.includes('Missing platform') && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {latestMiaDecision.reasoning.includes('shopify') && (
+                    <a href="/dashboard/settings/platforms" className="text-[10px] bg-[#96bf48]/15 text-[#96bf48] rounded-full px-3 py-1 hover:bg-[#96bf48]/25 transition-colors">
+                      Connect Shopify →
+                    </a>
+                  )}
+                  {latestMiaDecision.reasoning.includes('ga4') && (
+                    <a href="/dashboard/settings/platforms" className="text-[10px] bg-[#4285f4]/15 text-[#4285f4] rounded-full px-3 py-1 hover:bg-[#4285f4]/25 transition-colors">
+                      Connect Google Analytics →
+                    </a>
+                  )}
+                  {latestMiaDecision.reasoning.includes('meta') && (
+                    <a href="/dashboard/settings/platforms" className="text-[10px] bg-[#1877f2]/15 text-[#1877f2] rounded-full px-3 py-1 hover:bg-[#1877f2]/25 transition-colors">
+                      Connect Meta Ads →
+                    </a>
+                  )}
+                  {latestMiaDecision.reasoning.includes('klaviyo') && (
+                    <a href="/dashboard/settings/platforms" className="text-[10px] bg-[#1b4f72]/15 text-[#1b4f72] rounded-full px-3 py-1 hover:bg-[#1b4f72]/25 transition-colors">
+                      Connect Klaviyo →
+                    </a>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
@@ -523,7 +548,7 @@ export default function AgentDetailPage() {
                 </h2>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                   {agent.skills.map((skillId) => {
-                    const lastRunForSkill = recentRuns.find((r) => r.skill_name === skillId)
+                    const lastRunForSkill = recentRuns.find((r) => r.skill_id === skillId)
                     return (
                       <SkillCard
                         key={skillId}
@@ -597,7 +622,7 @@ export default function AgentDetailPage() {
                           >
                             <div className="min-w-0 flex-1 grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-1 items-center">
                               <p className="text-xs font-medium text-foreground truncate col-span-2 sm:col-span-1">
-                                {run.skill_name ?? run.id}
+                                {run.skill_id ?? run.id}
                               </p>
                               <div className="flex items-center">
                                 <StatusBadge status={run.status} />
@@ -619,8 +644,8 @@ export default function AgentDetailPage() {
 
                           {isExpanded && (
                             <div className="mt-3 rounded-lg bg-white/[0.03] border border-white/[0.06] p-3">
-                              {run.error ? (
-                                <p className="text-xs text-destructive font-mono break-all">{run.error}</p>
+                              {run.error_message ? (
+                                <p className="text-xs text-destructive font-mono break-all">{run.error_message}</p>
                               ) : (
                                 <AgentOutput agentId={agent.id} output={run.output} />
                               )}
