@@ -151,8 +151,6 @@ export async function POST(request: NextRequest): Promise<Response> {
       .from('conversations')
       .insert({
         brand_id: brandId,
-        user_id: user.id,
-        agent: 'mia',
         title: message.slice(0, 100),
       })
       .select('id')
