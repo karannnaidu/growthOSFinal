@@ -1,7 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Download, FileJson, CheckSquare, Square } from 'lucide-react'
@@ -21,21 +20,46 @@ export default function ExportsPage() {
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState<Set<string>>(new Set())
 
-  const supabase = useMemo(() => createClient(), [])
-
   useEffect(() => {
     async function fetchRuns() {
-      const { data } = await supabase
-        .from('skill_runs')
-        .select('id, skill_name, agent, status, created_at, output, credits_used')
-        .order('created_at', { ascending: false })
-        .limit(50)
+      try {
+        // 1. Resolve brand ID via API (bypasses RLS)
+        let brandId: string | null =
+          sessionStorage.getItem('onboarding_brand_id') ||
+          localStorage.getItem('growth_os_brand_id')
 
-      if (data) setRuns(data as SkillRun[])
-      setLoading(false)
+        if (!brandId) {
+          const res = await fetch('/api/brands/me')
+          if (res.ok) {
+            const data = await res.json()
+            if (data.brandId) {
+              brandId = data.brandId as string
+              localStorage.setItem('growth_os_brand_id', brandId)
+              sessionStorage.setItem('onboarding_brand_id', brandId)
+            }
+          }
+        }
+
+        if (!brandId) {
+          setLoading(false)
+          return
+        }
+
+        // 2. Fetch skill runs through API route (bypasses RLS circular dependency)
+        const res = await fetch(`/api/exports/runs?brandId=${brandId}`)
+        if (res.ok) {
+          const data = await res.json()
+          setRuns((data.runs ?? []) as SkillRun[])
+        }
+      } catch (err) {
+        console.error('[ExportsPage] fetchRuns error:', err)
+      } finally {
+        setLoading(false)
+      }
     }
+
     fetchRuns()
-  }, [supabase])
+  }, [])
 
   function toggleSelect(id: string) {
     setSelected((prev) => {
