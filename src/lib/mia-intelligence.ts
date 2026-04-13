@@ -74,10 +74,18 @@ export async function preFlightCheck(
     }
   }
 
-  // Determine if truly blocked (all required platforms missing AND no manual fallback)
+  // Check if Brand DNA exists (onboarding completed = always has data to work with)
+  const { createServiceClient } = await import('@/lib/supabase/service')
+  const admin = createServiceClient()
+  const { data: brandRow } = await admin.from('brands').select('brand_guidelines').eq('id', brandId).single()
+  const hasBrandDNA = !!brandRow?.brand_guidelines
+
+  // Only block if NO data at all — no platforms, no manual data, AND no Brand DNA
+  // Most skills can work with Brand DNA alone (degraded but useful)
   const blocked = requiredPlatforms.size > 0 &&
     missingPlatforms.length === requiredPlatforms.size &&
-    Object.keys(supplementaryData).length === 0
+    Object.keys(supplementaryData).length === 0 &&
+    !hasBrandDNA
 
   // 3. Check user instruction
   const instruction = await getInstruction(brandId, agentId)
