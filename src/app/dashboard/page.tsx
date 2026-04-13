@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { getBrandContext } from '@/lib/brand-context'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { MorningBrief } from '@/components/dashboard/morning-brief'
 import { MetricCard } from '@/components/dashboard/metric-card'
 import { AgentChains, type ChainNode } from '@/components/dashboard/agent-chains'
@@ -209,34 +209,37 @@ export default async function DashboardPage() {
     )
   }
 
-  const supabase = await createClient()
+  // Use service client for data queries — brand access already verified by getBrandContext.
+  // The user's anon client hits the brands ↔ brand_members circular RLS dependency,
+  // causing all queries to silently return empty.
+  const admin = createServiceClient()
 
   const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
   const today = new Date().toISOString().split('T')[0]
   const todayStart = `${today}T00:00:00.000Z`
 
   const [skillRunsRes, notificationsRes, metricsHistoryRes, miaDecisionsRes, agentSetupsRes] = await Promise.all([
-    supabase
+    admin
       .from('skill_runs')
       .select('*')
       .eq('brand_id', ctx.brandId)
       .gte('created_at', twentyFourHoursAgo)
       .order('created_at', { ascending: false })
       .limit(30),
-    supabase
+    admin
       .from('notifications')
       .select('*')
       .eq('brand_id', ctx.brandId)
       .eq('read', false)
       .order('created_at', { ascending: false })
       .limit(10),
-    supabase
+    admin
       .from('brand_metrics_history')
       .select('metric_name, metric_value, recorded_at')
       .eq('brand_id', ctx.brandId)
       .order('recorded_at', { ascending: false })
       .limit(50),
-    supabase
+    admin
       .from('knowledge_nodes')
       .select('id, properties, created_at')
       .eq('brand_id', ctx.brandId)
@@ -245,7 +248,7 @@ export default async function DashboardPage() {
       .gte('created_at', twentyFourHoursAgo)
       .order('created_at', { ascending: false })
       .limit(20),
-    supabase
+    admin
       .from('knowledge_nodes')
       .select('node_type, properties')
       .eq('brand_id', ctx.brandId)
