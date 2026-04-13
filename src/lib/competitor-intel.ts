@@ -21,6 +21,7 @@ export interface AdCreative {
   ad_delivery_stop_time: string | null
   media_type: 'image' | 'video' | 'carousel' | 'unknown'
   thumbnail_url: string | null
+  video_url: string | null
   ad_snapshot_url: string | null
   estimated_days_active: number
 }
@@ -189,8 +190,9 @@ async function fetchViaScrapCreators(
     const endMs = endSec ? endSec * 1000 : now
 
     const images = (snapshot.images as Array<{ original_image_url?: string }>) || []
-    const videos = (snapshot.videos as Array<{ video_preview_image_url?: string }>) || []
+    const videos = (snapshot.videos as Array<{ video_sd_url?: string; video_hd_url?: string; video_preview_image_url?: string }>) || []
     const thumbnail = images[0]?.original_image_url || videos[0]?.video_preview_image_url || null
+    const videoUrl = videos[0]?.video_hd_url || videos[0]?.video_sd_url || null
 
     // Build snapshot URL for viewing the full ad on Meta Ad Library
     const archiveId = (ad.ad_archive_id as string) || (ad.ad_id as string) || ''
@@ -207,6 +209,7 @@ async function fetchViaScrapCreators(
       ad_delivery_stop_time: stopTime,
       media_type: videos.length > 0 ? 'video' as const : images.length > 0 ? 'image' as const : 'unknown' as const,
       thumbnail_url: thumbnail,
+      video_url: videoUrl,
       ad_snapshot_url: snapshotUrl,
       estimated_days_active: Math.max(1, Math.round((endMs - startMs) / (1000 * 60 * 60 * 24))),
     }
@@ -256,6 +259,7 @@ async function fetchViaMetaApi(searchTerm: string, countryCode: string): Promise
         ad_delivery_stop_time: stopTime || null,
         media_type: 'unknown' as const,
         thumbnail_url: null,
+        video_url: null,
         ad_snapshot_url: (ad.ad_snapshot_url as string) || (adId ? `https://www.facebook.com/ads/library/?id=${adId}` : null),
         estimated_days_active: Math.max(1, Math.round((endMs - startMs) / (1000 * 60 * 60 * 24))),
       }
@@ -694,6 +698,27 @@ export async function scanAndStoreCompetitorAds(
         } catch { /* non-fatal */ }
       }
 
+      // 2b. Download video to permanent storage (if video ad)
+      let storedVideoUrl: string | null = null
+      if (ad.video_url) {
+        try {
+          const vidRes = await fetch(ad.video_url, { signal: AbortSignal.timeout(60000) })
+          if (vidRes.ok) {
+            const buffer = Buffer.from(await vidRes.arrayBuffer())
+            const contentType = vidRes.headers.get('content-type') || 'video/mp4'
+            const ext = contentType.includes('webm') ? 'webm' : 'mp4'
+            const path = `${brandId}/competitors/${competitorSlug}/${adId}-video.${ext}`
+            const { error: uploadErr } = await admin.storage
+              .from('competitor-assets')
+              .upload(path, buffer, { contentType, upsert: true })
+            if (!uploadErr) {
+              const { data: urlData } = admin.storage.from('competitor-assets').getPublicUrl(path)
+              storedVideoUrl = urlData?.publicUrl ?? null
+            }
+          }
+        } catch { /* non-fatal — videos can be large/slow */ }
+      }
+
       // 3. Analyze with Gemini Vision (if thumbnail available)
       let analysis: CreativeAnalysis | null = null
       const imageToAnalyze = storedThumbUrl || ad.thumbnail_url
@@ -714,6 +739,8 @@ export async function scanAndStoreCompetitorAds(
           ad_creative_body: ad.ad_creative_body,
           thumbnail_url: ad.thumbnail_url,
           stored_thumbnail_url: storedThumbUrl,
+          video_url: ad.video_url,
+          stored_video_url: storedVideoUrl,
           cta_text: ad.ad_creative_link_title,
           estimated_days_active: ad.estimated_days_active,
           is_active: !ad.ad_delivery_stop_time,

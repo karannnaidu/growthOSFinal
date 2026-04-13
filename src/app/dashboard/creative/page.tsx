@@ -1156,27 +1156,24 @@ function CompetitorInsightsPanel({ brandId }: { brandId: string | null }) {
           <h3 className="text-xs uppercase tracking-widest text-muted-foreground font-medium mb-3">Top Performers</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {data.topPerformers.map((item: any) => (
-              <button key={item.id} onClick={() => setExpandedId(item.id)} className="glass-panel rounded-xl overflow-hidden text-left transition-all duration-200 hover:bg-white/[0.03] hover:ring-1 hover:ring-indigo-500/20">
-                {/* Media — video or thumbnail */}
+              <div key={item.id} className="glass-panel rounded-xl overflow-hidden">
+                {/* Media — video plays inline, images are clickable */}
                 {item.videoUrl ? (
                   <div className="relative aspect-video bg-black">
                     <video src={item.videoUrl} poster={item.thumbnailUrl || undefined}
-                      muted preload="metadata"
+                      controls muted preload="metadata"
                       className="absolute inset-0 w-full h-full object-contain" />
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-                      <Play className="h-8 w-8 text-white/80" />
-                    </div>
                   </div>
                 ) : item.thumbnailUrl ? (
-                  <div className="relative aspect-video bg-muted/30">
+                  <button onClick={() => setExpandedId(item.id)} className="relative aspect-video bg-muted/30 w-full cursor-pointer">
                     <CompetitorThumb src={item.thumbnailUrl} alt={item.competitorName} />
-                  </div>
+                  </button>
                 ) : (
                   <div className="aspect-video bg-muted/20 flex items-center justify-center">
                     <ImageIcon className="h-8 w-8 text-muted-foreground/30" />
                   </div>
                 )}
-                <div className="p-3 space-y-2">
+                <button onClick={() => setExpandedId(item.id)} className="p-3 space-y-2 text-left w-full hover:bg-white/[0.02] transition-colors">
                   <div className="flex items-start justify-between">
                     <div>
                       <p className="text-sm font-medium text-foreground">{item.competitorName}</p>
@@ -1191,8 +1188,8 @@ function CompetitorInsightsPanel({ brandId }: { brandId: string | null }) {
                     {item.format !== 'unknown' && <span className="text-[9px] bg-white/10 rounded px-1.5 py-0.5 text-muted-foreground">{item.format}</span>}
                     {item.messagingApproach !== 'unknown' && <span className="text-[9px] bg-white/10 rounded px-1.5 py-0.5 text-muted-foreground">{item.messagingApproach}</span>}
                   </div>
-                </div>
-              </button>
+                </button>
+              </div>
             ))}
           </div>
         </div>
@@ -1203,27 +1200,24 @@ function CompetitorInsightsPanel({ brandId }: { brandId: string | null }) {
         <h3 className="text-xs uppercase tracking-widest text-muted-foreground font-medium mb-3">All Competitor Creatives ({data.total})</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {data.items?.map((item: any) => (
-            <button key={item.id} onClick={() => setExpandedId(item.id)} className="glass-panel rounded-xl overflow-hidden text-left transition-all duration-200 hover:bg-white/[0.03] hover:ring-1 hover:ring-indigo-500/20">
-              {/* Media — video or thumbnail */}
+            <div key={item.id} className="glass-panel rounded-xl overflow-hidden">
+              {/* Media — video plays inline, images are clickable */}
               {item.videoUrl ? (
                 <div className="relative aspect-video bg-black">
                   <video src={item.videoUrl} poster={item.thumbnailUrl || undefined}
-                    muted preload="metadata"
+                    controls muted preload="metadata"
                     className="absolute inset-0 w-full h-full object-contain" />
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-                    <Play className="h-6 w-6 text-white/80" />
-                  </div>
                 </div>
               ) : item.thumbnailUrl ? (
-                <div className="relative aspect-video bg-muted/30">
+                <button onClick={() => setExpandedId(item.id)} className="relative aspect-video bg-muted/30 w-full cursor-pointer">
                   <CompetitorThumb src={item.thumbnailUrl} alt={item.competitorName} />
-                </div>
+                </button>
               ) : (
                 <div className="aspect-video bg-muted/20 flex items-center justify-center">
                   <ImageIcon className="h-6 w-6 text-muted-foreground/30" />
                 </div>
               )}
-              <div className="p-3 space-y-1.5">
+              <button onClick={() => setExpandedId(item.id)} className="p-3 space-y-1.5 text-left w-full hover:bg-white/[0.02] transition-colors">
                 <p className="text-xs font-medium text-foreground">{item.competitorName}</p>
                 <p className="text-[10px] text-muted-foreground line-clamp-2">{item.adBody || item.visualDescription || 'No description'}</p>
                 <div className="flex items-center gap-2 text-[9px] text-muted-foreground">
@@ -1231,8 +1225,8 @@ function CompetitorInsightsPanel({ brandId }: { brandId: string | null }) {
                   <span>{'\u2022'}</span>
                   <span>{item.format}</span>
                 </div>
-              </div>
-            </button>
+              </button>
+            </div>
           ))}
         </div>
       </div>
