@@ -5,7 +5,7 @@
     "role": "Manager",
     "color": "#6366F1",
     "avatar": "/agents/mia.png",
-    "skills": ["weekly-report", "seasonal-planner", "product-launch-playbook", "whatsapp-briefing"],
+    "skills": ["mia-orchestration", "weekly-report", "seasonal-planner", "product-launch-playbook", "whatsapp-briefing"],
     "triggers": ["scout", "aria", "luna", "hugo", "sage", "max", "atlas", "echo", "nova", "navi", "penny"],
     "schedule": "0 8 * * *",
     "is_manager": true,
