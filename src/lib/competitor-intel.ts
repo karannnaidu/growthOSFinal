@@ -448,3 +448,63 @@ export async function searchCompetitorNews(
     return []
   }
 }
+
+// ---------------------------------------------------------------------------
+// Competitor Creative Analysis (Gemini Vision)
+// ---------------------------------------------------------------------------
+
+export interface CreativeAnalysis {
+  format: 'static_image' | 'video' | 'carousel' | 'ugc' | 'graphic_design'
+  messaging_approach: 'benefit_led' | 'social_proof' | 'urgency_fomo' | 'educational' | 'lifestyle'
+  visual_style: 'studio' | 'lifestyle' | 'ugc' | 'product_hero' | 'graphic'
+  visual_description: string
+  estimated_performance: 'high' | 'medium' | 'low'
+  key_elements: string[]
+}
+
+export async function analyzeCompetitorCreative(
+  imageUrl: string,
+  daysActive: number,
+): Promise<CreativeAnalysis | null> {
+  const apiKey = process.env.GOOGLE_AI_KEY
+  if (!apiKey) return null
+
+  try {
+    const imgRes = await fetch(imageUrl, { signal: AbortSignal.timeout(10000) })
+    if (!imgRes.ok) return null
+    const buffer = Buffer.from(await imgRes.arrayBuffer())
+    const base64 = buffer.toString('base64')
+    const mimeType = imgRes.headers.get('content-type') || 'image/png'
+
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [
+            { text: `Analyze this ad creative. Respond with JSON only:\n{\n  "format": "static_image" | "video" | "carousel" | "ugc" | "graphic_design",\n  "messaging_approach": "benefit_led" | "social_proof" | "urgency_fomo" | "educational" | "lifestyle",\n  "visual_style": "studio" | "lifestyle" | "ugc" | "product_hero" | "graphic",\n  "visual_description": "one paragraph describing what the ad shows",\n  "key_elements": ["list", "of", "notable", "design", "elements"]\n}` },
+            { inlineData: { mimeType, data: base64 } },
+          ]}],
+          generationConfig: { maxOutputTokens: 512, temperature: 0.2 },
+        }),
+      },
+    )
+
+    if (!res.ok) return null
+    const data = await res.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> }
+    let text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
+
+    const fenceMatch = text.match(/^```(?:json)?\s*\n?([\s\S]*?)\n?\s*```$/)
+    if (fenceMatch) text = fenceMatch[1]!.trim()
+
+    const parsed = JSON.parse(text) as Omit<CreativeAnalysis, 'estimated_performance'>
+    return {
+      ...parsed,
+      estimated_performance: daysActive >= 14 ? 'high' : daysActive >= 7 ? 'medium' : 'low',
+    }
+  } catch (err) {
+    console.warn('[competitor-intel] analyzeCompetitorCreative failed:', err)
+    return null
+  }
+}
