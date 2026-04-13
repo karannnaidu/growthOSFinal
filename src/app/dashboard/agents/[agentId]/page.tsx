@@ -273,6 +273,18 @@ export default function AgentDetailPage() {
   // Run a skill
   // ---------------------------------------------------------------------------
 
+  // Refetch recent runs for this agent
+  const refreshRuns = useCallback(async () => {
+    if (!brandId) return
+    try {
+      const res = await fetch(`/api/agents/${agentId}?brandId=${brandId}`)
+      if (res.ok) {
+        const json = await res.json() as { recentRuns: SkillRun[] }
+        setRecentRuns(json.recentRuns ?? [])
+      }
+    } catch { /* ignore */ }
+  }, [agentId, brandId])
+
   const handleRunSkill = useCallback(async (skillId: string) => {
     if (!brandId || runningSkill) return
     setRunningSkill(skillId)
@@ -294,8 +306,10 @@ export default function AgentDetailPage() {
       setSkillRunResult((prev) => ({ ...prev, [skillId]: 'Error' }))
     } finally {
       setRunningSkill(null)
+      // Refetch runs so Latest Output and Recent Runs update
+      refreshRuns()
     }
-  }, [brandId, runningSkill])
+  }, [brandId, runningSkill, refreshRuns])
 
   // ---------------------------------------------------------------------------
   // Update config

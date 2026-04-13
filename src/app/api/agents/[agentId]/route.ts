@@ -63,7 +63,9 @@ export async function GET(
   if (!agent) return NextResponse.json({ error: 'Agent not found' }, { status: 404 })
 
   // 5. Query recent skill runs for this agent + brand
-  const { data: recentRuns } = await supabase
+  //    Use service client because the user-session client can hit recursive RLS
+  //    on skill_runs → brands → brand_members.  Brand access is already verified above.
+  const { data: recentRuns } = await admin
     .from('skill_runs')
     .select('id, skill_id, status, output, model_used, credits_used, duration_ms, created_at, triggered_by, error_message')
     .eq('brand_id', brandId)
