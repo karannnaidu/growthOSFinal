@@ -12,7 +12,6 @@ import {
   Play,
   Loader2,
 } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
@@ -80,9 +79,7 @@ export default function CampaignsPage() {
   const [error, setError] = useState<string | null>(null)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
 
-  const supabase = createClient()
-
-  // Resolve brand id, then fetch campaigns
+  // Resolve brand id, then fetch campaigns via API (bypasses RLS)
   const load = useCallback(async () => {
     setIsLoading(true)
     setError(null)
@@ -115,21 +112,16 @@ export default function CampaignsPage() {
       return
     }
 
-    const { data, error: fetchErr } = await supabase
-      .from('campaigns')
-      .select('id, name, status, platform, daily_budget, launched_at, created_at')
-      .eq('brand_id', brandId)
-      .order('created_at', { ascending: false })
-      .limit(50)
-
-    if (fetchErr) {
+    try {
+      const res = await fetch(`/api/campaigns/list?brandId=${brandId}`)
+      if (!res.ok) throw new Error('Failed to load campaigns')
+      const { campaigns: data } = await res.json() as { campaigns: Campaign[] }
+      setCampaigns(data)
+    } catch {
       setError('Failed to load campaigns')
+    } finally {
       setIsLoading(false)
-      return
     }
-
-    setCampaigns((data ?? []) as Campaign[])
-    setIsLoading(false)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
