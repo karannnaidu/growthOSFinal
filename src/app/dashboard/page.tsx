@@ -385,6 +385,27 @@ export default async function DashboardPage() {
         <div className="xl:col-span-4 space-y-6">
           <AgentChains nodes={chainNodes} />
 
+          {/* Campaign shortcut */}
+          <div className="glass-panel rounded-2xl p-5">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">
+              Campaigns
+            </h3>
+            <div className="space-y-2">
+              <a
+                href="/dashboard/campaigns/new"
+                className="flex items-center gap-2 text-sm text-[#6366f1] hover:text-[#818cf8] transition-colors"
+              >
+                <span>+ New Campaign</span>
+              </a>
+              <a
+                href="/dashboard/campaigns"
+                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                View All Campaigns
+              </a>
+            </div>
+          </div>
+
           {/* Quick stats card */}
           <div className="glass-panel rounded-2xl p-5">
             <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">
