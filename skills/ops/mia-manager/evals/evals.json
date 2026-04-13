@@ -1,0 +1,65 @@
+{
+  "skill_name": "mia-manager",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Run Mia's daily review. Brand has Meta Ads connected, no Shopify, no GA4, no Klaviyo. Brand DNA exists with 4 products, 6 competitors, full positioning and audience data.",
+      "expected_output": "Mia runs health-check, dispatches Tier 1 agents (Scout, Hugo, Echo, Aria), queues appropriate follow-ups. Explains what's missing (Shopify, GA4) with connect CTAs. Does NOT block on missing platforms.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "User says in chat: 'I want to focus on email marketing this month. What can we do?' Klaviyo is NOT connected. Brand DNA has target audience data.",
+      "expected_output": "Mia acknowledges the request, explains Luna can create email templates/flows from Brand DNA. Recommends connecting Klaviyo for performance data. Dispatches Luna with available data, doesn't just say 'connect Klaviyo first'.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "Health-check results: SEO score 38 (critical), brand_coherence 92 (healthy), product_health 71 (healthy), ads null (not connected), email null (not connected). What does Mia dispatch?",
+      "expected_output": "Mia prioritizes the critical SEO finding — dispatches Hugo seo-audit immediately. Doesn't dispatch agents for healthy categories. Explains why SEO is urgent and what Hugo will do.",
+      "files": []
+    },
+    {
+      "id": 4,
+      "prompt": "User says: 'My competitor Boheco just launched a new product line, I need to respond fast. They're running aggressive UGC ads.' Only Meta Ads connected.",
+      "expected_output": "Mia dispatches Echo competitor-scan targeting Boheco specifically, then queues Aria ad-copy + ugc-script inspired by competitor UGC. Explains the response strategy. Doesn't waste time on irrelevant agents.",
+      "files": []
+    },
+    {
+      "id": 5,
+      "prompt": "User asks: 'Why isn't Penny doing anything? I added her to my team.' Shopify is not connected, no manual financial data provided.",
+      "expected_output": "Mia explains Penny needs Shopify order/revenue data to calculate unit economics and cash flow. Offers two paths: connect Shopify OR provide manual data on Penny's agent page. Doesn't blame the user or give a generic error.",
+      "files": []
+    },
+    {
+      "id": 6,
+      "prompt": "All platforms connected: Shopify, Meta Ads, GA4, Klaviyo. User clicks Run Mia's Review. Full data available. What's the optimal dispatch order?",
+      "expected_output": "Mia runs the full cycle: Scout health-check first, then dispatches based on findings using ALL available data. Includes Max (with real ROAS), Luna (with real email metrics), Sage (with real conversion data), Penny (with real financials). Orders by priority/impact.",
+      "files": []
+    },
+    {
+      "id": 7,
+      "prompt": "User instructs Mia: 'Stop running ad-copy until I approve the brand voice first. Run brand-voice-extractor and let me review before anything else.'",
+      "expected_output": "Mia acknowledges the instruction, stores it, dispatches Aria brand-voice-extractor only. Skips ad-copy in the current and future cycles until user approves. Explains what will happen after brand voice is extracted.",
+      "files": []
+    },
+    {
+      "id": 8,
+      "prompt": "Health-check returns ALL categories critical: product_health 25, brand_coherence 30, seo 20, conversion 35, ads 28, email 22. Everything is on fire. How does Mia prioritize?",
+      "expected_output": "Mia doesn't try to fix everything at once. Picks the 2-3 highest impact issues, dispatches those agents first, queues the rest. Explains the triage: 'SEO and brand coherence affect everything downstream, fixing those first.' Doesn't overwhelm with 8 parallel dispatches.",
+      "files": []
+    },
+    {
+      "id": 9,
+      "prompt": "User asks: 'What should I connect next? I currently only have Meta Ads connected. What gives me the most value?' Brand DNA exists.",
+      "expected_output": "Mia recommends based on impact: likely Shopify first (unlocks Penny finance + Navi inventory + better Scout health-check with real revenue data), then GA4 (unlocks Sage CRO with real conversion data). Explains what each connection unlocks in terms of agent capabilities.",
+      "files": []
+    },
+    {
+      "id": 10,
+      "prompt": "Echo discovered a Boheco competitor ad running UGC testimonial format for 45 days (high performer). The brand has no UGC content currently. Should Mia auto-dispatch Aria?",
+      "expected_output": "Mia creates a notification: 'Competitor trend detected — Boheco's UGC testimonial ad is a top performer (45 days active). I recommend creating similar UGC content.' Auto-dispatches Aria ugc-script with the competitor creative as inspiration. Tags the generated creative as 'Auto-generated — inspired by Boheco UGC'. Does NOT auto-publish — waits for user approval.",
+      "files": []
+    }
+  ]
+}
