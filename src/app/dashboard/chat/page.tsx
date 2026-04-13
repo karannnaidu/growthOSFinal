@@ -85,6 +85,7 @@ export default function ChatPage() {
         .from('conversations')
         .select('id, title, created_at')
         .eq('brand_id', resolvedBrandId)
+        .eq('agent', 'mia')
         .order('created_at', { ascending: false })
         .limit(20)
 

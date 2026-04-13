@@ -287,16 +287,21 @@ CREATE INDEX IF NOT EXISTS idx_notif_unread ON notifications(brand_id) WHERE rea
 CREATE TABLE IF NOT EXISTS conversations (
   id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   brand_id   uuid REFERENCES brands(id) ON DELETE CASCADE NOT NULL,
+  user_id    uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+  agent      text DEFAULT 'mia',
   title      text,
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()
 );
 
+CREATE INDEX IF NOT EXISTS idx_conv_brand_agent
+  ON conversations(brand_id, agent, user_id);
+
 -- 18. conversation_messages
 CREATE TABLE IF NOT EXISTS conversation_messages (
   id                      uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   conversation_id         uuid REFERENCES conversations(id) ON DELETE CASCADE NOT NULL,
-  role                    text CHECK (role IN ('user','mia')),
+  role                    text CHECK (role IN ('user','assistant','mia')),
   content                 text NOT NULL,
   actions                 jsonb DEFAULT '[]',
   agents_referenced       text[] DEFAULT '{}',
