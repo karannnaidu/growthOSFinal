@@ -74,11 +74,7 @@
     "schedule": null,
     "is_manager": false,
     "can_spawn": false,
-    "description": "Optimizes conversion rates, designs A/B tests, and finds pricing opportunities to improve margins.",
-    "setup": {
-      "requirements": [{"key":"data:primary_landing_page","label":"Primary Landing Page URL","type":"text","required":true,"fallback":"manual"}],
-      "chat_prompt": "I'm Sage, your CRO specialist. What's your main landing page URL?"
-    }
+    "description": "Optimizes conversion rates, designs A/B tests, and finds pricing opportunities to improve margins."
   },
   {
     "id": "max",
@@ -106,11 +102,7 @@
     "schedule": "0 8 * * 3",
     "is_manager": false,
     "can_spawn": false,
-    "description": "Builds audience segments, creates customer personas from real data, simulates persona reactions to creatives, designs retargeting funnels, finds micro-influencers, and tracks creator ROI.",
-    "setup": {
-      "requirements": [{"key":"data:target_audience_notes","label":"Target Audience Notes","type":"text","required":true,"fallback":"manual"}],
-      "chat_prompt": "I'm Atlas, your audience specialist. Tell me about your ideal customer — who are they?"
-    }
+    "description": "Builds audience segments, creates customer personas from real data, simulates persona reactions to creatives, designs retargeting funnels, finds micro-influencers, and tracks creator ROI."
   },
   {
     "id": "echo",
