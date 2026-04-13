@@ -58,6 +58,26 @@ function deriveMorningNarrative(
       contextParts.push(`${dataGaps.length} data gap${dataGaps.length > 1 ? 's' : ''} — connect more platforms for deeper insights.`)
     }
 
+    // Append ad performance data if available
+    const adAnalysis = skillRuns.find(
+      (r) => r.agent_id === 'max' && r.skill_id === 'ad-performance-analyzer' && r.status === 'completed',
+    )
+
+    if (adAnalysis?.output && typeof adAnalysis.output === 'object') {
+      const adOut = adAnalysis.output as Record<string, unknown>
+      const benchmarkNarrative = adOut.benchmark_narrative as string | undefined
+      const adSummary = adOut.summary as string | undefined
+      const phase = adOut.phase as string | undefined
+
+      if (phase === 'active_optimization' && benchmarkNarrative) {
+        parts.push(benchmarkNarrative)
+      } else if (phase === 'pre_campaign' && adSummary) {
+        contextParts.push(adSummary)
+      } else if (phase === 'baseline_capture') {
+        contextParts.push('Ad performance baseline captured. Launch a campaign to start tracking improvements.')
+      }
+    }
+
     return {
       narrative: parts.join(' ') || `${brandName} health check complete.`,
       metricsContext: contextParts.join(' ') || `Based on the latest diagnostics for ${brandName}.`,
