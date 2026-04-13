@@ -6,6 +6,7 @@ category: creative
 complexity: free
 credits: 0
 mcp_tools: [meta_ads.campaigns.insights]
+required_tools: [meta_ads.campaigns.insights]
 chains_to: [ad-copy, ugc-script, image-brief]
 schedule: "0 7 * * *"
 knowledge:

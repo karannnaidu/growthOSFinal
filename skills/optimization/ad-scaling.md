@@ -6,6 +6,7 @@ category: optimization
 complexity: premium
 credits: 3
 mcp_tools: [meta_ads.campaigns.insights, ga4.report.run]
+required_tools: [meta_ads.campaigns.insights]
 chains_to: [budget-allocation, creative-fatigue-detector]
 knowledge:
   needs: [campaign, metric, channel, audience, creative, insight]

@@ -44,6 +44,7 @@ export async function preFlightCheck(
   brandId: string,
   agentId: string,
   mcpTools: string[],
+  requiredTools: string[] = [],
 ): Promise<PreFlightResult> {
   // 1. Check platform status
   let platformStatus = await getPlatformStatus(brandId)
@@ -51,14 +52,15 @@ export async function preFlightCheck(
     platformStatus = await syncPlatformStatus(brandId)
   }
 
-  const requiredPlatforms = new Set<string>()
+  // Build the set of ALL platforms used by this skill (for data gap notes)
+  const allPlatforms = new Set<string>()
   for (const tool of mcpTools) {
     const platform = TOOL_PLATFORM_MAP[tool]
-    if (platform) requiredPlatforms.add(platform)
+    if (platform) allPlatforms.add(platform)
   }
 
   const missingPlatforms: string[] = []
-  for (const platform of requiredPlatforms) {
+  for (const platform of allPlatforms) {
     const key = platform as keyof PlatformStatus
     if (key !== 'updated_at' && !platformStatus[key]) {
       missingPlatforms.push(platform)
@@ -74,15 +76,28 @@ export async function preFlightCheck(
     }
   }
 
-  // Never block skills — mcp_tools lists what a skill CAN use, not what it
-  // REQUIRES.  Every skill is designed to work with partial data ("Adaptive
-  // data mode").  Missing platforms are noted as data gaps, not blockers.
-  const blocked = false
+  // 3. Only block if a REQUIRED tool's platform is missing (no fallback).
+  //    mcp_tools = "use if available", required_tools = "must have".
+  //    Most skills have no required_tools and run with partial data.
+  const requiredPlatforms = new Set<string>()
+  for (const tool of requiredTools) {
+    const platform = TOOL_PLATFORM_MAP[tool]
+    if (platform) requiredPlatforms.add(platform)
+  }
 
-  // 3. Check user instruction
+  const missingRequired: string[] = []
+  for (const platform of requiredPlatforms) {
+    if (missingPlatforms.includes(platform) && !supplementaryData[platform]) {
+      missingRequired.push(platform)
+    }
+  }
+
+  const blocked = missingRequired.length > 0
+
+  // 4. Check user instruction
   const instruction = await getInstruction(brandId, agentId)
 
-  // 4. Build data gaps note
+  // 5. Build data gaps note (all missing, not just required)
   let dataGapsNote: string | null = null
   if (missingPlatforms.length > 0) {
     const gaps = missingPlatforms.filter(p => !supplementaryData[p])
