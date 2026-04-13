@@ -584,6 +584,131 @@ export async function runSkill(input: SkillRunInput): Promise<SkillRunResult> {
     }).catch(console.warn);
   }
 
+  // Post-execution: launch campaign on Meta for campaign-launcher skill
+  if (skill.id === 'campaign-launcher' && status === 'completed') {
+    try {
+      const { loadMetaCredential, createMetaCampaign, createMetaAdSet, createMetaAd } = await import('@/lib/meta-ads')
+      const { OPTIMIZATION_GOAL_MAP } = await import('@/lib/meta-ads')
+
+      const credential = await loadMetaCredential(input.brandId)
+      const ctx = input.additionalContext ?? {}
+      const campaignName = (ctx.campaign_name ?? output.campaign_name ?? 'Growth OS Campaign') as string
+      const objective = (ctx.objective ?? output.objective ?? 'conversion') as string
+      const dailyBudget = Number(ctx.daily_budget ?? output.daily_budget ?? 50)
+      const launchMode = (ctx.launch_mode ?? output.launch_mode ?? 'live') as string
+      const metaStatus = launchMode === 'draft' ? 'PAUSED' as const : 'ACTIVE' as const
+      const creatives = (ctx.creatives ?? output.creatives ?? []) as Array<{
+        headline: string; body: string; cta: string; image_url?: string
+      }>
+      const audienceTiers = (ctx.audience_tiers ?? output.audience_tiers ?? []) as Array<{
+        name: string; targeting: Record<string, unknown>
+      }>
+      const linkUrl = (ctx.link_url ?? output.link_url ?? '') as string
+
+      // 1. Create CBO campaign
+      const campaign = await createMetaCampaign({
+        credential,
+        name: campaignName,
+        objective: objective as 'awareness' | 'conversion' | 'retention',
+        dailyBudget,
+        status: metaStatus,
+      })
+
+      // 2. Create ad sets per audience tier
+      const adSetIds: string[] = []
+      const optimizationGoal = OPTIMIZATION_GOAL_MAP[objective] ?? 'OFFSITE_CONVERSIONS'
+
+      for (const tier of audienceTiers) {
+        const adSet = await createMetaAdSet({
+          credential,
+          campaignId: campaign.id,
+          name: `${campaignName} — ${tier.name}`,
+          optimizationGoal,
+          billingEvent: 'IMPRESSIONS',
+          targeting: tier.targeting as any,
+          status: metaStatus,
+        })
+        adSetIds.push(adSet.id)
+      }
+
+      // 3. Create ads (each creative in each ad set)
+      const adIds: string[] = []
+      for (const adSetId of adSetIds) {
+        for (let i = 0; i < creatives.length; i++) {
+          const c = creatives[i]!
+          const ad = await createMetaAd({
+            credential,
+            adSetId,
+            name: `${campaignName} — Variant ${String.fromCharCode(65 + i)}`,
+            creative: {
+              primaryText: c.body,
+              headline: c.headline,
+              linkUrl,
+              ctaType: c.cta || 'SHOP_NOW',
+              imageUrl: c.image_url,
+            },
+            status: metaStatus,
+          })
+          adIds.push(ad.id)
+        }
+      }
+
+      // 4. Insert into campaigns table
+      const learningEndsAt = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString()
+      await supabase.from('campaigns').insert({
+        brand_id: input.brandId,
+        name: campaignName,
+        objective,
+        status: launchMode === 'draft' ? 'paused' : 'active',
+        platform: 'meta',
+        daily_budget: dailyBudget,
+        launch_mode: launchMode,
+        meta_campaign_id: campaign.id,
+        meta_adset_ids: adSetIds,
+        meta_ad_ids: adIds,
+        targeting: audienceTiers,
+        creatives,
+        audience_tiers: audienceTiers,
+        learning_ends_at: learningEndsAt,
+        launcher_run_id: runId,
+        launched_at: new Date().toISOString(),
+      })
+
+      // 5. Notify user
+      await supabase.from('notifications').insert({
+        brand_id: input.brandId,
+        type: 'auto_completed',
+        agent_id: 'max',
+        title: launchMode === 'draft'
+          ? `Draft campaign "${campaignName}" saved on Meta`
+          : `Campaign "${campaignName}" is live on Meta`,
+        body: `${adIds.length} ads across ${adSetIds.length} audience tiers. Daily budget: $${dailyBudget}. ${launchMode === 'live' ? 'Learning period: 3 days.' : 'Activate from Meta Ads Manager when ready.'}`,
+        read: false,
+      })
+
+    } catch (err) {
+      console.error('[SkillsEngine] campaign-launcher post-execution failed:', err)
+      await supabase.from('campaigns').insert({
+        brand_id: input.brandId,
+        name: (input.additionalContext?.campaign_name ?? output.campaign_name ?? 'Failed Campaign') as string,
+        objective: (input.additionalContext?.objective ?? output.objective ?? 'conversion') as string,
+        status: 'failed',
+        platform: 'meta',
+        daily_budget: Number(input.additionalContext?.daily_budget ?? output.daily_budget ?? 0),
+        optimization_log: [{ error: err instanceof Error ? err.message : String(err), at: new Date().toISOString() }],
+        launcher_run_id: runId,
+      })
+      await supabase.from('notifications').insert({
+        brand_id: input.brandId,
+        type: 'alert',
+        agent_id: 'max',
+        title: 'Campaign launch failed',
+        body: err instanceof Error ? err.message : 'Unknown error launching campaign on Meta.',
+        read: false,
+      })
+    }
+  }
+
   return {
     id: runId,
     status,
