@@ -127,9 +127,19 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       .eq('id', brandId)
       .single()
 
-    const products = (brandData?.brand_guidelines as Record<string, unknown>)?.products as Array<{ name: string; image_url?: string }> ?? brandData?.product_context as Array<{ name: string; image_url?: string }> ?? []
-    const productImages = products.filter(p => p.image_url).map(p => p.image_url!)
-    console.log(`[creative/generate] Product images available: ${productImages.length}`)
+    const products = (brandData?.brand_guidelines as Record<string, unknown>)?.products as Array<{ name: string; image_url?: string; transparent_image_url?: string; bg_approved?: boolean }> ?? brandData?.product_context as Array<{ name: string; image_url?: string }> ?? []
+    // Prefer transparent (bg-removed) versions when approved
+    const productImages: string[] = []
+    let hasTransparent = false
+    for (const p of products) {
+      if (p.transparent_image_url && p.bg_approved) {
+        productImages.push(p.transparent_image_url)
+        hasTransparent = true
+      } else if (p.image_url) {
+        productImages.push(p.image_url)
+      }
+    }
+    console.log(`[creative/generate] Product images: ${productImages.length} (${hasTransparent ? 'has transparent' : 'originals only'})`)
 
     // 4. Generate 4 image variants using product images as references
     const imagePrompts = brief.imagePrompts.slice(0, 4)
