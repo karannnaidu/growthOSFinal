@@ -709,6 +709,104 @@ export async function runSkill(input: SkillRunInput): Promise<SkillRunResult> {
     }
   }
 
+  // Post-execution: write ad performance benchmarks to brand_metrics_history
+  if (skill.id === 'ad-performance-analyzer' && status === 'completed') {
+    try {
+      const phase = output.phase as string
+      const today = new Date().toISOString().split('T')[0]
+
+      // Build metrics from LLM output
+      const adMetrics: Record<string, unknown> = {
+        ad_roas: (output.baseline_comparison as Record<string, { current?: number }>)?.roas?.current ?? null,
+        ad_cac: (output.baseline_comparison as Record<string, { current?: number }>)?.cac?.current ?? null,
+        ad_ctr: (output.baseline_comparison as Record<string, { current?: number }>)?.ctr?.current ?? null,
+        ad_account_maturity: output.account_maturity ?? null,
+        ad_account_currency: output.account_currency ?? null,
+        ad_total_lifetime_spend: output.total_lifetime_spend ?? null,
+        ad_phase: phase,
+      }
+
+      // GOS vs external comparison
+      const gosVsExt = output.gos_vs_external as Record<string, Record<string, unknown>> | undefined
+      if (gosVsExt) {
+        adMetrics.ad_gos_roas = gosVsExt.growth_os?.roas ?? null
+        adMetrics.ad_gos_cac = gosVsExt.growth_os?.cac ?? null
+        adMetrics.ad_ext_roas = gosVsExt.external?.roas ?? null
+        adMetrics.ad_ext_cac = gosVsExt.external?.cac ?? null
+      }
+
+      // Check existing data for this brand
+      const { data: existingRows } = await supabase
+        .from('brand_metrics_history')
+        .select('date, metrics')
+        .eq('brand_id', input.brandId)
+        .order('date', { ascending: false })
+        .limit(30)
+
+      // Find if baseline already captured in any existing row
+      const baselineRow = (existingRows ?? []).find(r =>
+        (r.metrics as Record<string, unknown>)?.ad_baseline_roas != null
+      )
+
+      if (phase === 'baseline_capture' && !baselineRow) {
+        // First run: capture baseline
+        const baseline = output.baseline_comparison as Record<string, { baseline?: number }> | undefined
+        if (baseline) {
+          adMetrics.ad_baseline_roas = baseline.roas?.baseline ?? null
+          adMetrics.ad_baseline_cac = baseline.cac?.baseline ?? null
+          adMetrics.ad_baseline_ctr = baseline.ctr?.baseline ?? null
+          adMetrics.ad_baseline_captured_at = today
+        }
+      } else if (baselineRow) {
+        // Preserve existing baseline in every row
+        const bm = baselineRow.metrics as Record<string, unknown>
+        adMetrics.ad_baseline_roas = bm.ad_baseline_roas
+        adMetrics.ad_baseline_cac = bm.ad_baseline_cac
+        adMetrics.ad_baseline_ctr = bm.ad_baseline_ctr
+        adMetrics.ad_baseline_captured_at = bm.ad_baseline_captured_at
+      }
+
+      // Monthly benchmark: save last month's data on first run of new month
+      const currentMonth = new Date().toLocaleString('en-US', { month: 'short', year: 'numeric' }).toLowerCase().replace(' ', '_')
+      const monthKey = `ad_monthly_roas_${currentMonth}`
+      const hasMonthly = (existingRows ?? []).some(r =>
+        (r.metrics as Record<string, unknown>)?.[monthKey] != null
+      )
+      if (!hasMonthly && existingRows && existingRows.length > 0) {
+        const lastRow = existingRows.find(r => {
+          const m = r.metrics as Record<string, unknown>
+          return m?.ad_roas != null && r.date !== today
+        })
+        if (lastRow) {
+          const lm = lastRow.metrics as Record<string, unknown>
+          adMetrics[monthKey] = lm.ad_roas
+          adMetrics[`ad_monthly_cac_${currentMonth}`] = lm.ad_cac
+          adMetrics[`ad_monthly_ctr_${currentMonth}`] = lm.ad_ctr
+        }
+      }
+
+      // Upsert: merge with any existing metrics for today
+      const { data: todayRow } = await supabase
+        .from('brand_metrics_history')
+        .select('metrics')
+        .eq('brand_id', input.brandId)
+        .eq('date', today)
+        .single()
+
+      const mergedMetrics = { ...(todayRow?.metrics as Record<string, unknown> ?? {}), ...adMetrics }
+
+      await supabase.from('brand_metrics_history').upsert({
+        brand_id: input.brandId,
+        date: today,
+        metrics: mergedMetrics,
+        source: 'ad-performance-analyzer',
+      }, { onConflict: 'brand_id,date' })
+
+    } catch (err) {
+      console.warn('[SkillsEngine] ad-performance-analyzer benchmark persist failed:', err)
+    }
+  }
+
   return {
     id: runId,
     status,
