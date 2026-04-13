@@ -43,6 +43,9 @@ interface BrandDna {
     price: string | null
     image_url: string | null
     category: string
+    transparent_image_url?: string
+    bg_approved?: boolean
+    bg_removed_at?: string
   }[]
   visual_identity: {
     primary_colors: string[]
@@ -351,6 +354,7 @@ export default function BrandDnaPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [dirty, setDirty] = useState(false)
+  const [removingBg, setRemovingBg] = useState<string | null>(null)
 
   // Resolve brand ID via API (bypasses RLS), validates cached IDs
   useEffect(() => {
@@ -427,6 +431,43 @@ export default function BrandDnaPage() {
       setTimeout(() => setMessage(null), 4000)
     }
   }, [brandId, dna])
+
+  async function handleRemoveBg(productName: string, imageUrl: string) {
+    if (!brandId || removingBg) return
+    setRemovingBg(productName)
+    try {
+      const res = await fetch('/api/products/remove-bg', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ brandId, productName, imageUrl }),
+      })
+      if (res.ok) {
+        // Re-fetch DNA to get updated product data with transparent URL
+        const dnaRes = await fetch(`/api/settings/brand-dna?brandId=${brandId}`)
+        if (dnaRes.ok) {
+          const dnaData = await dnaRes.json()
+          setDna(dnaData.dna)
+        }
+      }
+    } finally {
+      setRemovingBg(null)
+    }
+  }
+
+  async function handleApproveBg(productName: string, approved: boolean) {
+    if (!brandId) return
+    await fetch('/api/products/approve-bg', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ brandId, productName, approved }),
+    })
+    // Re-fetch DNA
+    const dnaRes = await fetch(`/api/settings/brand-dna?brandId=${brandId}`)
+    if (dnaRes.ok) {
+      const dnaData = await dnaRes.json()
+      setDna(dnaData.dna)
+    }
+  }
 
   if (isLoading) {
     return (
@@ -647,6 +688,43 @@ export default function BrandDnaPage() {
                 <div className="p-2.5 flex-1 flex flex-col">
                   <span className="text-xs font-medium text-foreground line-clamp-2 mb-0.5">{product.name}</span>
                   {product.price && <span className="text-[10px] font-metric text-muted-foreground mt-auto">{product.price}</span>}
+
+                  {/* Background removal controls */}
+                  {product.image_url && !product.bg_approved && !product.transparent_image_url && (
+                    <button
+                      onClick={() => handleRemoveBg(product.name, product.image_url!)}
+                      disabled={removingBg === product.name}
+                      className="mt-1.5 w-full text-[10px] text-[#6366f1] hover:text-[#6366f1]/80 disabled:opacity-50 text-center"
+                    >
+                      {removingBg === product.name ? 'Removing bg...' : 'Remove Background'}
+                    </button>
+                  )}
+
+                  {/* Pending approval */}
+                  {product.transparent_image_url && !product.bg_approved && (
+                    <div className="mt-1.5 space-y-1">
+                      <div className="aspect-square bg-[#1a1a2e] rounded overflow-hidden relative">
+                        <img src={product.transparent_image_url} alt="Transparent" className="absolute inset-0 w-full h-full object-contain" />
+                      </div>
+                      <div className="flex gap-1">
+                        <button onClick={() => handleApproveBg(product.name, true)}
+                          className="flex-1 text-[9px] bg-[#10b981]/20 text-[#10b981] rounded py-0.5 hover:bg-[#10b981]/30">
+                          Approve
+                        </button>
+                        <button onClick={() => handleApproveBg(product.name, false)}
+                          className="flex-1 text-[9px] bg-[#ef4444]/20 text-[#ef4444] rounded py-0.5 hover:bg-[#ef4444]/30">
+                          Reject
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Approved badge */}
+                  {product.bg_approved && (
+                    <span className="mt-1 inline-block text-[9px] bg-[#10b981]/15 text-[#10b981] rounded-full px-2 py-0.5">
+                      BG Removed ✓
+                    </span>
+                  )}
                 </div>
                 <button
                   onClick={() => update((d) => ({ ...d, products: d.products.filter((_, i) => i !== idx) }))}
