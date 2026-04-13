@@ -85,26 +85,106 @@ export interface StatusCheck {
 }
 
 // ---------------------------------------------------------------------------
-// Meta Ad Library
+// Ad Library — ScrapeCreators (primary) + Meta API (fallback)
 // ---------------------------------------------------------------------------
 
+/**
+ * Fetch competitor ads using ScrapeCreators API (scrapes Meta Ad Library).
+ * Falls back to Meta's official API if ScrapeCreators key is not set.
+ */
 export async function fetchCompetitorAds(
   searchTerm: string,
   countryCode: string = 'US',
 ): Promise<AdCreative[]> {
+  // Try ScrapeCreators first (works for all commercial ads)
+  const scrapeKey = process.env.SCRAPECREATORS_API_KEY
+  if (scrapeKey) {
+    try {
+      const result = await fetchViaScrapCreators(searchTerm, scrapeKey)
+      if (result.length > 0) return result
+    } catch (err) {
+      console.warn('[competitor-intel] ScrapeCreators failed, trying Meta API:', err)
+    }
+  }
+
+  // Fallback: Meta official API (only works for political/EU ads)
+  return fetchViaMetaApi(searchTerm, countryCode)
+}
+
+async function fetchViaScrapCreators(searchTerm: string, apiKey: string): Promise<AdCreative[]> {
+  // Step 1: Search for the company to get pageId
+  const searchRes = await fetch(
+    `https://api.scrapecreators.com/v1/facebook/adLibrary/search/companies?query=${encodeURIComponent(searchTerm)}`,
+    { headers: { 'x-api-key': apiKey } },
+  )
+  if (!searchRes.ok) {
+    console.warn('[competitor-intel] ScrapeCreators company search failed:', searchRes.status)
+    return []
+  }
+
+  const searchData = await searchRes.json() as { searchResults?: Array<{ page_id?: string; name?: string }> }
+  const pageId = searchData.searchResults?.[0]?.page_id
+  if (!pageId) {
+    console.warn('[competitor-intel] No pageId found for:', searchTerm)
+    return []
+  }
+
+  // Step 2: Fetch ads for this company
+  const adsRes = await fetch(
+    `https://api.scrapecreators.com/v1/facebook/adLibrary/company/ads?pageId=${pageId}`,
+    { headers: { 'x-api-key': apiKey } },
+  )
+  if (!adsRes.ok) {
+    console.warn('[competitor-intel] ScrapeCreators ads fetch failed:', adsRes.status)
+    return []
+  }
+
+  const adsData = await adsRes.json() as { results?: Array<Record<string, unknown>> }
+  const now = Date.now()
+
+  return (adsData.results || []).slice(0, 25).map(ad => {
+    const snapshot = (ad.snapshot || {}) as Record<string, unknown>
+    const body = snapshot.body as { text?: string } | string | null
+    const bodyText = typeof body === 'string' ? body : body?.text || null
+
+    // Timestamps are Unix seconds
+    const startSec = ad.start_date as number
+    const endSec = ad.end_date as number | null
+    const startTime = startSec ? new Date(startSec * 1000).toISOString() : new Date().toISOString()
+    const stopTime = endSec ? new Date(endSec * 1000).toISOString() : null
+    const startMs = startSec ? startSec * 1000 : Date.now()
+    const endMs = endSec ? endSec * 1000 : now
+
+    const images = (snapshot.images as Array<{ original_image_url?: string }>) || []
+    const videos = (snapshot.videos as Array<{ video_preview_image_url?: string }>) || []
+    const thumbnail = images[0]?.original_image_url || videos[0]?.video_preview_image_url || null
+
+    return {
+      id: (ad.ad_archive_id as string) || (ad.ad_id as string) || String(Date.now()),
+      page_name: (ad.page_name as string) || (snapshot.page_name as string) || searchTerm,
+      ad_creative_body: bodyText,
+      ad_creative_link_title: (snapshot.title as string) || null,
+      ad_delivery_start_time: startTime,
+      ad_delivery_stop_time: stopTime,
+      media_type: videos.length > 0 ? 'video' as const : images.length > 0 ? 'image' as const : 'unknown' as const,
+      thumbnail_url: thumbnail,
+      estimated_days_active: Math.max(1, Math.round((endMs - startMs) / (1000 * 60 * 60 * 24))),
+    }
+  })
+}
+
+async function fetchViaMetaApi(searchTerm: string, countryCode: string): Promise<AdCreative[]> {
   const appId = process.env.META_APP_ID
   const appSecret = process.env.META_APP_SECRET
   if (!appId || !appSecret) return []
 
   try {
-    // Get access token
     const tokenRes = await fetch(
       `https://graph.facebook.com/oauth/access_token?client_id=${appId}&client_secret=${appSecret}&grant_type=client_credentials`,
     )
     if (!tokenRes.ok) return []
     const { access_token } = await tokenRes.json() as { access_token: string }
 
-    // Search Ad Library
     const params = new URLSearchParams({
       access_token,
       search_terms: searchTerm,
@@ -139,7 +219,7 @@ export async function fetchCompetitorAds(
       }
     })
   } catch (err) {
-    console.warn('[competitor-intel] fetchCompetitorAds failed:', err)
+    console.warn('[competitor-intel] Meta API fallback failed:', err)
     return []
   }
 }
