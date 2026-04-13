@@ -27,6 +27,15 @@ export interface SkillRunResult {
   error?: string;
 }
 
+export interface SkillProgressEvent {
+  agent: string
+  skill: string
+  step: 'starting' | 'loading_context' | 'pre_flight' | 'fetching_data' | 'analyzing' | 'quality_check' | 'storing' | 'post_flight' | 'complete' | 'error'
+  message: string
+  progress: number
+  output?: Record<string, unknown>
+}
+
 // ---------------------------------------------------------------------------
 // Model routing — Task 1.5 implementation
 // ---------------------------------------------------------------------------
@@ -163,7 +172,7 @@ function buildPrompt(
 // Core engine
 // ---------------------------------------------------------------------------
 
-export async function runSkill(input: SkillRunInput): Promise<SkillRunResult> {
+export async function runSkill(input: SkillRunInput, onProgress?: (event: SkillProgressEvent) => void): Promise<SkillRunResult> {
   const startTime = Date.now();
 
   // Use service client to bypass RLS recursive policy on brands
@@ -186,6 +195,8 @@ export async function runSkill(input: SkillRunInput): Promise<SkillRunResult> {
     };
   }
 
+  onProgress?.({ agent: skill.agent, skill: skill.id, step: 'starting', message: `Starting ${skill.name}...`, progress: 5 })
+
   // 2. Load brand context
   const { data: brand, error: brandError } = await supabase
     .from('brands')
@@ -204,6 +215,8 @@ export async function runSkill(input: SkillRunInput): Promise<SkillRunResult> {
       error: `Brand not found: ${brandError?.message ?? 'unknown error'}`,
     };
   }
+
+  onProgress?.({ agent: skill.agent, skill: skill.id, step: 'loading_context', message: 'Loading brand context...', progress: 10 })
 
   // 3. Check wallet balance (skip for free skills)
   const creditsRequired = skill.credits;
@@ -282,6 +295,8 @@ export async function runSkill(input: SkillRunInput): Promise<SkillRunResult> {
     console.warn('[SkillsEngine] Pre-flight check failed (continuing):', err)
   }
 
+  onProgress?.({ agent: skill.agent, skill: skill.id, step: 'pre_flight', message: preFlightResult?.dataGapsNote || 'Pre-flight checks passed', progress: 15 })
+
   // 5. Fetch live platform data via MCP client (non-fatal if it fails)
   let liveData: SkillDataContext = {};
   if (skill.mcpTools && skill.mcpTools.length > 0) {
@@ -291,6 +306,8 @@ export async function runSkill(input: SkillRunInput): Promise<SkillRunResult> {
       console.warn('[SkillsEngine] fetchSkillData failed (continuing without live data):', err);
     }
   }
+
+  onProgress?.({ agent: skill.agent, skill: skill.id, step: 'fetching_data', message: 'Platform data loaded', progress: 25 })
 
   // 5.5. Fetch knowledge graph context via RAG (non-fatal)
   let ragContext: import('@/lib/knowledge/rag').RAGResult | null = null;
@@ -334,12 +351,16 @@ export async function runSkill(input: SkillRunInput): Promise<SkillRunResult> {
     ragContext,
   );
 
+  onProgress?.({ agent: skill.agent, skill: skill.id, step: 'analyzing', message: `Analyzing with ${model}...`, progress: 35 })
+
   let output: Record<string, unknown>;
   try {
     output = await callLLM({ model, provider, systemPrompt, userPrompt });
   } catch (err) {
     output = {};
     const durationMs = Date.now() - startTime;
+
+    onProgress?.({ agent: skill.agent, skill: skill.id, step: 'error', message: `LLM call failed: ${err instanceof Error ? err.message : String(err)}`, progress: 0 })
 
     // Store failed run
     const { data: failedRun } = await supabase
@@ -374,6 +395,8 @@ export async function runSkill(input: SkillRunInput): Promise<SkillRunResult> {
       error: `LLM call failed: ${err instanceof Error ? err.message : String(err)}`,
     };
   }
+
+  onProgress?.({ agent: skill.agent, skill: skill.id, step: 'quality_check', message: 'Checking output quality...', progress: 80 })
 
   // 6. Quality check
   const qc = qualityCheck(output);
@@ -415,6 +438,8 @@ export async function runSkill(input: SkillRunInput): Promise<SkillRunResult> {
       error: `Failed to store skill run: ${runInsertError.message}`,
     };
   }
+
+  onProgress?.({ agent: skill.agent, skill: skill.id, step: 'storing', message: 'Saving results...', progress: 90 })
 
   const runId = skillRun?.id ?? '';
 
@@ -806,6 +831,8 @@ export async function runSkill(input: SkillRunInput): Promise<SkillRunResult> {
       console.warn('[SkillsEngine] ad-performance-analyzer benchmark persist failed:', err)
     }
   }
+
+  onProgress?.({ agent: skill.agent, skill: skill.id, step: 'complete', message: `${skill.name} complete`, progress: 100, output })
 
   return {
     id: runId,
