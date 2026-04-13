@@ -4,13 +4,29 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { runSkill } from '@/lib/skills-engine'
+import { createMiaDecision } from '@/lib/knowledge/intelligence'
 
 // ---------------------------------------------------------------------------
-// POST /api/mia/trigger — manually trigger Mia's daily cycle
+// POST /api/mia/trigger — trigger Mia's daily review cycle
 //
-// Runs Scout health-check first, then skills-engine auto-chains to Mia
-// via the mia-orchestrator (which decides follow-up actions).
+// 1. Runs health-check synchronously (Scout diagnoses the brand).
+// 2. Queues a daily cycle of skills as pending_chain for the chain-processor
+//    cron to pick up. Skills are selected based on available data — if Meta
+//    is connected, ad skills run; if Brand DNA exists, brand skills run; etc.
 // ---------------------------------------------------------------------------
+
+/** Skills that only need Brand DNA / knowledge graph (no platform creds). */
+const BRAND_DNA_SKILLS = [
+  'seo-audit',           // hugo — always useful with Brand DNA
+  'brand-voice-extractor', // aria — extracts/refines brand voice
+  'competitor-scan',     // echo — uses competitor intel tools (env vars)
+  'ad-copy',             // aria — generates ad copy from Brand DNA
+]
+
+/** Skills that benefit from Meta Ads connection. */
+const META_SKILLS = [
+  'creative-fatigue-detector', // aria — analyzes ad creative performance
+]
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const supabase = await createClient()
@@ -36,7 +52,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     if (!member) return NextResponse.json({ error: 'Access denied' }, { status: 403 })
   }
 
-  // Run health-check synchronously (Vercel kills async work after response)
+  // 1. Run health-check synchronously
+  let healthResult: { id: string; status: string; error?: string } | null = null
   try {
     const result = await runSkill({
       brandId,
@@ -44,16 +61,55 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       triggeredBy: 'mia',
       additionalContext: { source: 'manual_trigger' },
     })
-    return NextResponse.json({
-      success: true,
-      runId: result.id,
-      status: result.status,
-      message: result.status === 'completed'
-        ? 'Health check complete. Mia is reviewing findings.'
-        : `Health check ${result.status}: ${result.error || 'unknown'}`,
-    })
+    healthResult = { id: result.id, status: result.status, error: result.error }
   } catch (err) {
     console.error('[mia/trigger] health-check failed:', err)
-    return NextResponse.json({ error: 'Health check failed' }, { status: 500 })
   }
+
+  // 2. Build a daily cycle pending_chain based on available data
+  const pendingChain: string[] = [...BRAND_DNA_SKILLS]
+
+  // Check which platforms are connected
+  const { data: creds } = await admin
+    .from('credentials')
+    .select('platform')
+    .eq('brand_id', brandId)
+
+  const platforms = new Set((creds ?? []).map(c => c.platform))
+
+  if (platforms.has('meta')) {
+    pendingChain.push(...META_SKILLS)
+  }
+
+  // Filter out skills that already ran today (avoid duplicates)
+  const todayStart = `${new Date().toISOString().split('T')[0]}T00:00:00.000Z`
+  const { data: todayRuns } = await admin
+    .from('skill_runs')
+    .select('skill_id')
+    .eq('brand_id', brandId)
+    .gte('created_at', todayStart)
+    .eq('status', 'completed')
+
+  const alreadyRan = new Set((todayRuns ?? []).map(r => r.skill_id))
+  const filtered = pendingChain.filter(s => !alreadyRan.has(s))
+
+  // 3. Create a mia_decision node with the pending chain for the chain-processor
+  if (filtered.length > 0) {
+    await createMiaDecision(brandId, {
+      decision: 'auto_run',
+      reasoning: `Daily cycle: dispatching ${filtered.length} skills (${filtered.join(', ')}).`,
+      follow_up_skills: filtered,
+      pending_chain: filtered,
+      target_agent: 'mia',
+    })
+  }
+
+  return NextResponse.json({
+    success: true,
+    healthCheck: healthResult,
+    queuedSkills: filtered,
+    message: healthResult?.status === 'completed'
+      ? `Health check complete. ${filtered.length} follow-up skills queued.`
+      : `Health check ${healthResult?.status ?? 'skipped'}. ${filtered.length} follow-up skills queued.`,
+  })
 }

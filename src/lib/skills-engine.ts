@@ -459,18 +459,21 @@ export async function runSkill(input: SkillRunInput): Promise<SkillRunResult> {
   }
 
   // 11. Post-flight intelligence — Mia decides follow-ups
+  //     MUST await so the mia_decision node is saved before Vercel kills the function.
   if (status === 'completed' && runId) {
-    postFlightDecision({
-      brandId: input.brandId,
-      agentId: skill.agent,
-      skillId: skill.id,
-      skillRunId: runId,
-      output,
-      chainsTo: skill.chainsTo,
-      dataGapsNote: preFlightResult?.dataGapsNote ?? null,
-    }).catch((err) => {
+    try {
+      await postFlightDecision({
+        brandId: input.brandId,
+        agentId: skill.agent,
+        skillId: skill.id,
+        skillRunId: runId,
+        output,
+        chainsTo: skill.chainsTo,
+        dataGapsNote: preFlightResult?.dataGapsNote ?? null,
+      })
+    } catch (err) {
       console.warn('[SkillsEngine] Post-flight decision failed (non-fatal):', err)
-    })
+    }
   }
 
   // Post-execution: fal.ai image generation for image-brief skill

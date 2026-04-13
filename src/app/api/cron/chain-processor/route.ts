@@ -1,6 +1,9 @@
 // src/app/api/cron/chain-processor/route.ts
+//
+// Runs every 5 minutes (vercel.json). Picks up mia_decision nodes with
+// non-empty pending_chain and executes all queued skills sequentially.
 
-export const maxDuration = 60
+export const maxDuration = 300 // 5 min — enough to run a full chain
 
 import { NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
@@ -40,45 +43,56 @@ export async function GET(): Promise<NextResponse> {
     return NextResponse.json({ processed: 0 })
   }
 
-  let processed = 0
+  let totalProcessed = 0
 
-  for (const node of withChain.slice(0, 5)) {
+  for (const node of withChain.slice(0, 3)) {
     const props = node.properties as { pending_chain?: string[]; target_agent?: string; [key: string]: unknown }
-    const chain = props.pending_chain ?? []
+    const chain = [...(props.pending_chain ?? [])]
     if (chain.length === 0) continue
 
-    const nextSkill = chain[0]!
-    const remainingChain = chain.slice(1)
+    const completed: string[] = []
+    const failed: string[] = []
 
-    try {
-      await runSkill({
-        brandId: node.brand_id,
-        skillId: nextSkill,
-        triggeredBy: 'mia',
-        additionalContext: { source: 'chain_processor', parent_decision: node.id },
-        chainDepth: 1,
-      })
+    // Run ALL skills in the chain sequentially
+    while (chain.length > 0) {
+      const nextSkill = chain.shift()!
 
-      await admin
-        .from('knowledge_nodes')
-        .update({
-          properties: { ...props, pending_chain: remainingChain },
-          updated_at: new Date().toISOString(),
+      try {
+        await runSkill({
+          brandId: node.brand_id,
+          skillId: nextSkill,
+          triggeredBy: 'mia',
+          additionalContext: { source: 'chain_processor', parent_decision: node.id },
+          chainDepth: 1,
         })
-        .eq('id', node.id)
+        completed.push(nextSkill)
+        totalProcessed++
+      } catch (err) {
+        console.error(`[chain-processor] Failed to run ${nextSkill} for brand ${node.brand_id}:`, err)
+        failed.push(nextSkill)
+        // Continue with remaining skills — don't let one failure stop the chain
+      }
 
-      processed++
-    } catch (err) {
-      console.error(`[chain-processor] Failed to run ${nextSkill} for brand ${node.brand_id}:`, err)
+      // Update pending_chain after each skill so progress is saved
       await admin
         .from('knowledge_nodes')
         .update({
-          properties: { ...props, pending_chain: [], blocked_reason: `Chain failed at ${nextSkill}: ${err instanceof Error ? err.message : String(err)}` },
+          properties: { ...props, pending_chain: [...chain], completed_skills: completed, failed_skills: failed },
           updated_at: new Date().toISOString(),
         })
         .eq('id', node.id)
     }
+
+    // Mark decision as fully processed
+    await admin
+      .from('knowledge_nodes')
+      .update({
+        properties: { ...props, pending_chain: [], completed_skills: completed, failed_skills: failed },
+        is_active: false, // Done — won't be picked up again
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', node.id)
   }
 
-  return NextResponse.json({ processed })
+  return NextResponse.json({ processed: totalProcessed })
 }
