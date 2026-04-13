@@ -6,7 +6,7 @@ category: diagnosis
 complexity: free
 credits: 0
 mcp_tools: [shopify.products.list, shopify.orders.list, meta_ads.campaigns.insights, ga4.report.run]
-chains_to: [seo-audit, email-flow-audit, ad-copy, budget-allocation]
+chains_to: [seo-audit, email-flow-audit, ad-copy, budget-allocation, campaign-optimizer]
 schedule: "0 6 * * *"
 knowledge:
   needs: [product, campaign, metric, insight]
