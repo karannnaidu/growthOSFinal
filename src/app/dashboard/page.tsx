@@ -17,14 +17,56 @@ function deriveMorningNarrative(
   skillRuns: Record<string, unknown>[],
   brandName: string,
 ): { narrative: string; metricsContext: string } {
-  // Try to find a scout health-check output
+  // Try to find a scout health-check output (output is JSONB → object)
   const healthCheck = skillRuns.find(
     (r) => r.agent_id === 'scout' && r.skill_id === 'health-check' && r.status === 'completed',
   )
 
-  if (healthCheck && typeof healthCheck.output === 'string') {
-    // Use the first sentence as narrative, rest as context
-    const text = healthCheck.output
+  if (healthCheck?.output && typeof healthCheck.output === 'object') {
+    const out = healthCheck.output as Record<string, unknown>
+    const score = out.overall_score as number | undefined
+    const categories = out.categories as Record<string, { score?: number; status?: string; summary?: string }> | undefined
+    const criticalFindings = (out.critical_findings ?? []) as Array<{ category?: string; finding?: string }>
+    const positiveSignals = (out.positive_signals ?? []) as string[]
+    const dataGaps = (out.data_gaps ?? []) as string[]
+
+    // Build a Jarvis-style narrative from real data
+    const parts: string[] = []
+
+    if (score != null) {
+      const grade = score >= 75 ? 'strong' : score >= 50 ? 'needs attention' : 'critical'
+      parts.push(`${brandName} scores ${score}/100 — ${grade}.`)
+    }
+
+    if (criticalFindings.length > 0) {
+      const top = criticalFindings.slice(0, 2).map(f => f.finding || f.category).join('; ')
+      parts.push(`${criticalFindings.length} critical finding${criticalFindings.length > 1 ? 's' : ''}: ${top}.`)
+    } else if (positiveSignals.length > 0) {
+      parts.push(positiveSignals[0]!)
+    }
+
+    // Metrics context line
+    const contextParts: string[] = []
+    if (categories) {
+      const healthy = Object.values(categories).filter(c => c.status === 'healthy').length
+      const warning = Object.values(categories).filter(c => c.status === 'warning').length
+      const critical = Object.values(categories).filter(c => c.status === 'critical').length
+      const scored = Object.keys(categories).length
+      contextParts.push(`${scored} categories assessed: ${healthy} healthy, ${warning} warning, ${critical} critical.`)
+    }
+    if (dataGaps.length > 0) {
+      contextParts.push(`${dataGaps.length} data gap${dataGaps.length > 1 ? 's' : ''} — connect more platforms for deeper insights.`)
+    }
+
+    return {
+      narrative: parts.join(' ') || `${brandName} health check complete.`,
+      metricsContext: contextParts.join(' ') || `Based on the latest diagnostics for ${brandName}.`,
+    }
+  }
+
+  // Fallback: if output is a string (legacy), use it directly
+  if (healthCheck?.output && typeof healthCheck.output === 'string') {
+    const text = healthCheck.output as string
     const firstDot = text.indexOf('.')
     if (firstDot > 0 && firstDot < 200) {
       return {
@@ -32,7 +74,6 @@ function deriveMorningNarrative(
         metricsContext: text.slice(firstDot + 1).trim() || `Here's your ${brandName} morning overview.`,
       }
     }
-    return { narrative: text.slice(0, 150), metricsContext: `Based on the latest diagnostics for ${brandName}.` }
   }
 
   // Fallback narrative
