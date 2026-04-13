@@ -103,6 +103,9 @@ export default function NewCampaignPage() {
   // Error
   const [stepError, setStepError] = useState<string | null>(null)
 
+  // Launch state
+  const [launching, setLaunching] = useState(false)
+
   // ---------------------------------------------------------------------------
   // Init: resolve brand
   // ---------------------------------------------------------------------------
@@ -843,13 +846,95 @@ export default function NewCampaignPage() {
               </Button>
               <Button
                 className="bg-indigo-600 hover:bg-indigo-700 text-white"
-                onClick={() => {
-                  // Placeholder: launch campaign
-                  router.push('/dashboard/campaigns')
+                disabled={launching}
+                onClick={async () => {
+                  if (!brandId) return
+                  setLaunching(true)
+                  try {
+                    const selected = copyVariants.filter(v => approvedVariants.has(v.id))
+                    const res = await fetch('/api/campaigns/launch', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        brandId,
+                        campaignName: campaignName || `${objective} Campaign`,
+                        objective,
+                        dailyBudget: Number(budgetRange) || 50,
+                        launchMode: 'live',
+                        creatives: selected.map(v => ({
+                          headline: v.headline,
+                          body: v.body,
+                          cta: v.cta,
+                        })),
+                        audienceTiers: [
+                          { name: 'Prospecting', targeting: { geo_locations: { countries: ['IN'] }, age_min: 18, age_max: 65 } },
+                        ],
+                        linkUrl: '',
+                      }),
+                    })
+                    if (res.ok) {
+                      router.push('/dashboard/campaigns')
+                    } else {
+                      const data = await res.json()
+                      alert(data.error || 'Launch failed')
+                    }
+                  } catch (err) {
+                    alert('Launch failed. Check console.')
+                    console.error(err)
+                  } finally {
+                    setLaunching(false)
+                  }
                 }}
               >
-                <Rocket className="h-4 w-4 mr-1.5" />
-                Launch Campaign
+                {launching ? (
+                  <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" />Launching...</>
+                ) : (
+                  <><Rocket className="h-4 w-4 mr-1.5" />Launch Live</>
+                )}
+              </Button>
+              <Button
+                variant="outline"
+                disabled={launching}
+                onClick={async () => {
+                  if (!brandId) return
+                  setLaunching(true)
+                  try {
+                    const selected = copyVariants.filter(v => approvedVariants.has(v.id))
+                    const res = await fetch('/api/campaigns/launch', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        brandId,
+                        campaignName: campaignName || `${objective} Campaign`,
+                        objective,
+                        dailyBudget: Number(budgetRange) || 50,
+                        launchMode: 'draft',
+                        creatives: selected.map(v => ({
+                          headline: v.headline,
+                          body: v.body,
+                          cta: v.cta,
+                        })),
+                        audienceTiers: [
+                          { name: 'Prospecting', targeting: { geo_locations: { countries: ['IN'] }, age_min: 18, age_max: 65 } },
+                        ],
+                        linkUrl: '',
+                      }),
+                    })
+                    if (res.ok) {
+                      router.push('/dashboard/campaigns')
+                    } else {
+                      const data = await res.json()
+                      alert(data.error || 'Save failed')
+                    }
+                  } catch (err) {
+                    alert('Save failed.')
+                    console.error(err)
+                  } finally {
+                    setLaunching(false)
+                  }
+                }}
+              >
+                Save as Draft
               </Button>
             </div>
           </div>
