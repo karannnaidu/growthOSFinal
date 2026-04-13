@@ -1,9 +1,11 @@
 'use client'
 
+import { useEffect } from 'react'
 import { Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { RichAgentCard } from '@/components/chat/rich-agent-card'
 import { AGENTS } from '@/lib/agents-data'
+import { parseMiaResponse, type MiaAction } from '@/lib/mia-actions'
 
 interface ChatMessageProps {
   role: 'user' | 'mia'
@@ -12,6 +14,7 @@ interface ChatMessageProps {
   streaming?: boolean
   agentsReferenced?: string[]
   onActionClick?: (skillId: string) => void
+  onActionsFound?: (actions: MiaAction[]) => void
 }
 
 // Agent names for detection (lowercase -> agentId)
@@ -95,8 +98,22 @@ export function ChatMessage({
   timestamp,
   streaming = false,
   onActionClick,
+  onActionsFound,
 }: ChatMessageProps) {
   const isUser = role === 'user'
+
+  // Parse and strip action blocks from Mia's messages
+  const { text: displayText, actions: parsedActions } = role === 'mia' && !streaming
+    ? parseMiaResponse(content)
+    : { text: content, actions: [] as MiaAction[] }
+
+  // Notify parent of parsed actions (on first parse)
+  useEffect(() => {
+    if (parsedActions.length > 0 && onActionsFound) {
+      onActionsFound(parsedActions)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [content])
 
   return (
     <div
@@ -130,7 +147,7 @@ export function ChatMessage({
           </span>
         ) : (
           <p className="whitespace-pre-wrap break-words">
-            {isUser ? content : parseContent(content, onActionClick)}
+            {isUser ? content : parseContent(displayText, onActionClick)}
             {streaming && (
               <span className="inline-block ml-0.5 h-4 w-0.5 bg-[#6366f1] animate-pulse" aria-hidden="true" />
             )}
