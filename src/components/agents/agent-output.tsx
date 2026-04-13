@@ -1,5 +1,7 @@
 'use client'
 
+import { SkillOutput } from '@/components/ui/skill-output'
+
 interface AgentOutputProps {
   agentId: string
   output: Record<string, unknown> | string | null
@@ -194,53 +196,7 @@ function ScoutOutput({ output }: { output: Record<string, unknown> }) {
 }
 
 function DefaultOutput({ output }: { output: Record<string, unknown> | string }) {
-  if (typeof output === 'string') {
-    return (
-      <div className="text-xs text-foreground/80 whitespace-pre-wrap max-h-80 overflow-auto leading-relaxed">
-        {output.slice(0, 5000)}
-      </div>
-    )
-  }
-
-  // Render structured output as readable sections
-  const { content, model, provider, ...rest } = output
-  const displayObj = content ? { content } : rest
-
-  return (
-    <div className="space-y-3 max-h-80 overflow-auto">
-      {Object.entries(displayObj).map(([key, val]) => {
-        if (val === null || val === undefined) return null
-        const isArray = Array.isArray(val)
-        const isObject = typeof val === 'object' && !isArray
-        return (
-          <div key={key}>
-            <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">{key.replace(/_/g, ' ')}</p>
-            {typeof val === 'string' ? (
-              <p className="text-xs text-foreground/80 whitespace-pre-wrap">{val.slice(0, 1000)}</p>
-            ) : isArray ? (
-              <div className="space-y-1">
-                {(val as unknown[]).slice(0, 5).map((item, i) => (
-                  <p key={i} className="text-xs text-muted-foreground">• {typeof item === 'string' ? item : JSON.stringify(item).slice(0, 200)}</p>
-                ))}
-                {(val as unknown[]).length > 5 && <p className="text-[10px] text-muted-foreground/50">+{(val as unknown[]).length - 5} more</p>}
-              </div>
-            ) : isObject ? (
-              <div className="grid grid-cols-2 gap-1.5">
-                {Object.entries(val as Record<string, unknown>).slice(0, 8).map(([k, v]) => (
-                  <div key={k} className="rounded bg-white/[0.04] px-2 py-1">
-                    <p className="text-[9px] text-muted-foreground capitalize">{k.replace(/_/g, ' ')}</p>
-                    <p className="text-xs text-foreground truncate">{String(v)}</p>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-xs text-foreground font-mono">{String(val)}</p>
-            )}
-          </div>
-        )
-      })}
-    </div>
-  )
+  return <SkillOutput output={typeof output === 'string' ? { content: output } : output} />
 }
 
 // ---------------------------------------------------------------------------

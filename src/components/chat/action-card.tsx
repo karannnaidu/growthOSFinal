@@ -12,6 +12,7 @@ import {
   Zap,
 } from 'lucide-react'
 import { AgentAvatar } from '@/components/agents/agent-avatar'
+import { SkillOutput } from '@/components/ui/skill-output'
 import { AGENT_MAP } from '@/lib/agents-data'
 import type { SkillAction } from '@/lib/mia-actions'
 
@@ -99,10 +100,8 @@ function ActionRow({
 
       {/* Expanded output */}
       {expanded && state.output && (
-        <div className="mt-2 rounded-lg bg-black/20 p-2.5 text-[11px] font-mono text-muted-foreground max-h-60 overflow-auto">
-          <pre className="whitespace-pre-wrap break-words">
-            {JSON.stringify(state.output, null, 2)}
-          </pre>
+        <div className="mt-2">
+          <SkillOutput output={state.output} compact maxHeight={240} />
         </div>
       )}
     </div>

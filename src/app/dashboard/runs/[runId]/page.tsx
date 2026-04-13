@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ArrowLeft, Download, Play, Clock, Cpu, Zap } from 'lucide-react'
+import { SkillOutput } from '@/components/ui/skill-output'
 
 interface SkillRun {
   id: string
@@ -210,9 +211,7 @@ export default function SkillRunDetailPage() {
             </h2>
           </div>
           <div className="p-6">
-            <pre className="text-xs font-mono text-foreground/80 whitespace-pre-wrap break-words bg-black/20 rounded-xl p-4 max-h-96 overflow-y-auto">
-              {JSON.stringify(run.output, null, 2)}
-            </pre>
+            <SkillOutput output={run.output as Record<string, unknown>} maxHeight={600} />
           </div>
         </div>
       )}
