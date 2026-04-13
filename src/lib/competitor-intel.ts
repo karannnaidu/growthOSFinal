@@ -21,6 +21,7 @@ export interface AdCreative {
   ad_delivery_stop_time: string | null
   media_type: 'image' | 'video' | 'carousel' | 'unknown'
   thumbnail_url: string | null
+  ad_snapshot_url: string | null
   estimated_days_active: number
 }
 
@@ -159,8 +160,14 @@ async function fetchViaScrapCreators(searchTerm: string, apiKey: string): Promis
     const videos = (snapshot.videos as Array<{ video_preview_image_url?: string }>) || []
     const thumbnail = images[0]?.original_image_url || videos[0]?.video_preview_image_url || null
 
+    // Build snapshot URL for viewing the full ad on Meta Ad Library
+    const archiveId = (ad.ad_archive_id as string) || (ad.ad_id as string) || ''
+    const snapshotUrl = archiveId
+      ? `https://www.facebook.com/ads/library/?id=${archiveId}`
+      : null
+
     return {
-      id: (ad.ad_archive_id as string) || (ad.ad_id as string) || String(Date.now()),
+      id: archiveId || String(Date.now()),
       page_name: (ad.page_name as string) || (snapshot.page_name as string) || searchTerm,
       ad_creative_body: bodyText,
       ad_creative_link_title: (snapshot.title as string) || null,
@@ -168,6 +175,7 @@ async function fetchViaScrapCreators(searchTerm: string, apiKey: string): Promis
       ad_delivery_stop_time: stopTime,
       media_type: videos.length > 0 ? 'video' as const : images.length > 0 ? 'image' as const : 'unknown' as const,
       thumbnail_url: thumbnail,
+      ad_snapshot_url: snapshotUrl,
       estimated_days_active: Math.max(1, Math.round((endMs - startMs) / (1000 * 60 * 60 * 24))),
     }
   })
@@ -190,7 +198,7 @@ async function fetchViaMetaApi(searchTerm: string, countryCode: string): Promise
       search_terms: searchTerm,
       ad_reached_countries: `["${countryCode}"]`,
       ad_type: 'ALL',
-      fields: 'id,page_name,ad_creative_bodies,ad_creative_link_titles,ad_delivery_start_time,ad_delivery_stop_time',
+      fields: 'id,page_name,ad_creative_bodies,ad_creative_link_titles,ad_delivery_start_time,ad_delivery_stop_time,ad_snapshot_url',
       limit: '25',
     })
 
@@ -206,8 +214,9 @@ async function fetchViaMetaApi(searchTerm: string, countryCode: string): Promise
       const startMs = new Date(startTime).getTime()
       const endMs = stopTime ? new Date(stopTime).getTime() : now
 
+      const adId = (ad.id as string) || ''
       return {
-        id: (ad.id as string) || '',
+        id: adId,
         page_name: (ad.page_name as string) || '',
         ad_creative_body: ((ad.ad_creative_bodies as string[]) || [])[0] || null,
         ad_creative_link_title: ((ad.ad_creative_link_titles as string[]) || [])[0] || null,
@@ -215,6 +224,7 @@ async function fetchViaMetaApi(searchTerm: string, countryCode: string): Promise
         ad_delivery_stop_time: stopTime || null,
         media_type: 'unknown' as const,
         thumbnail_url: null,
+        ad_snapshot_url: (ad.ad_snapshot_url as string) || (adId ? `https://www.facebook.com/ads/library/?id=${adId}` : null),
         estimated_days_active: Math.max(1, Math.round((endMs - startMs) / (1000 * 60 * 60 * 24))),
       }
     })

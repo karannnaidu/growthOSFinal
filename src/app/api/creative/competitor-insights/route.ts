@@ -39,6 +39,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       daysActive: props.estimated_days_active as number ?? 0,
       keyElements: props.key_elements as string[] ?? [],
       adBody: props.ad_creative_body as string ?? null,
+      adSnapshotUrl: props.ad_snapshot_url as string ?? null,
       isInspiration: c.confidence >= 0.95,
       createdAt: c.created_at,
     }
