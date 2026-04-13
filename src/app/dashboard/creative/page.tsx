@@ -21,6 +21,7 @@ import {
   Palette,
   Activity,
   Star,
+  Eye,
 } from 'lucide-react'
 
 // ---------------------------------------------------------------------------
@@ -67,18 +68,20 @@ interface GenerateResult {
 // Constants
 // ---------------------------------------------------------------------------
 
-type TabKey = 'gallery' | 'generate' | 'performance'
+type TabKey = 'gallery' | 'generate' | 'insights' | 'performance'
 
 const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
   { key: 'gallery', label: 'Gallery', icon: <ImageIcon className="h-4 w-4" /> },
   { key: 'generate', label: 'Generate', icon: <Sparkles className="h-4 w-4" /> },
+  { key: 'insights', label: 'Competitor Insights', icon: <Eye className="h-4 w-4" /> },
   { key: 'performance', label: 'Performance', icon: <BarChart3 className="h-4 w-4" /> },
 ]
 
 const CAMPAIGN_GOALS = [
   { value: 'awareness', label: 'Awareness', desc: 'Maximize reach and brand recognition' },
-  { value: 'conversion', label: 'Conversion', desc: 'Drive purchases and sign-ups' },
-  { value: 'retention', label: 'Retention', desc: 'Re-engage existing customers' },
+  { value: 'urgency', label: 'Urgency / FOMO', desc: 'Create scarcity and urgency to buy now' },
+  { value: 'offer', label: 'Offer / Discount', desc: 'Promote deals, bundles, and discounts' },
+  { value: 'retargeting', label: 'Retargeting', desc: 'Re-engage visitors who didn\'t purchase' },
 ]
 
 const PAGE_LIMIT = 20
@@ -100,7 +103,8 @@ export default function CreativeStudioPage() {
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null)
 
   // Generate state
-  const [genStep, setGenStep] = useState(0)
+  const [genStep, setGenStep] = useState<'select' | 'edit' | 'generating' | 'results'>('select')
+  const [editableBrief, setEditableBrief] = useState<any>(null)
   const [campaignGoal, setCampaignGoal] = useState<string | null>(null)
   const [selectedPersonas, setSelectedPersonas] = useState<string[]>([])
   const [customPrompt, setCustomPrompt] = useState('')
@@ -179,35 +183,48 @@ export default function CreativeStudioPage() {
   }, [brandId, fetchGallery])
 
   // ---------------------------------------------------------------------------
-  // Generate handler
+  // Generate handlers (two-step flow)
   // ---------------------------------------------------------------------------
-  async function handleGenerate() {
+  async function handleGenerateBrief() {
     if (!brandId || !campaignGoal) return
     setGenerating(true)
     setGenError(null)
-    setGenResult(null)
-
     try {
       const res = await fetch('/api/creative/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          brandId,
-          campaignGoal,
-          targetPersonas: selectedPersonas.length > 0 ? selectedPersonas.join(', ') : 'general audience',
-          customPrompt: customPrompt || undefined,
-        }),
+        body: JSON.stringify({ brandId, campaignGoal, targetPersonas: selectedPersonas.join(', '), customPrompt, briefOnly: true }),
       })
+      if (!res.ok) throw new Error(`API error ${res.status}`)
+      const data = await res.json()
+      setEditableBrief(data.brief)
+      setGenStep('edit')
+    } catch (err) {
+      setGenError(err instanceof Error ? err.message : 'Brief generation failed')
+    } finally {
+      setGenerating(false)
+    }
+  }
 
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}))
-        throw new Error((errData as Record<string, string>).error || 'Generation failed')
-      }
-
-      const data: GenerateResult = await res.json()
+  async function handleGenerateImages() {
+    if (!brandId || !campaignGoal || !editableBrief) return
+    setGenStep('generating')
+    setGenerating(true)
+    setGenError(null)
+    setGenResult(null)
+    try {
+      const res = await fetch('/api/creative/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ brandId, campaignGoal, targetPersonas: selectedPersonas.join(', '), editedBrief: editableBrief }),
+      })
+      if (!res.ok) throw new Error(`API error ${res.status}`)
+      const data = await res.json()
       setGenResult(data)
+      setGenStep('results')
     } catch (err) {
       setGenError(err instanceof Error ? err.message : 'Generation failed')
+      setGenStep('edit')
     } finally {
       setGenerating(false)
     }
@@ -598,7 +615,7 @@ export default function CreativeStudioPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => { setGenResult(null); setGenStep(0); setCampaignGoal(null); setSelectedPersonas([]); setCustomPrompt('') }}
+                  onClick={() => { setGenResult(null); setGenStep('select'); setEditableBrief(null); setCampaignGoal(null); setSelectedPersonas([]); setCustomPrompt('') }}
                   className="border-border/40"
                 >
                   Start Over
@@ -717,15 +734,17 @@ export default function CreativeStudioPage() {
             /* Multi-step generation flow */
             <div className="space-y-6">
               {/* Step 1: Campaign Goal */}
+              {genStep === 'select' && (
+              <>
               <div className="space-y-3">
                 <h2 className="font-heading text-base font-semibold text-foreground">
                   1. Campaign Goal
                 </h2>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {CAMPAIGN_GOALS.map((goal) => (
                     <button
                       key={goal.value}
-                      onClick={() => { setCampaignGoal(goal.value); if (genStep < 1) setGenStep(1) }}
+                      onClick={() => { setCampaignGoal(goal.value) }}
                       className={cn(
                         'glass-panel rounded-xl p-4 text-left transition-all duration-200',
                         campaignGoal === goal.value
@@ -741,14 +760,14 @@ export default function CreativeStudioPage() {
               </div>
 
               {/* Step 2: Target Personas */}
-              {genStep >= 1 && (
+              {campaignGoal && (
                 <div className="space-y-3 animate-fade-in">
                   <h2 className="font-heading text-base font-semibold text-foreground">
                     2. Target Personas
                   </h2>
                   <div className="flex flex-wrap gap-2">
                     <button
-                      onClick={() => { setSelectedPersonas([]); if (genStep < 2) setGenStep(2) }}
+                      onClick={() => { setSelectedPersonas([]) }}
                       className={cn(
                         'px-3 py-1.5 rounded-full text-xs border transition-colors',
                         selectedPersonas.length === 0
@@ -765,7 +784,6 @@ export default function CreativeStudioPage() {
                           setSelectedPersonas((prev) =>
                             prev.includes(p.name) ? prev.filter((n) => n !== p.name) : [...prev, p.name],
                           )
-                          if (genStep < 2) setGenStep(2)
                         }}
                         className={cn(
                           'px-3 py-1.5 rounded-full text-xs border transition-colors',
@@ -782,7 +800,7 @@ export default function CreativeStudioPage() {
               )}
 
               {/* Step 3: Knowledge Context Preview */}
-              {genStep >= 2 && (
+              {campaignGoal && (
                 <div className="space-y-3 animate-fade-in">
                   <h2 className="font-heading text-base font-semibold text-foreground">
                     3. Knowledge Context Preview
@@ -807,7 +825,7 @@ export default function CreativeStudioPage() {
               )}
 
               {/* Step 4: Custom Prompt */}
-              {genStep >= 2 && (
+              {campaignGoal && (
                 <div className="space-y-3 animate-fade-in">
                   <h2 className="font-heading text-base font-semibold text-foreground">
                     4. Custom Prompt <span className="text-muted-foreground font-normal">(optional)</span>
@@ -822,25 +840,94 @@ export default function CreativeStudioPage() {
                 </div>
               )}
 
-              {/* Step 5: Generate button */}
-              {genStep >= 2 && (
+              {/* Step 5: Generate Brief button */}
+              {campaignGoal && (
                 <div className="animate-fade-in">
                   {genError && (
                     <p className="text-sm text-destructive mb-3">{genError}</p>
                   )}
                   <Button
-                    onClick={handleGenerate}
-                    disabled={!campaignGoal}
+                    onClick={handleGenerateBrief}
+                    disabled={!campaignGoal || generating}
                     className="bg-indigo-600 hover:bg-indigo-700 text-white"
                   >
                     <Sparkles className="h-4 w-4 mr-1.5" />
-                    Generate Creatives
+                    {generating ? 'Creating Brief...' : 'Create Brief'}
                   </Button>
+                </div>
+              )}
+              </>
+              )}
+
+              {/* Edit Step: Editable Ad Copy */}
+              {genStep === 'edit' && editableBrief && (
+                <div className="space-y-4 animate-fade-in">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-heading font-bold text-foreground">Edit Your Ad Copy</h3>
+                    <button onClick={() => { setGenStep('select'); setEditableBrief(null) }}
+                      className="text-xs text-muted-foreground hover:text-foreground">{'\u2190'} Back</button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">Review and edit before generating images. Each variant creates one ad.</p>
+                  {(editableBrief.copyVariants || []).map((variant: any, idx: number) => (
+                    <div key={idx} className="glass-panel rounded-xl p-4 space-y-2.5">
+                      <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">Variant {idx + 1}</p>
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] text-muted-foreground">Headline</label>
+                        <input value={variant.headline || ''} onChange={(e) => {
+                          const updated = { ...editableBrief, copyVariants: editableBrief.copyVariants.map((v: any, i: number) => i === idx ? { ...v, headline: e.target.value } : v) }
+                          setEditableBrief(updated)
+                        }} className="w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm text-foreground focus:border-[#6366f1]/40 focus:outline-none" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] text-muted-foreground">Body Copy</label>
+                        <textarea value={variant.body || ''} onChange={(e) => {
+                          const updated = { ...editableBrief, copyVariants: editableBrief.copyVariants.map((v: any, i: number) => i === idx ? { ...v, body: e.target.value } : v) }
+                          setEditableBrief(updated)
+                        }} rows={2} className="w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm text-foreground focus:border-[#6366f1]/40 focus:outline-none resize-none" />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] text-muted-foreground">CTA</label>
+                          <input value={variant.cta || ''} onChange={(e) => {
+                            const updated = { ...editableBrief, copyVariants: editableBrief.copyVariants.map((v: any, i: number) => i === idx ? { ...v, cta: e.target.value } : v) }
+                            setEditableBrief(updated)
+                          }} className="w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm text-foreground focus:border-[#6366f1]/40 focus:outline-none" />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] text-muted-foreground">Offer Text (optional)</label>
+                          <input value={variant.offerText || ''} onChange={(e) => {
+                            const updated = { ...editableBrief, copyVariants: editableBrief.copyVariants.map((v: any, i: number) => i === idx ? { ...v, offerText: e.target.value } : v) }
+                            setEditableBrief(updated)
+                          }} placeholder="e.g. 20% off" className="w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/40 focus:border-[#6366f1]/40 focus:outline-none" />
+                        </div>
+                      </div>
+                      {variant.sceneDescription && (
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] text-muted-foreground">Scene Description</label>
+                          <textarea value={variant.sceneDescription || ''} onChange={(e) => {
+                            const updated = { ...editableBrief, copyVariants: editableBrief.copyVariants.map((v: any, i: number) => i === idx ? { ...v, sceneDescription: e.target.value } : v) }
+                            setEditableBrief(updated)
+                          }} rows={2} className="w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm text-foreground focus:border-[#6366f1]/40 focus:outline-none resize-none" />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  <button onClick={handleGenerateImages} disabled={generating}
+                    className="w-full rounded-xl bg-[#6366f1] py-3 text-sm font-semibold text-white hover:bg-[#6366f1]/90 disabled:opacity-50 transition-colors">
+                    {generating ? 'Generating Images...' : `Generate ${editableBrief.copyVariants?.length || 4} Ad Images`}
+                  </button>
                 </div>
               )}
             </div>
           )}
         </div>
+      )}
+
+      {/* ================================================================= */}
+      {/* TAB: Competitor Insights                                           */}
+      {/* ================================================================= */}
+      {activeTab === 'insights' && (
+        <CompetitorInsightsPanel brandId={brandId} />
       )}
 
       {/* ================================================================= */}
@@ -917,6 +1004,116 @@ export default function CreativeStudioPage() {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Competitor Insights Panel
+// ---------------------------------------------------------------------------
+function CompetitorInsightsPanel({ brandId }: { brandId: string | null }) {
+  const [data, setData] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!brandId) return
+    fetch(`/api/creative/competitor-insights?brandId=${brandId}`)
+      .then(r => r.json())
+      .then(d => setData(d))
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [brandId])
+
+  if (loading) return <div className="space-y-3">{[1,2,3].map(i => <div key={i} className="h-24 animate-pulse rounded-xl bg-white/[0.04]" />)}</div>
+  if (!data || data.total === 0) return (
+    <div className="text-center py-12">
+      <p className="text-muted-foreground text-sm">No competitor creatives yet.</p>
+      <p className="text-muted-foreground/60 text-xs mt-1">Echo will populate this when competitor scans run.</p>
+    </div>
+  )
+
+  async function toggleInspiration(creativeId: string, inspire: boolean) {
+    if (!brandId) return
+    await fetch('/api/creative/competitor-insights', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ brandId, creativeId, inspire }),
+    })
+    // Refresh
+    const res = await fetch(`/api/creative/competitor-insights?brandId=${brandId}`)
+    if (res.ok) setData(await res.json())
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Trend summary */}
+      {data.trends && (
+        <div className="glass-panel rounded-xl p-4">
+          <h3 className="text-xs uppercase tracking-widest text-muted-foreground font-medium mb-3">Trends</h3>
+          <div className="flex flex-wrap gap-2">
+            {Object.entries(data.trends.formatCounts as Record<string, number>).map(([format, count]) => (
+              <span key={format} className="text-xs bg-[#6366f1]/10 text-[#6366f1] rounded-full px-2.5 py-1">
+                {format.replace('_', ' ')}: {count}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Top performers */}
+      {data.topPerformers?.length > 0 && (
+        <div>
+          <h3 className="text-xs uppercase tracking-widest text-muted-foreground font-medium mb-3">Top Performers</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {data.topPerformers.map((item: any) => (
+              <div key={item.id} className="glass-panel rounded-xl p-3 space-y-2">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-foreground">{item.competitorName}</p>
+                    <p className="text-[10px] text-muted-foreground">{item.daysActive} days active</p>
+                  </div>
+                  <span className="text-[9px] bg-[#10b981]/15 text-[#10b981] rounded-full px-2 py-0.5">High performer</span>
+                </div>
+                {item.visualDescription && (
+                  <p className="text-xs text-muted-foreground line-clamp-2">{item.visualDescription}</p>
+                )}
+                <div className="flex flex-wrap gap-1">
+                  {item.format !== 'unknown' && <span className="text-[9px] bg-white/10 rounded px-1.5 py-0.5 text-muted-foreground">{item.format}</span>}
+                  {item.messagingApproach !== 'unknown' && <span className="text-[9px] bg-white/10 rounded px-1.5 py-0.5 text-muted-foreground">{item.messagingApproach}</span>}
+                </div>
+                <button
+                  onClick={() => toggleInspiration(item.id, !item.isInspiration)}
+                  className={`text-[10px] px-2.5 py-1 rounded-full transition-colors ${
+                    item.isInspiration
+                      ? 'bg-[#f97316]/15 text-[#f97316]'
+                      : 'bg-white/5 text-muted-foreground hover:bg-[#f97316]/10 hover:text-[#f97316]'
+                  }`}
+                >
+                  {item.isInspiration ? '\u2605 Inspiration' : '\u2606 Use as Inspiration'}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* All creatives */}
+      <div>
+        <h3 className="text-xs uppercase tracking-widest text-muted-foreground font-medium mb-3">All Competitor Creatives ({data.total})</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {data.items?.map((item: any) => (
+            <div key={item.id} className="glass-panel rounded-xl p-3 space-y-1.5">
+              <p className="text-xs font-medium text-foreground">{item.competitorName}</p>
+              <p className="text-[10px] text-muted-foreground line-clamp-2">{item.visualDescription || item.adBody || 'No description'}</p>
+              <div className="flex items-center gap-2 text-[9px] text-muted-foreground">
+                <span>{item.daysActive}d</span>
+                <span>{'\u2022'}</span>
+                <span>{item.format}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   )
 }
