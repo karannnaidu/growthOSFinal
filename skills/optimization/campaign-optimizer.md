@@ -11,7 +11,7 @@ chains_to: [ad-copy, image-brief, creative-fatigue-detector]
 schedule: "0 6 */2 * *"
 knowledge:
   needs: [campaign, metric, insight, audience, creative]
-  semantic_query: "campaign performance ROAS budget scaling creative fatigue audience demographics"
+  semantic_query: "campaign performance ROAS budget scaling creative fatigue audience demographics account maturity ramp"
   traverse_depth: 2
   include_agency_patterns: true
 produces:
@@ -38,6 +38,13 @@ Rules:
 - All ads declining: do NOT kill the campaign. Notify user, recommend creative refresh.
 - Creative fatigue (CTR declining across 3+ optimization cycles): flag for creative-fatigue-detector.
 - Let Meta's CBO handle budget distribution across ad sets. Don't micromanage ad set budgets.
+
+Account maturity ramp rules (from ad-performance-analyzer):
+- Cold (< $1K lifetime spend): max 20% budget increase, minimum 4 days between increases
+- Warm ($1K-$10K monthly): max 25% increase, minimum 3 days between increases
+- Established ($10K+ monthly): max 30% increase, minimum 3 days between increases
+
+The account_maturity level is provided in the additional context. Always respect these limits when recommending budget increases. Exceeding them triggers Meta's learning phase reset which tanks performance.
 
 Always write audience and creative learnings. Examples:
 - "Males 25-34 in prospecting tier: ROAS 4.2x vs 1.8x overall"
