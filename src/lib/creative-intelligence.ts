@@ -245,14 +245,19 @@ You MUST respond with valid JSON matching this exact schema:
   "reasoning": "overall strategic reasoning for this creative brief"
 }
 
+CRITICAL RULES FOR IMAGE PROMPTS:
+- The actual product photo will be provided separately as a reference image to the AI generator.
+- Your image prompts must describe the SCENE/BACKGROUND/SETTING around the product, NOT the product itself.
+- DO NOT describe the product bottle, package, label, or branding in the prompt.
+- Instead describe: the surface it sits on, the lighting, the background environment, lifestyle context, mood, color palette.
+- Example GOOD prompt: "Warm morning sunlight on a natural wood surface, soft bokeh background of green plants, golden hour lighting, minimalist aesthetic, premium product photography setting"
+- Example BAD prompt: "A bottle of wellness product with green label" (the product image is already provided)
+
 Guidelines:
-- Generate exactly 4 image prompts, 2 video prompts, and 3 copy variants.
-- Image prompts should be detailed enough for an AI image generator (Flux/SDXL).
-- Video prompts must include: scene description, camera motion, mood, and duration.
-- For awareness campaigns, use 5-second durations. For conversion campaigns, use 10-second durations.
-- Video scene descriptions should be based on the product and brand aesthetic.
-- Video motion direction should reference what worked in past top-performing video content.
-- Video style should draw from the best-performing video creatives in the knowledge graph.
+- Generate exactly 4 image prompts, 0 video prompts (video coming soon), and 3 copy variants.
+- Image prompts describe SCENES that complement the brand aesthetic — the product will be composited in.
+- Each prompt should describe a different setting/mood: lifestyle, studio, nature, urban, etc.
+- Use the brand's color palette as accent colors in the scene.
 - Copy should match the brand voice tone and avoid anything in the "don't say" list.
 - Reference top-performing creative styles when relevant.
 - Target specific personas with copy variants.

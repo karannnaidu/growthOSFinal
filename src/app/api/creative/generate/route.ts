@@ -147,15 +147,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const imageResults = await Promise.allSettled(
       imagePrompts.map((p, idx) =>
         generateImage({
-          prompt: p.prompt + '. Feature the actual product prominently. Professional product photography for D2C social media ad.',
-          negativePrompt: (p.negativePrompt || '') + ', blurry product, missing product, no product visible',
+          prompt: p.prompt + '. Keep the product bottle/package EXACTLY as shown in the reference image. Do not modify product labels, text, or branding. Place the product in the described scene. No AI-generated text overlays.',
+          negativePrompt: (p.negativePrompt || '') + ', modified product label, wrong brand name, distorted text, blurry product, AI generated text',
           width: p.width || 1024,
           height: p.height || 1024,
           num_images: 1,
           brandId,
           // Cycle through product images as references
           referenceImageUrl: productImages.length > 0 ? productImages[idx % productImages.length] : undefined,
-          strength: 0.6, // Keep product recognizable but allow creative context
+          strength: 0.35, // Lower = more faithful to reference product image
         }),
       ),
     )
