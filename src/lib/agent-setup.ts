@@ -15,6 +15,7 @@ export interface SetupRequirement {
   type: 'connection' | 'number' | 'text' | 'file'
   required: boolean
   fallback?: 'manual'
+  auto_from?: string  // e.g. 'brand.domain', 'brand.target_audience' — auto-resolve from Brand DNA
 }
 
 export interface AgentSetup {
@@ -61,6 +62,12 @@ export async function checkRequirements(brandId: string, agentId: string): Promi
     platformStatus = await syncPlatformStatus(brandId)
   }
 
+  // Load Brand DNA for auto-resolution
+  const { createServiceClient } = await import('@/lib/supabase/service')
+  const admin = createServiceClient()
+  const { data: brandRow } = await admin.from('brands').select('domain, brand_guidelines').eq('id', brandId).single()
+  const brandDNA = brandRow?.brand_guidelines as Record<string, unknown> | null
+
   const statuses: RequirementStatus[] = []
 
   for (const req of setup.requirements) {
@@ -73,9 +80,30 @@ export async function checkRequirements(brandId: string, agentId: string): Promi
       met = !!platformStatus[key]
       value = met ? 'connected' : 'not connected'
     } else if (category === 'data') {
-      const brandData = await getBrandData(brandId, name!)
-      met = !!brandData
-      value = brandData?.data
+      // First check if Brand DNA can auto-resolve this requirement
+      const autoFrom = (req as SetupRequirement).auto_from
+      if (autoFrom && brandDNA) {
+        if (autoFrom === 'brand.domain' && brandRow?.domain) {
+          met = true
+          value = { value: brandRow.domain }
+        } else if (autoFrom === 'brand.target_audience' && brandDNA.target_audience) {
+          met = true
+          value = brandDNA.target_audience
+        } else if (autoFrom === 'brand.products' && brandDNA.products) {
+          met = true
+          value = brandDNA.products
+        } else if (autoFrom === 'brand.positioning' && brandDNA.positioning) {
+          met = true
+          value = brandDNA.positioning
+        }
+      }
+
+      // If not auto-resolved, check manual brand_data nodes
+      if (!met) {
+        const brandData = await getBrandData(brandId, name!)
+        met = !!brandData
+        value = brandData?.data
+      }
     }
 
     statuses.push({ key: req.key, label: req.label, type: req.type, required: req.required, met, value })
