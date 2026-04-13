@@ -5,7 +5,8 @@
 //   1. Auth + brand access check
 //   2. Gather creative context from knowledge graph
 //   3. Generate an intelligent brief (image prompts, video prompts, copy)
-//   4. Generate 4 image variants via fal.ai
+//      3a. If briefOnly=true, return the brief for user editing
+//   4. Generate 4 image variants via Nano Banana 2 (Imagen 4.0 fallback)
 //   5. Generate 2 video variants via fal.ai (non-fatal)
 //   6. Persist all media to Supabase Storage
 //   7. Create knowledge graph nodes for each media item
@@ -24,12 +25,11 @@ import {
   type CreativeScore,
 } from '@/lib/creative-intelligence'
 import {
-  generateImage,
   generateVideo,
-  persistToStorage,
   createMediaNode,
   type GeneratedMedia,
 } from '@/lib/fal-client'
+import { generateAdImage } from '@/lib/imagen-client'
 
 export const maxDuration = 300 // Vercel Pro: 300s for full creative pipeline
 
@@ -64,11 +64,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
 
   const body = await request.json()
-  const { brandId, campaignGoal, targetPersonas, customPrompt } = body as {
+  const { brandId, campaignGoal, targetPersonas, customPrompt, briefOnly, editedBrief } = body as {
     brandId?: string
     campaignGoal?: string
     targetPersonas?: string
     customPrompt?: string
+    briefOnly?: boolean
+    editedBrief?: CreativeBrief
   }
 
   if (!brandId || !campaignGoal) {
@@ -120,6 +122,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     )
     console.log(`[creative/generate] Step 3 done. Image prompts: ${brief.imagePrompts?.length}, Reasoning: ${brief.reasoning?.slice(0, 50)}`)
 
+    if (briefOnly) {
+      return NextResponse.json({ brief, briefOnly: true })
+    }
+
+    // Use edited brief if provided (two-step flow)
+    const activeBrief = editedBrief ?? brief
+
     // 3.5 Fetch product images from Brand DNA for image-to-image reference
     const { data: brandData } = await admin
       .from('brands')
@@ -141,35 +150,46 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
     console.log(`[creative/generate] Product images: ${productImages.length} (${hasTransparent ? 'has transparent' : 'originals only'})`)
 
-    // 4. Generate 4 image variants using product images as references
-    const imagePrompts = brief.imagePrompts.slice(0, 4)
-    console.log(`[creative/generate] Step 4: generating ${imagePrompts.length} images via fal.ai (img2img with product refs)`)
-    const imageResults = await Promise.allSettled(
-      imagePrompts.map((p, idx) =>
-        generateImage({
-          prompt: p.prompt + '. Keep the product bottle/package EXACTLY as shown in the reference image. Do not modify product labels, text, or branding. Place the product in the described scene. No AI-generated text overlays.',
-          negativePrompt: (p.negativePrompt || '') + ', modified product label, wrong brand name, distorted text, blurry product, AI generated text',
-          width: p.width || 1024,
-          height: p.height || 1024,
-          num_images: 1,
-          brandId,
-          // Cycle through product images as references
-          referenceImageUrl: productImages.length > 0 ? productImages[idx % productImages.length] : undefined,
-          strength: 0.35, // Lower = more faithful to reference product image
-        }),
-      ),
-    )
+    // 4. Generate 4 ad images via Nano Banana 2 (or Imagen 4.0 fallback)
+    const imagePrompts = activeBrief.imagePrompts.slice(0, 4)
+    console.log(`[creative/generate] Step 4: generating ${imagePrompts.length} images via Nano Banana 2`)
 
-    const rawImages: GeneratedMedia[] = []
-    for (const result of imageResults) {
-      if (result.status === 'fulfilled' && result.value.length > 0) {
-        rawImages.push(result.value[0]!)
+    const rawImages: Array<{ base64: string; mimeType: string; width: number; height: number }> = []
+
+    for (let idx = 0; idx < imagePrompts.length; idx++) {
+      const p = imagePrompts[idx]!
+      const copyVariant = activeBrief.copyVariants[idx] ?? activeBrief.copyVariants[0]
+      const productImageUrl = productImages.length > 0 ? productImages[idx % productImages.length] : undefined
+
+      const adPrompt = [
+        `Create a professional D2C social media ad.`,
+        `Scene: ${copyVariant?.sceneDescription || p.prompt}`,
+        productImageUrl ? `Keep the product EXACTLY as shown in the reference image. Do not modify labels or branding.` : `Show a premium wellness product in the scene.`,
+        `Text overlay on the image:`,
+        copyVariant?.headline ? `- Headline (prominent, top): "${copyVariant.headline}"` : '',
+        copyVariant?.cta ? `- CTA button (bottom): "${copyVariant.cta}"` : '',
+        copyVariant?.offerText ? `- Offer badge (corner): "${copyVariant.offerText}"` : '',
+        `Style: Professional product photography, clean layout, social media ad format.`,
+      ].filter(Boolean).join('\n')
+
+      try {
+        const result = await generateAdImage({
+          prompt: adPrompt,
+          referenceImageUrl: productImageUrl,
+          width: 1024,
+          height: 1024,
+        })
+        if (result) rawImages.push(result)
+      } catch (err) {
+        console.warn(`[creative/generate] Image ${idx} failed:`, err)
       }
     }
 
+    console.log(`[creative/generate] Step 4 done. Generated ${rawImages.length} images`)
+
     // 5. Generate 2 video variants (non-fatal — skip entirely if no FAL_AI_KEY)
     const rawVideos: GeneratedMedia[] = []
-    const videoPrompts = brief.videoPrompts.slice(0, 2)
+    const videoPrompts = activeBrief.videoPrompts.slice(0, 2)
     try {
       const videoResults = await Promise.allSettled(
         videoPrompts.map((p) =>
@@ -190,30 +210,34 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       console.warn(`[POST /api/creative/generate] Video generation skipped or failed`)
     }
 
-    // 6. Persist to storage + 7. Create knowledge nodes
+    // 6. Persist to Supabase Storage + create knowledge nodes
     const persistedImages: PersistedMedia[] = []
-    const persistedVideos: PersistedMedia[] = []
 
-    // Persist images
     const imageStorageResults = await Promise.allSettled(
       rawImages.map(async (img, idx) => {
-        const subPath = `creatives/${runId}/image-${idx}.jpg`
-        const { storagePath, publicUrl } = await persistToStorage(
-          img.url,
-          brandId,
-          'generated-assets',
-          subPath,
-        )
+        const ext = img.mimeType.includes('png') ? 'png' : 'jpg'
+        const subPath = `creatives/${runId}/image-${idx}.${ext}`
+        const storagePath = `${brandId}/${subPath}`
+
+        const buffer = Buffer.from(img.base64, 'base64')
+        const { error: uploadErr } = await admin.storage
+          .from('generated-assets')
+          .upload(storagePath, buffer, { contentType: img.mimeType, upsert: true })
+
+        if (uploadErr) throw new Error(`Upload failed: ${uploadErr.message}`)
+
+        const { data: urlData } = admin.storage.from('generated-assets').getPublicUrl(storagePath)
+        const publicUrl = urlData?.publicUrl ?? ''
 
         console.log(`[creative/generate] Step 6: persisted image ${idx} to ${storagePath}`)
-        const copyVariant = brief.copyVariants[idx] ?? brief.copyVariants[0]
+        const copyVariant = activeBrief.copyVariants[idx] ?? activeBrief.copyVariants[0]
         const nodeId = await createMediaNode(
           brandId,
           'ad_creative',
           `Creative ${idx + 1} — ${campaignGoal.slice(0, 80)}`,
           storagePath,
           'generated-assets',
-          img.content_type,
+          img.mimeType,
           'creative-generate',
           runId,
           {
@@ -222,11 +246,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             copy_headline: copyVariant?.headline,
             copy_body: copyVariant?.body,
             copy_cta: copyVariant?.cta,
+            offer_text: copyVariant?.offerText,
             media_url: publicUrl,
           },
         )
 
-        return { ...img, storagePath, publicUrl, nodeId } as PersistedMedia
+        return { url: publicUrl, width: img.width, height: img.height, content_type: img.mimeType, storagePath, publicUrl, nodeId } as PersistedMedia
       }),
     )
 
@@ -237,9 +262,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     // Persist videos
+    const persistedVideos: PersistedMedia[] = []
     const videoStorageResults = await Promise.allSettled(
       rawVideos.map(async (vid, idx) => {
         const subPath = `creatives/${runId}/video-${idx}.mp4`
+        const { persistToStorage } = await import('@/lib/fal-client')
         const { storagePath, publicUrl } = await persistToStorage(
           vid.url,
           brandId,
@@ -277,7 +304,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const scores: CreativeScore[] = []
     const scoreResults = await Promise.allSettled(
       persistedImages.map((img, idx) => {
-        const copyVariant = brief.copyVariants[idx] ?? brief.copyVariants[0]
+        const copyVariant = activeBrief.copyVariants[idx] ?? activeBrief.copyVariants[0]
         const copyText = copyVariant
           ? `${copyVariant.headline}\n${copyVariant.body}\n${copyVariant.cta}`
           : ''
@@ -307,7 +334,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         content_type: vid.content_type,
         nodeId: vid.nodeId,
       })),
-      brief,
+      brief: activeBrief,
       scores,
     })
   } catch (err) {
