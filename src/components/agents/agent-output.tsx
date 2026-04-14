@@ -216,19 +216,37 @@ export function AgentOutput({ agentId, output }: AgentOutputProps) {
 
   switch (agentId.toLowerCase()) {
     case 'hugo':
-      return <HugoOutput output={output} />
-    case 'aria':
-      // AriaOutput handles creative-card shaped output; fall through for other Aria skills (ugc-script, etc.)
-      if (output.creatives || output.variants || output.cards) {
+      // HugoOutput handles flat score maps; fall through for skills with complex nested output
+      if (output.scores || output.audit) {
+        return <HugoOutput output={output} />
+      }
+      return <DefaultOutput output={output} />
+    case 'aria': {
+      // AriaOutput handles flat creative-card arrays with top-level headline/body/cta
+      const ariaItems = (output.creatives ?? output.variants ?? output.cards) as Record<string, unknown>[] | undefined
+      if (Array.isArray(ariaItems) && ariaItems.length > 0 && (ariaItems[0]!.headline || ariaItems[0]!.body)) {
         return <AriaOutput output={output} />
       }
       return <DefaultOutput output={output} />
+    }
     case 'max':
-      return <MaxOutput output={output} />
+      // MaxOutput handles allocations/channels tables; fall through for other Max skills
+      if (output.allocations || output.channels) {
+        return <MaxOutput output={output} />
+      }
+      return <DefaultOutput output={output} />
     case 'penny':
-      return <PennyOutput output={output} />
+      // PennyOutput handles projections/forecast; fall through for other Penny skills
+      if (output.projections || output.forecast) {
+        return <PennyOutput output={output} />
+      }
+      return <DefaultOutput output={output} />
     case 'scout':
-      return <ScoutOutput output={output} />
+      // ScoutOutput handles health-check shape; fall through for other Scout skills
+      if (output.overall_score != null || output.health_score != null || output.categories) {
+        return <ScoutOutput output={output} />
+      }
+      return <DefaultOutput output={output} />
     default:
       return <DefaultOutput output={output} />
   }
