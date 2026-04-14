@@ -549,6 +549,20 @@ export async function extractBrandDna(
 
   notify({ step: 'storing', message: 'Updating brand guidelines...', progress: 90 })
 
+  // Derive do_say / dont_say from available BrandDna fields so the
+  // brand_guidelines table has initial values even before the more refined
+  // brand-voice-extractor skill runs.
+  const doSay: string[] = [
+    ...brandDna.key_themes,
+    ...brandDna.tone_adjectives,
+    ...brandDna.brand_voice.sample_phrases,
+  ].filter(Boolean)
+
+  const dontSay: string[] = competitors
+    .map((c) => c.name)
+    .filter(Boolean)
+    .map((name) => `Avoid referencing competitor: ${name}`)
+
   await supabase.from('brand_guidelines').upsert(
     {
       brand_id: brandId,
@@ -564,6 +578,8 @@ export async function extractBrandDna(
         font_style: brandDna.visual_identity.font_style,
       },
       brand_story: brandDna.brand_story,
+      do_say: doSay,
+      dont_say: dontSay,
     },
     { onConflict: 'brand_id' },
   )

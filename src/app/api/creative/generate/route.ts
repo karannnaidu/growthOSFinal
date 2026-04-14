@@ -112,24 +112,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const context = await gatherCreativeContext(brandId)
     console.log(`[creative/generate] Step 2 done. Creatives: ${context.topPerformingCreatives?.length}, Personas: ${context.personas?.length}`)
 
-    // 3. Generate intelligent brief
-    console.log(`[creative/generate] Step 3: generating brief via Claude`)
-    const brief: CreativeBrief = await generateIntelligentBrief(
-      brandId,
-      customPrompt ? `${campaignGoal}\n\nAdditional instructions: ${customPrompt}` : campaignGoal,
-      targetPersonas || 'general audience',
-      context,
-    )
-    console.log(`[creative/generate] Step 3 done. Image prompts: ${brief.imagePrompts?.length}, Reasoning: ${brief.reasoning?.slice(0, 50)}`)
-
-    if (briefOnly) {
-      return NextResponse.json({ brief, briefOnly: true })
-    }
-
-    // Use edited brief if provided (two-step flow)
-    const activeBrief = editedBrief ?? brief
-
-    // 3.5 Fetch product images from Brand DNA for image-to-image reference
+    // 2.5 Fetch product images from Brand DNA for image-to-image reference
+    // (needs to happen before brief generation so product info is available)
     const { data: brandData } = await admin
       .from('brands')
       .select('brand_guidelines, product_context')
@@ -150,11 +134,33 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
     console.log(`[creative/generate] Product images: ${productImages.length} (${hasTransparent ? 'has transparent' : 'originals only'})`)
 
+    // 3. Generate intelligent brief
+    console.log(`[creative/generate] Step 3: generating brief via Claude`)
+    const brief: CreativeBrief = await generateIntelligentBrief(
+      brandId,
+      customPrompt ? `${campaignGoal}\n\nAdditional instructions: ${customPrompt}` : campaignGoal,
+      targetPersonas || 'general audience',
+      context,
+    )
+    console.log(`[creative/generate] Step 3 done. Image prompts: ${brief.imagePrompts?.length}, Reasoning: ${brief.reasoning?.slice(0, 50)}`)
+
+    if (briefOnly) {
+      return NextResponse.json({ brief, briefOnly: true })
+    }
+
+    // Use edited brief if provided (two-step flow)
+    const activeBrief = editedBrief ?? brief
+
     // 4. Generate 4 ad images via Nano Banana 2 (or Imagen 4.0 fallback)
     const imagePrompts = activeBrief.imagePrompts.slice(0, 4)
     console.log(`[creative/generate] Step 4: generating ${imagePrompts.length} images via Nano Banana 2`)
 
     const rawImages: Array<{ base64: string; mimeType: string; width: number; height: number }> = []
+
+    // Extract brand context for image prompts
+    const brandCategory = context.brandGuidelines?.positioning || 'professional'
+    const brandName = context.brandInfo?.name || 'the brand'
+    const brandColors = context.brandGuidelines?.colors
 
     for (let idx = 0; idx < imagePrompts.length; idx++) {
       const p = imagePrompts[idx]!
@@ -162,14 +168,17 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       const productImageUrl = productImages.length > 0 ? productImages[idx % productImages.length] : undefined
 
       const adPrompt = [
-        `Create a professional D2C social media ad.`,
+        `Create a professional ${brandCategory} social media ad for ${brandName}.`,
         `Scene: ${copyVariant?.sceneDescription || p.prompt}`,
-        productImageUrl ? `Keep the product EXACTLY as shown in the reference image. Do not modify labels or branding.` : `Show a premium wellness product in the scene.`,
+        productImageUrl
+          ? `Keep the product EXACTLY as shown in the reference image. Do not modify labels or branding.`
+          : `Show a relevant ${brandCategory} visual that represents ${brandName}.`,
         `Text overlay on the image:`,
         copyVariant?.headline ? `- Headline (prominent, top): "${copyVariant.headline}"` : '',
         copyVariant?.cta ? `- CTA button (bottom): "${copyVariant.cta}"` : '',
         copyVariant?.offerText ? `- Offer badge (corner): "${copyVariant.offerText}"` : '',
-        `Style: Professional product photography, clean layout, social media ad format.`,
+        brandColors ? `Brand colors: ${JSON.stringify(brandColors)}. Use these as accent colors.` : '',
+        `Style: Professional commercial photography, high production value, clean layout, ${brandCategory} aesthetic, social media ad format.`,
       ].filter(Boolean).join('\n')
 
       try {

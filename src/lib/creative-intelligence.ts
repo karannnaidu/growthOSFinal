@@ -24,6 +24,14 @@ export interface CreativeContext {
     colors: any;
     doSay: string[];
     dontSay: string[];
+    positioning: string | null;
+    targetAudience: any;
+    brandStory: string | null;
+  };
+  brandInfo: {
+    name: string | null;
+    brandDNA: any;
+    productContext: any;
   };
   competitorCreatives: Array<{ name: string; style: string; performance: any }>;
   productImages: Array<{ name: string; url: string; productTitle: string }>;
@@ -133,17 +141,25 @@ export async function gatherCreativeContext(
     competitorResult,
     productResult,
     guidelinesResult,
+    brandResult,
   ] = await Promise.all([
     safeRagQuery('top performing ad creatives', ['ad_creative']),
     safeRagQuery('target audience persona', ['persona']),
     safeRagQuery('competitor ad creative', ['competitor_creative']),
-    safeRagQuery('product image', ['product_image']),
+    safeRagQuery('product image', ['product_image', 'product']),
 
     // Brand guidelines (service client bypasses RLS)
     admin
       .from('brand_guidelines')
-      .select('voice_tone, colors, do_say, dont_say')
+      .select('voice_tone, colors, do_say, dont_say, positioning, target_audience, brand_story')
       .eq('brand_id', brandId)
+      .single(),
+
+    // Brand record — contains brand_guidelines jsonb (BrandDNA) and product_context
+    admin
+      .from('brands')
+      .select('name, brand_guidelines, product_context')
+      .eq('id', brandId)
       .single(),
   ]);
 
@@ -192,18 +208,33 @@ export async function gatherCreativeContext(
   if (guidelinesResult.error && guidelinesResult.error.code !== 'PGRST116') {
     console.warn('[CreativeIntelligence] brand_guidelines query error:', guidelinesResult.error.message);
   }
+  if (brandResult.error && brandResult.error.code !== 'PGRST116') {
+    console.warn('[CreativeIntelligence] brands query error:', brandResult.error.message);
+  }
   const gl = guidelinesResult.data;
+  const br = brandResult.data;
   const brandGuidelines = {
     voiceTone: gl?.voice_tone ?? null,
     colors: gl?.colors ?? null,
     doSay: Array.isArray(gl?.do_say) ? gl.do_say : [],
     dontSay: Array.isArray(gl?.dont_say) ? gl.dont_say : [],
+    positioning: gl?.positioning ?? null,
+    targetAudience: gl?.target_audience ?? null,
+    brandStory: gl?.brand_story ?? null,
+  };
+
+  // Brand-level info from the brands table (BrandDNA jsonb + product_context)
+  const brandInfo = {
+    name: br?.name ?? null,
+    brandDNA: br?.brand_guidelines ?? null,
+    productContext: br?.product_context ?? null,
   };
 
   return {
     topPerformingCreatives,
     personas,
     brandGuidelines,
+    brandInfo,
     competitorCreatives,
     productImages,
   };
@@ -321,6 +352,11 @@ ${JSON.stringify(slimCreatives)}
 
 ## Persona Profiles
 ${JSON.stringify(slimPersonas)}
+
+## Brand Info
+${context.brandInfo?.name ? `Brand Name: ${context.brandInfo.name}` : ''}
+${context.brandInfo?.brandDNA ? `Brand DNA: ${JSON.stringify(context.brandInfo.brandDNA)}` : ''}
+${context.brandInfo?.productContext ? `Product Context: ${JSON.stringify(context.brandInfo.productContext)}` : ''}
 
 ## Brand Guidelines
 ${JSON.stringify(context.brandGuidelines)}
