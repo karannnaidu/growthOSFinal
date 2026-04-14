@@ -218,7 +218,11 @@ export function AgentOutput({ agentId, output }: AgentOutputProps) {
     case 'hugo':
       return <HugoOutput output={output} />
     case 'aria':
-      return <AriaOutput output={output} />
+      // AriaOutput handles creative-card shaped output; fall through for other Aria skills (ugc-script, etc.)
+      if (output.creatives || output.variants || output.cards) {
+        return <AriaOutput output={output} />
+      }
+      return <DefaultOutput output={output} />
     case 'max':
       return <MaxOutput output={output} />
     case 'penny':
