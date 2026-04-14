@@ -8,6 +8,7 @@ import { InternalLog, type LogEntry } from '@/components/dashboard/internal-log'
 import { RecommendationCard } from '@/components/dashboard/recommendation-card'
 import { ChatFAB } from '@/components/dashboard/chat-fab'
 import { AGENTS, AGENT_MAP } from '@/lib/agents-data'
+import { MissionControl } from '@/components/dashboard/mission-control'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -365,23 +366,8 @@ export default async function DashboardPage() {
             />
           </div>
 
-          {/* Agent Status Bar */}
-          <div className="glass-panel rounded-xl p-4">
-            <p className="text-[10px] uppercase tracking-widest text-muted-foreground/60 mb-3">Agent Status</p>
-            <div className="flex flex-wrap gap-3">
-              {AGENTS.map(agent => {
-                const setup = agentSetups[agent.id]
-                const isBlocked = miaDecisions.some(d => d.target_agent === agent.id && d.decision === 'blocked')
-                const color = isBlocked ? '#ef4444' : setup?.state === 'ready' ? '#10b981' : setup?.state === 'collecting' ? '#f97316' : '#4b5563'
-                return (
-                  <a key={agent.id} href={`/dashboard/agents/${agent.id}`} className="flex items-center gap-1.5 group" title={agent.name}>
-                    <span className="w-2 h-2 rounded-full" style={{ background: color }} />
-                    <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">{agent.name}</span>
-                  </a>
-                )
-              })}
-            </div>
-          </div>
+          {/* Mission Control — live agent activity */}
+          <MissionControl brandId={ctx.brandId} isRunning={false} onRunComplete={() => {}} />
 
           {/* Internal Log */}
           <InternalLog entries={logEntries} />

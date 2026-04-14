@@ -10,6 +10,7 @@ import { AgentHero } from '@/components/agents/agent-hero'
 import { SkillCard } from '@/components/agents/skill-card'
 import { AgentOutput } from '@/components/agents/agent-output'
 import { MiaControl } from '@/components/agents/mia-control'
+import { AgentActivity } from '@/components/agents/agent-activity'
 import type { AgentConfig } from '@/lib/agents-data'
 
 // ---------------------------------------------------------------------------
@@ -285,30 +286,16 @@ export default function AgentDetailPage() {
     } catch { /* ignore */ }
   }, [agentId, brandId])
 
-  const handleRunSkill = useCallback(async (skillId: string) => {
+  const handleRunSkill = useCallback((skillId: string) => {
     if (!brandId || runningSkill) return
     setRunningSkill(skillId)
     setSkillRunResult((prev) => ({ ...prev, [skillId]: '' }))
-
-    try {
-      const res = await fetch('/api/skills/run', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ skillId, brandId }),
-      })
-      const json = await res.json() as { success: boolean; data?: { status: string }; error?: { message: string } }
-      if (!res.ok || !json.success) {
-        setSkillRunResult((prev) => ({ ...prev, [skillId]: json.error?.message ?? 'Run failed' }))
-      } else {
-        setSkillRunResult((prev) => ({ ...prev, [skillId]: json.data?.status === 'completed' ? 'Done' : 'Ran' }))
-      }
-    } catch {
-      setSkillRunResult((prev) => ({ ...prev, [skillId]: 'Error' }))
-    } finally {
-      setRunningSkill(null)
-      // Refetch runs so Latest Output and Recent Runs update
+    // AgentActivity component handles the actual SSE execution
+    // Refresh runs after a delay to pick up the completed run
+    setTimeout(() => {
       refreshRuns()
-    }
+      setRunningSkill(null)
+    }, 30_000)
   }, [brandId, runningSkill, refreshRuns])
 
   // ---------------------------------------------------------------------------
@@ -596,6 +583,11 @@ export default function AgentDetailPage() {
                   </div>
                 )}
               </div>
+
+              {/* Live activity terminal when skill is running */}
+              {runningSkill && brandId && (
+                <AgentActivity brandId={brandId} agentId={agentId} skillId={runningSkill} />
+              )}
 
               {/* Recent output */}
               <div className="glass-panel rounded-xl overflow-hidden">

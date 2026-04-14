@@ -16,6 +16,7 @@ interface MorningBriefProps {
   latestRunId?: string
   brandId?: string
   miaDecisions?: MiaDecision[]
+  onTriggerReview?: () => void
 }
 
 export function MorningBrief({
@@ -24,6 +25,7 @@ export function MorningBrief({
   latestRunId,
   brandId,
   miaDecisions,
+  onTriggerReview,
 }: MorningBriefProps) {
   // Build smarter narrative from Mia decisions when available
   const displayNarrative = (() => {
@@ -74,17 +76,21 @@ export function MorningBrief({
       </p>
 
       {/* Actions */}
-      <MiaActions brandId={brandId} latestRunId={latestRunId} />
+      <MiaActions brandId={brandId} latestRunId={latestRunId} onTriggerReview={onTriggerReview} />
     </div>
   )
 }
 
-function MiaActions({ brandId, latestRunId }: { brandId?: string; latestRunId?: string }) {
+function MiaActions({ brandId, latestRunId, onTriggerReview }: { brandId?: string; latestRunId?: string; onTriggerReview?: () => void }) {
   const [triggering, setTriggering] = useState(false)
   const [triggered, setTriggered] = useState(false)
 
   async function handleTrigger() {
     if (!brandId || triggering) return
+    if (onTriggerReview) {
+      onTriggerReview()
+      return
+    }
     setTriggering(true)
     try {
       const res = await fetch('/api/mia/trigger', {
