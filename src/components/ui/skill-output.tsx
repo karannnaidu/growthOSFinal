@@ -368,6 +368,10 @@ function FallbackValue({ value }: { value: unknown }) {
 // ---------------------------------------------------------------------------
 
 function RenderValue({ keyName, value, compact }: { keyName: string; value: unknown; compact?: boolean }) {
+  // Guard against null/undefined values that slip through
+  if (value === null || value === undefined) return null
+
+  try {
   const pattern = detectPattern(keyName, value)
   switch (pattern) {
     case 'score': return <ScoreGauge label={keyName} value={value as number} compact={compact} />
@@ -409,6 +413,10 @@ function RenderValue({ keyName, value, compact }: { keyName: string; value: unkn
     }
     default: return <FallbackValue value={value} />
   }
+  } catch {
+    // If any renderer crashes, fall back to JSON display
+    return <FallbackValue value={value} />
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -424,6 +432,11 @@ export function SkillOutput({ output, maxHeight = 400, compact = false }: SkillO
 
   if (typeof output === 'string') {
     return <ProseBlock text={output} compact={compact} />
+  }
+
+  // Guard: if output is not a plain object (e.g. array, number), wrap or fallback
+  if (typeof output !== 'object' || Array.isArray(output)) {
+    return <FallbackValue value={output} />
   }
 
   const entries = Object.entries(output)

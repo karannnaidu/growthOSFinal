@@ -367,7 +367,7 @@ export default async function DashboardPage() {
           </div>
 
           {/* Mission Control — live agent activity */}
-          <MissionControl brandId={ctx.brandId} isRunning={false} onRunComplete={() => {}} />
+          <MissionControl brandId={ctx.brandId} isRunning={false} />
 
           {/* Internal Log */}
           <InternalLog entries={logEntries} />
