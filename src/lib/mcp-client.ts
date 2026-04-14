@@ -20,6 +20,7 @@ export interface SkillDataContext {
   shopify?: {
     products?: unknown[];
     orders?: unknown[];
+    customers?: unknown[];
     shop?: unknown;
   };
   meta?: {
@@ -349,6 +350,12 @@ const TOOL_HANDLERS: Record<string, ToolHandler> = {
       cred.access_token,
       'orders.json?limit=50&status=any',
     ),
+  'shopify.customers.list': async (_brandId, cred) =>
+    shopifyFetch(
+      cred.metadata.shop ?? '',
+      cred.access_token,
+      'customers.json?limit=50',
+    ),
   'shopify.shop.get': async (_brandId, cred) =>
     shopifyFetch(cred.metadata.shop ?? '', cred.access_token, 'shop.json'),
 
@@ -479,6 +486,7 @@ const TOOL_HANDLERS: Record<string, ToolHandler> = {
 const TOOL_PLATFORM: Record<string, string> = {
   'shopify.products.list': 'shopify',
   'shopify.orders.list': 'shopify',
+  'shopify.customers.list': 'shopify',
   'shopify.shop.get': 'shopify',
   'meta_ads.campaigns.insights': 'meta',
   'meta_ads.adsets.list': 'meta',
@@ -597,6 +605,10 @@ export async function fetchSkillData(
         case 'shopify.orders.list':
           context.shopify = context.shopify ?? {};
           context.shopify.orders = (result as { orders?: unknown[] }).orders ?? [];
+          break;
+        case 'shopify.customers.list':
+          context.shopify = context.shopify ?? {};
+          context.shopify.customers = (result as { customers?: unknown[] }).customers ?? [];
           break;
         case 'shopify.shop.get':
           context.shopify = context.shopify ?? {};

@@ -14,8 +14,8 @@ export async function POST(request: NextRequest): Promise<Response> {
     return new Response(JSON.stringify({ error: 'Not authenticated' }), { status: 401 })
   }
 
-  const body = await request.json() as { brandId?: string; skillId?: string }
-  const { brandId, skillId } = body
+  const body = await request.json() as { brandId?: string; skillId?: string; additionalContext?: Record<string, unknown> }
+  const { brandId, skillId, additionalContext } = body
 
   if (!brandId || !skillId) {
     return new Response(JSON.stringify({ error: 'brandId and skillId required' }), { status: 400 })
@@ -44,7 +44,7 @@ export async function POST(request: NextRequest): Promise<Response> {
 
       try {
         const result = await runSkill(
-          { brandId, skillId, triggeredBy: 'user', additionalContext: { source: 'stream' } },
+          { brandId, skillId, triggeredBy: 'user', additionalContext: { ...additionalContext, source: 'stream' } },
           onProgress,
         )
 

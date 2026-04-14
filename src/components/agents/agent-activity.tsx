@@ -13,9 +13,10 @@ interface AgentActivityProps {
   brandId: string
   agentId: string
   skillId: string | null // currently running skill, or null if idle
+  onComplete?: () => void
 }
 
-export function AgentActivity({ brandId, agentId, skillId }: AgentActivityProps) {
+export function AgentActivity({ brandId, agentId, skillId, onComplete }: AgentActivityProps) {
   const [lines, setLines] = useState<ActivityLine[]>([])
   const terminalRef = useRef<HTMLDivElement>(null)
 
@@ -64,6 +65,8 @@ export function AgentActivity({ brandId, agentId, skillId }: AgentActivityProps)
             }
           }
         }
+        // Stream finished — signal completion
+        onComplete?.()
       } catch { /* aborted or error */ }
     })()
 

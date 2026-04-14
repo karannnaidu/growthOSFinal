@@ -174,6 +174,8 @@ export function getSkillPath(skillId: string): string | null {
   for (const f of files) {
     const basename = path.basename(f, '.md');
     if (basename === skillId) return f;
+    // Handle directory-based skills: skills/category/skill-name/SKILL.md
+    if (basename === 'SKILL' && path.basename(path.dirname(f)) === skillId) return f;
   }
   return null;
 }

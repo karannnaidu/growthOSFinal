@@ -291,12 +291,13 @@ export default function AgentDetailPage() {
     setRunningSkill(skillId)
     setSkillRunResult((prev) => ({ ...prev, [skillId]: '' }))
     // AgentActivity component handles the actual SSE execution
-    // Refresh runs after a delay to pick up the completed run
-    setTimeout(() => {
-      refreshRuns()
-      setRunningSkill(null)
-    }, 30_000)
-  }, [brandId, runningSkill, refreshRuns])
+    // Completion is signalled via the onComplete callback from AgentActivity
+  }, [brandId, runningSkill])
+
+  const handleSkillComplete = useCallback(() => {
+    setRunningSkill(null)
+    refreshRuns()
+  }, [refreshRuns])
 
   // ---------------------------------------------------------------------------
   // Update config
@@ -586,7 +587,7 @@ export default function AgentDetailPage() {
 
               {/* Live activity terminal when skill is running */}
               {runningSkill && brandId && (
-                <AgentActivity brandId={brandId} agentId={agentId} skillId={runningSkill} />
+                <AgentActivity brandId={brandId} agentId={agentId} skillId={runningSkill} onComplete={handleSkillComplete} />
               )}
 
               {/* Recent output */}

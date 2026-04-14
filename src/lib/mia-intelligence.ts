@@ -17,6 +17,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 const TOOL_PLATFORM_MAP: Record<string, string> = {
   'shopify.products.list': 'shopify',
   'shopify.orders.list': 'shopify',
+  'shopify.customers.list': 'shopify',
   'shopify.shop.get': 'shopify',
   'meta_ads.campaigns.insights': 'meta',
   'meta_ads.adsets.list': 'meta',

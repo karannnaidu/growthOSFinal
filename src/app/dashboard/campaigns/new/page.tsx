@@ -137,7 +137,7 @@ export default function NewCampaignPage() {
     const res = await fetch('/api/skills/run', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ brandId, skillId, input }),
+      body: JSON.stringify({ brandId, skillId, additionalContext: input }),
     })
     if (!res.ok) throw new Error(`Skill ${skillId} failed: ${res.status}`)
     const json = await res.json() as { success: boolean; data?: Record<string, unknown> }

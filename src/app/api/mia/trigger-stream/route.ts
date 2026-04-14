@@ -25,8 +25,14 @@ export async function POST(request: NextRequest): Promise<Response> {
 
   const admin = createServiceClient()
   const { data: brand } = await admin.from('brands').select('id, owner_id, name').eq('id', brandId).single()
-  if (!brand || brand.owner_id !== user.id) {
-    return new Response(JSON.stringify({ error: 'Access denied' }), { status: 403 })
+  if (!brand) {
+    return new Response(JSON.stringify({ error: 'Brand not found' }), { status: 404 })
+  }
+  if (brand.owner_id !== user.id) {
+    const { data: member } = await admin.from('brand_members').select('brand_id').eq('brand_id', brandId).eq('user_id', user.id).single()
+    if (!member) {
+      return new Response(JSON.stringify({ error: 'Access denied' }), { status: 403 })
+    }
   }
 
   const encoder = new TextEncoder()
@@ -127,7 +133,7 @@ export async function POST(request: NextRequest): Promise<Response> {
 
           try {
             const result = await runSkill(
-              { brandId, skillId, triggeredBy: 'mia', additionalContext: { source: 'mia_cycle' } },
+              { brandId, skillId, triggeredBy: 'mia', additionalContext: { source: 'mia_cycle', health_check_output: healthOutput } },
               (event) => send('progress', event as unknown as Record<string, unknown>),
             )
             send('result', { agent: result.modelUsed, skill: skillId, status: result.status })
