@@ -255,8 +255,8 @@ export async function syncPlatformStatus(brandId: string): Promise<PlatformStatu
   const status: PlatformStatus = {
     shopify: platforms.has('shopify'),
     meta: platforms.has('meta'),
-    ga4: platforms.has('google'),
-    gsc: platforms.has('google'),
+    ga4: platforms.has('google') || platforms.has('google_analytics'),
+    gsc: platforms.has('google') || platforms.has('google_analytics'),
     klaviyo: platforms.has('klaviyo'),
     updated_at: new Date().toISOString(),
   }
