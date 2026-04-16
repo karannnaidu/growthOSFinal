@@ -105,6 +105,33 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // Run scheduled skill tasks
     for (const task of tasks) {
       try {
+        // Dedupe: skip if this skill already ran (or is running) for this brand today (UTC).
+        // The unique index `skill_runs_daily_unique` (migration 005) enforces this at the DB
+        // level; this check avoids attempting the insert and swallowing the error.
+        const startOfTodayUtc = new Date()
+        startOfTodayUtc.setUTCHours(0, 0, 0, 0)
+
+        const { data: existing } = await supabase
+          .from('skill_runs')
+          .select('id')
+          .eq('brand_id', brand.id)
+          .eq('skill_id', task.skillId)
+          .gte('created_at', startOfTodayUtc.toISOString())
+          .in('status', ['completed', 'running'])
+          .maybeSingle()
+
+        if (existing) {
+          console.log(
+            `[cron/daily] skip ${brand.id}/${task.skillId} — already ran today (run ${existing.id})`,
+          )
+          ;(brandResults.skills as unknown[]).push({
+            skill: task.skillId,
+            status: 'skipped',
+            runId: existing.id,
+          })
+          continue
+        }
+
         const result = await runSkill({
           brandId: brand.id,
           skillId: task.skillId,
