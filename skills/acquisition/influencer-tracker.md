@@ -5,7 +5,7 @@ agent: atlas
 category: acquisition
 complexity: cheap
 credits: 1
-mcp_tools: [shopify.orders.list]
+mcp_tools: [brand.orders.list]
 chains_to: [influencer-finder]
 schedule: "0 9 * * 1"
 knowledge:

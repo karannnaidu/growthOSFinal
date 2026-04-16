@@ -5,7 +5,7 @@ agent: hugo
 category: growth
 complexity: cheap
 credits: 1
-mcp_tools: []
+mcp_tools: [brand.products.list]
 chains_to: [keyword-strategy]
 schedule: "0 8 * * 2"
 knowledge:

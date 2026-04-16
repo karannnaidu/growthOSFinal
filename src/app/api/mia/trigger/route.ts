@@ -84,7 +84,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   let miaSkillPrompt = ''
   try {
     const miaSkill = await loadSkill('mia-manager')
-    miaSkillPrompt = miaSkill.sections.systemPrompt + '\n' + (miaSkill.sections.workflow || '')
+    const fromSections = (miaSkill.sections.systemPrompt + '\n' + (miaSkill.sections.workflow || '')).trim()
+    miaSkillPrompt = fromSections.length > 200 ? fromSections : miaSkill.rawMarkdown.replace(/^---[\s\S]*?---\s*/m, '').trim()
   } catch {
     // Fallback if skill not found
     miaSkillPrompt = 'You are Mia, an AI marketing manager. Decide which skills to dispatch based on the health-check results.'

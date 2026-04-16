@@ -5,7 +5,7 @@ agent: sage
 category: optimization
 complexity: mid
 credits: 2
-mcp_tools: [ga4.report.run]
+mcp_tools: [ga4.report.run, brand.products.list]
 chains_to: [ab-test-design]
 knowledge:
   needs: [product, metric, persona, insight, competitor]

@@ -5,7 +5,7 @@ agent: atlas
 category: acquisition
 complexity: mid
 credits: 2
-mcp_tools: [shopify.customers.list, shopify.orders.list, meta_ads.campaigns.insights]
+mcp_tools: [brand.customers.list, brand.orders.list, meta_ads.campaigns.insights]
 chains_to: [retargeting-strategy, ad-copy]
 knowledge:
   needs: [persona, audience, campaign, metric, competitor, product]

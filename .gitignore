@@ -42,3 +42,6 @@ yarn-error.log*
 next-env.d.ts
 
 .vercel
+
+# graphify output lives in outer repo
+graphify-out/

@@ -5,7 +5,7 @@ agent: hugo
 category: growth
 complexity: premium
 credits: 3
-mcp_tools: []
+mcp_tools: [brand.products.list]
 chains_to: [seo-audit]
 knowledge:
   needs: [keyword, product, competitor, persona, content_plan]

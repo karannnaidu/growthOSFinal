@@ -378,7 +378,7 @@ const TOOL_HANDLERS: Record<string, ToolHandler> = {
 
   // Competitor Intelligence (no platform credential needed — uses env vars)
   'competitor.ads': async (brandId) => {
-    const { scanAndStoreCompetitorAds, fetchCompetitorAds } = await import('@/lib/competitor-intel');
+    const { scanAndStoreCompetitorAds } = await import('@/lib/competitor-intel');
     const admin = (await import('@/lib/supabase/service')).createServiceClient();
     const { data: nodes } = await admin
       .from('knowledge_nodes')
@@ -392,11 +392,11 @@ const TOOL_HANDLERS: Record<string, ToolHandler> = {
       const props = node.properties as Record<string, unknown> | null;
       const domain = props?.domain as string | undefined;
       const socialLinks = props?.social_links as Record<string, string> | undefined;
-      const hints = (domain || socialLinks?.facebook) ? { domain, facebookUrl: socialLinks?.facebook ?? socialLinks?.meta } : undefined;
-      // Full pipeline: fetch + download media + analyze + store as knowledge nodes
+      void socialLinks; void domain; // hints already derived inside scanAndStoreCompetitorAds
+      // Full pipeline: fetch + download media + analyze + store as knowledge nodes.
+      // Returns the fetched ads so we don't double-call ScrapeCreators.
       const result = await scanAndStoreCompetitorAds(brandId, node.name, props ?? undefined);
-      const ads = await fetchCompetitorAds(node.name, 'US', hints);
-      allResults.push({ competitor: node.name, ads, stored: result.stored, errors: result.errors });
+      allResults.push({ competitor: node.name, ads: result.ads, stored: result.stored, errors: result.errors });
     }
     return allResults;
   },
@@ -476,6 +476,49 @@ const TOOL_HANDLERS: Record<string, ToolHandler> = {
   'brand.orders.list': async (brandId) => {
     const { resolveBrandOrders } = await import('@/lib/resolvers/brand-orders');
     return resolveBrandOrders(brandId);
+  },
+  // Growth OS internal billing — wallet balance, free credits, and
+  // usage totals. Used by Penny's billing-check (scope: Growth OS's own
+  // billing, not the brand's vendor billing).
+  'gos.wallet.summary': async (brandId) => {
+    const admin = (await import('@/lib/supabase/service')).createServiceClient();
+    const { data: wallet } = await admin
+      .from('wallets')
+      .select(
+        'balance, free_credits, free_credits_expires_at, auto_recharge, auto_recharge_threshold, auto_recharge_amount',
+      )
+      .eq('brand_id', brandId)
+      .single();
+
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+
+    const [{ data: todayRows }, { data: monthRows }, { data: recentTx }] = await Promise.all([
+      admin.from('wallet_transactions').select('amount').eq('brand_id', brandId).eq('type', 'debit').gte('created_at', startOfToday),
+      admin.from('wallet_transactions').select('amount').eq('brand_id', brandId).eq('type', 'debit').gte('created_at', startOfMonth),
+      admin
+        .from('wallet_transactions')
+        .select('amount, type, description, created_at, metadata')
+        .eq('brand_id', brandId)
+        .order('created_at', { ascending: false })
+        .limit(20),
+    ]);
+
+    const sum = (rows: { amount: number | null }[] | null) =>
+      (rows ?? []).reduce((acc, r) => acc + Math.abs(r.amount ?? 0), 0);
+
+    return {
+      balance: wallet?.balance ?? 0,
+      free_credits: wallet?.free_credits ?? 0,
+      free_credits_expires_at: wallet?.free_credits_expires_at ?? null,
+      auto_recharge: wallet?.auto_recharge ?? false,
+      auto_recharge_threshold: wallet?.auto_recharge_threshold ?? null,
+      auto_recharge_amount: wallet?.auto_recharge_amount ?? null,
+      credits_used_today: sum(todayRows),
+      credits_used_this_month: sum(monthRows),
+      recent_transactions: recentTx ?? [],
+    };
   },
 
   'competitor.status': async (brandId) => {

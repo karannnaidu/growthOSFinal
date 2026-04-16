@@ -27,7 +27,15 @@ function isResolverResult(v: unknown): v is ResolverResult<unknown> {
 function arrayHasData(v: unknown): boolean {
   if (Array.isArray(v)) return v.length > 0;
   if (!v) return false;
-  if (typeof v === 'object') return Object.keys(v as object).length > 0;
+  if (typeof v === 'object') {
+    const obj = v as Record<string, unknown>;
+    // Unwrap common wrapper shapes before length-checking so e.g. Meta's
+    // `{data: []}` (empty ad account) correctly counts as no data.
+    for (const key of ['data', 'rows', 'campaigns', 'adsets', 'customers', 'orders', 'products']) {
+      if (key in obj) return arrayHasData(obj[key]);
+    }
+    return Object.keys(obj).length > 0;
+  }
   return !!v;
 }
 

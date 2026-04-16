@@ -75,6 +75,7 @@ const connectedPlatforms = new Set((creds ?? []).map((c) => c.platform));
 // (product catalog extracted from URL), so brand.* resolvers always have
 // at least a medium-confidence source available.
 connectedPlatforms.add('brand');
+connectedPlatforms.add('gos');
 
 console.log('\n--- CONNECTED PLATFORMS ---');
 if (!creds?.length) {
@@ -175,6 +176,8 @@ const TOOL_PLATFORM = {
   'brand.products.list': 'brand',
   'brand.customers.list': 'brand',
   'brand.orders.list': 'brand',
+  // gos.* tools read Growth OS's own DB (wallet, skill_runs, etc.) — always available.
+  'gos.wallet.summary': 'gos',
 };
 
 // Tools that are stubbed server-side even if platform is "connected"

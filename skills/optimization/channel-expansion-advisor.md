@@ -5,7 +5,7 @@ agent: max
 category: optimization
 complexity: mid
 credits: 2
-mcp_tools: [shopify.orders.list, ga4.report.run]
+mcp_tools: [brand.orders.list, brand.products.list, ga4.report.run]
 chains_to: [budget-allocation, audience-targeting]
 knowledge:
   needs: [channel, metric, competitor, product, audience, persona]

@@ -652,7 +652,7 @@ export async function scanAndStoreCompetitorAds(
   brandId: string,
   competitorName: string,
   competitorProps?: Record<string, unknown>,
-): Promise<{ stored: number; errors: number }> {
+): Promise<{ stored: number; errors: number; ads: AdCreative[] }> {
   const { createServiceClient } = await import('@/lib/supabase/service')
   const admin = createServiceClient()
 
@@ -664,7 +664,7 @@ export async function scanAndStoreCompetitorAds(
 
   // 1. Fetch ads (with domain/FB hints for accurate matching)
   const ads = await fetchCompetitorAds(competitorName, 'US', hints)
-  if (ads.length === 0) return { stored: 0, errors: 0 }
+  if (ads.length === 0) return { stored: 0, errors: 0, ads }
 
   const competitorSlug = competitorName.toLowerCase().replace(/[^a-z0-9]+/g, '-')
   let stored = 0
@@ -763,5 +763,5 @@ export async function scanAndStoreCompetitorAds(
     }
   }
 
-  return { stored, errors }
+  return { stored, errors, ads }
 }

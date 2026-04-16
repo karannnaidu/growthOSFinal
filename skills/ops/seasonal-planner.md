@@ -5,7 +5,7 @@ agent: mia
 category: ops
 complexity: mid
 credits: 2
-mcp_tools: [shopify.orders.list]
+mcp_tools: [brand.orders.list]
 chains_to: [ad-copy, email-copy, social-content-calendar, budget-allocation]
 knowledge:
   needs: [product, metric, campaign, persona, insight, competitor]

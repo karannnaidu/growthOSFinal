@@ -5,7 +5,7 @@ agent: luna
 category: retention
 complexity: cheap
 credits: 1
-mcp_tools: [shopify.orders.list]
+mcp_tools: [brand.orders.list]
 chains_to: [email-copy, abandoned-cart-recovery]
 knowledge:
   needs: [email_flow, audience, metric, insight, persona]

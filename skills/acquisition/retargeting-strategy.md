@@ -5,7 +5,7 @@ agent: atlas
 category: acquisition
 complexity: premium
 credits: 3
-mcp_tools: [meta_ads.campaigns.insights, ga4.report.run, shopify.orders.list]
+mcp_tools: [meta_ads.campaigns.insights, ga4.report.run, brand.orders.list]
 chains_to: [ad-copy, email-copy]
 knowledge:
   needs: [persona, audience, campaign, metric, creative, product]

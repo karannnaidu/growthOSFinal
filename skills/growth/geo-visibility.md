@@ -5,7 +5,7 @@ agent: nova
 category: growth
 complexity: cheap
 credits: 1
-mcp_tools: [shopify.orders.list, ga4.report.run]
+mcp_tools: [brand.orders.list, ga4.report.run]
 chains_to: [ad-copy, audience-targeting]
 schedule: "0 9 * * 1"
 knowledge:
