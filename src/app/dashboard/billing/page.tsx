@@ -21,8 +21,11 @@ import {
 // ---------------------------------------------------------------------------
 
 interface BalanceData {
+  total: number
+  free_credits: number
   balance: number
-  freeCredits: number
+  /** @deprecated Use free_credits. Kept for backwards compatibility. */
+  freeCredits?: number
   freeCreditsExpiresAt: string | null
   autoRecharge: boolean
   autoRechargeThreshold: number | null
@@ -290,7 +293,7 @@ export default function BillingPage() {
     }
   }
 
-  const totalCredits = balance ? balance.balance + balance.freeCredits : 0
+  const totalCredits = balance?.total ?? 0
   const usedThisMonth = balance?.creditsUsedThisMonth ?? 0
   // Usage % = credits used vs total pool (remaining + used). Don't inflate denominator.
   const totalPool = totalCredits + usedThisMonth // total that was available at start of month
@@ -367,7 +370,7 @@ export default function BillingPage() {
                   <div>
                     <span className="text-muted-foreground">Free credits: </span>
                     <span className="font-medium text-foreground">
-                      {(balance?.freeCredits ?? 0).toLocaleString()}
+                      {(balance?.free_credits ?? 0).toLocaleString()}
                     </span>
                   </div>
                   <div className="h-3 w-px bg-white/[0.12]" />

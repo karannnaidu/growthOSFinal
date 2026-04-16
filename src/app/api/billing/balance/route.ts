@@ -5,8 +5,10 @@
 //
 // Response shape:
 //   {
-//     balance: number,
-//     freeCredits: number,
+//     total: number,              // balance + free_credits (pre-computed for UI)
+//     free_credits: number,       // snake_case (matches DB column)
+//     balance: number,            // paid credits only
+//     freeCredits: number,        // DEPRECATED — legacy camelCase alias, same as free_credits
 //     freeCreditsExpiresAt: string | null,
 //     autoRecharge: boolean,
 //     autoRechargeThreshold: number | null,
@@ -104,9 +106,15 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     0,
   )
 
+  const balance = wallet?.balance ?? 0
+  const freeCredits = wallet?.free_credits ?? 0
+
   return NextResponse.json({
-    balance: wallet?.balance ?? 0,
-    freeCredits: wallet?.free_credits ?? 0,
+    total: balance + freeCredits,
+    free_credits: freeCredits,
+    balance,
+    // Legacy camelCase alias — kept so any older consumer doesn't break.
+    freeCredits,
     freeCreditsExpiresAt: wallet?.free_credits_expires_at ?? null,
     autoRecharge: wallet?.auto_recharge ?? false,
     autoRechargeThreshold: wallet?.auto_recharge_threshold ?? null,
