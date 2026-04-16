@@ -5,7 +5,7 @@ agent: atlas
 category: customer-intel
 complexity: mid
 credits: 2
-mcp_tools: [shopify.customers.list, shopify.orders.list]
+mcp_tools: [brand.customers.list, brand.orders.list]
 chains_to: [persona-creative-review]
 knowledge:
   needs: [audience, product, insight, review_theme]
@@ -20,6 +20,8 @@ produces:
     edge_to: product
     edge_type: mentions
 ---
+
+Use `brand.orders` / `brand.customers` / `brand.products` as your data sources. If any has `source !== 'shopify'`, caveat quantitative claims — say "based on available data" rather than "based on X months of orders".
 
 ## System Prompt
 

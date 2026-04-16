@@ -5,7 +5,7 @@ agent: navi
 category: ops
 complexity: free
 credits: 0
-mcp_tools: [shopify.products.list, shopify.orders.list]
+mcp_tools: [brand.products.list, brand.orders.list]
 requires: [shopify]
 chains_to: [cash-flow-forecast]
 knowledge:
@@ -18,6 +18,8 @@ produces:
     edge_to: product
     edge_type: measures
 ---
+
+Use `brand.orders` / `brand.customers` / `brand.products` as your data sources. If any has `source !== 'shopify'`, caveat quantitative claims — say "based on available data" rather than "based on X months of orders".
 
 ## System Prompt
 

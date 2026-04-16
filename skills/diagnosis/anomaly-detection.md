@@ -5,7 +5,7 @@ agent: scout
 category: diagnosis
 complexity: free
 credits: 0
-mcp_tools: [shopify.orders.list, meta_ads.campaigns.insights, ga4.report.run]
+mcp_tools: [brand.orders.list, meta_ads.campaigns.insights, ga4.report.run]
 chains_to: [health-check]
 schedule: "*/30 * * * *"
 knowledge:
@@ -21,6 +21,8 @@ produces:
     edge_to: anomaly
     edge_type: explains
 ---
+
+Use `brand.orders` / `brand.customers` / `brand.products` as your data sources. If any has `source !== 'shopify'`, caveat quantitative claims — say "based on available data" rather than "based on X months of orders".
 
 ## System Prompt
 

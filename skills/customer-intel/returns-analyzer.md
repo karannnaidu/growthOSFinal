@@ -5,7 +5,7 @@ agent: scout
 category: customer-intel
 complexity: free
 credits: 0
-mcp_tools: [shopify.orders.list, shopify.products.list]
+mcp_tools: [brand.orders.list, brand.products.list]
 chains_to: [page-cro, email-copy]
 schedule: "0 8 * * 3"
 knowledge:
@@ -19,6 +19,8 @@ produces:
     edge_type: derived_from
   - node_type: metric
 ---
+
+Use `brand.orders` / `brand.customers` / `brand.products` as your data sources. If any has `source !== 'shopify'`, caveat quantitative claims — say "based on available data" rather than "based on X months of orders".
 
 ## System Prompt
 

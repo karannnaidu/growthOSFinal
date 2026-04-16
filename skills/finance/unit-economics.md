@@ -5,7 +5,7 @@ agent: penny
 category: finance
 complexity: cheap
 credits: 1
-mcp_tools: [shopify.orders.list, shopify.products.list]
+mcp_tools: [brand.orders.list, brand.products.list]
 chains_to: [cash-flow-forecast, pricing-optimizer]
 schedule: "0 8 * * 1"
 knowledge:
@@ -21,6 +21,8 @@ produces:
     edge_to: metric
     edge_type: derived_from
 ---
+
+Use `brand.orders` / `brand.customers` / `brand.products` as your data sources. If any has `source !== 'shopify'`, caveat quantitative claims — say "based on available data" rather than "based on X months of orders".
 
 ## System Prompt
 

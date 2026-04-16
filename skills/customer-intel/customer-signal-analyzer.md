@@ -5,7 +5,7 @@ agent: scout
 category: customer-intel
 complexity: cheap
 credits: 1
-mcp_tools: [shopify.orders.list, shopify.customers.list]
+mcp_tools: [brand.orders.list, brand.customers.list]
 chains_to: [persona-builder, churn-prevention]
 schedule: "0 7 * * 1"
 knowledge:
@@ -21,6 +21,8 @@ produces:
     edge_to: persona
     edge_type: affects
 ---
+
+Use `brand.orders` / `brand.customers` / `brand.products` as your data sources. If any has `source !== 'shopify'`, caveat quantitative claims — say "based on available data" rather than "based on X months of orders".
 
 ## System Prompt
 

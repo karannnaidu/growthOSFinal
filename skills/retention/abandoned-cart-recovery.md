@@ -5,7 +5,7 @@ agent: luna
 category: retention
 complexity: cheap
 credits: 1
-mcp_tools: [shopify.orders.list]
+mcp_tools: [brand.orders.list]
 chains_to: [email-copy]
 knowledge:
   needs: [product, audience, metric, email_flow, persona, insight]
@@ -20,6 +20,8 @@ produces:
     edge_to: metric
     edge_type: derived_from
 ---
+
+Use `brand.orders` / `brand.customers` / `brand.products` as your data sources. If any has `source !== 'shopify'`, caveat quantitative claims — say "based on available data" rather than "based on X months of orders".
 
 ## System Prompt
 

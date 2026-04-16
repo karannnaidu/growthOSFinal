@@ -5,7 +5,7 @@ agent: scout
 category: diagnosis
 complexity: free
 credits: 0
-mcp_tools: [shopify.products.list, shopify.orders.list, meta_ads.campaigns.insights, ga4.report.run]
+mcp_tools: [brand.products.list, brand.orders.list, meta_ads.campaigns.insights, ga4.report.run]
 chains_to: [seo-audit, email-flow-audit, ad-copy, budget-allocation, campaign-optimizer]
 schedule: "0 6 * * *"
 knowledge:
@@ -19,6 +19,8 @@ produces:
     edge_type: derived_from
   - node_type: metric
 ---
+
+Use `brand.orders` / `brand.customers` / `brand.products` as your data sources. If any has `source !== 'shopify'`, caveat quantitative claims — say "based on available data" rather than "based on X months of orders".
 
 ## System Prompt
 
