@@ -11,6 +11,7 @@ import { SkillCard } from '@/components/agents/skill-card'
 import { AgentOutput } from '@/components/agents/agent-output'
 import { MiaControl } from '@/components/agents/mia-control'
 import { AgentActivity } from '@/components/agents/agent-activity'
+import { BlockedRunCard } from '@/components/skill-runs/BlockedRunCard'
 import type { AgentConfig } from '@/lib/agents-data'
 
 // ---------------------------------------------------------------------------
@@ -20,7 +21,7 @@ import type { AgentConfig } from '@/lib/agents-data'
 interface SkillRun {
   id: string
   skill_id: string
-  status: 'completed' | 'failed' | 'running'
+  status: 'completed' | 'failed' | 'running' | 'blocked'
   output: Record<string, unknown> | string | null
   model_used: string | null
   credits_used: number | null
@@ -28,6 +29,9 @@ interface SkillRun {
   created_at: string
   triggered_by: string | null
   error_message: string | null
+  blocked_reason?: string | null
+  missing_platforms?: string[] | null
+  data_source_summary?: Record<string, unknown> | null
 }
 
 interface BrandAgentConfig {
@@ -45,6 +49,7 @@ function StatusBadge({ status }: { status: string }) {
     completed: { label: 'Completed', color: '#10b981', bg: '#10b98118' },
     failed:    { label: 'Failed',    color: '#e11d48', bg: '#e11d4818' },
     running:   { label: 'Running',   color: '#f59e0b', bg: '#f59e0b18' },
+    blocked:   { label: 'Blocked',   color: '#b45309', bg: '#fde68a55' },
   }
   const s = map[status] ?? { label: status, color: '#64748b', bg: '#64748b18' }
   return (
@@ -618,6 +623,19 @@ export default function AgentDetailPage() {
                 ) : (
                   <div className="divide-y divide-white/[0.04]">
                     {recentRuns.map((run) => {
+                      if (run.status === 'blocked') {
+                        return (
+                          <div key={run.id} className="px-4 py-3">
+                            <BlockedRunCard
+                              agentName={agent.name}
+                              skillName={run.skill_id}
+                              blockedReason={run.blocked_reason ?? 'Missing data source'}
+                              missingPlatforms={run.missing_platforms ?? []}
+                              createdAt={run.created_at}
+                            />
+                          </div>
+                        )
+                      }
                       const isExpanded = expandedRun === run.id
                       return (
                         <div key={run.id} className="px-4 py-3">
