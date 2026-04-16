@@ -1,0 +1,128 @@
+// src/lib/resolvers/brand-products.ts
+//
+// brand.products.list — resolve a brand's product catalog from the best
+// available source. Precedence:
+//   1. Shopify (high confidence — live storefront data)
+//   2. brands.brand_data.products from onboarding extraction (medium)
+//   3. CSV upload (medium) — not implemented in this task; returns null
+//   4. Website scrape (low) — future
+//
+// Return shape is shared with brand-customers and brand-orders resolvers.
+//
+// NOTE: TOOL_HANDLERS in `mcp-client.ts` is module-local (not exported),
+// so we clone the shopify.products.list call here rather than lazy-import it.
+// This keeps the resolver self-contained and avoids a circular dep.
+
+import { createServiceClient } from '@/lib/supabase/service';
+import { shopifyFetch } from '@/lib/shopify';
+
+export type ResolverSource =
+  | 'shopify'
+  | 'brand_data'
+  | 'klaviyo'
+  | 'csv'
+  | 'scrape'
+  | null;
+
+export type ResolverConfidence = 'high' | 'medium' | 'low';
+
+export interface ResolverResult<T> {
+  data: T[] | null;
+  source: ResolverSource;
+  confidence: ResolverConfidence;
+  isComplete: boolean;
+}
+
+export interface BrandProduct {
+  id: string;
+  title: string;
+  price?: number;
+  sku?: string;
+  description?: string;
+}
+
+/**
+ * Normalize a raw Shopify product into the shared BrandProduct shape.
+ * Shopify prices are stringly-typed on variants; the first variant is used.
+ */
+function normalizeShopifyProduct(raw: unknown): BrandProduct | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const p = raw as {
+    id?: number | string;
+    title?: string;
+    body_html?: string | null;
+    variants?: Array<{ price?: string; sku?: string | null }>;
+  };
+  if (p.id === undefined || !p.title) return null;
+  const v = p.variants?.[0];
+  const priceNum = v?.price ? Number.parseFloat(v.price) : undefined;
+  return {
+    id: String(p.id),
+    title: p.title,
+    price: Number.isFinite(priceNum as number) ? (priceNum as number) : undefined,
+    sku: v?.sku ?? undefined,
+    description: p.body_html ?? undefined,
+  };
+}
+
+export async function resolveBrandProducts(
+  brandId: string,
+): Promise<ResolverResult<BrandProduct>> {
+  const supabase = createServiceClient();
+
+  // 1. Try Shopify — fetch the credential and call the storefront directly.
+  const { data: shopifyCred } = await supabase
+    .from('credentials')
+    .select('platform, access_token, metadata')
+    .eq('brand_id', brandId)
+    .eq('platform', 'shopify')
+    .maybeSingle();
+
+  if (shopifyCred?.access_token) {
+    try {
+      const metadata = (shopifyCred.metadata ?? {}) as Record<string, string | null | undefined>;
+      const shop = metadata.shop ?? '';
+      if (shop) {
+        const res = (await shopifyFetch(
+          shop,
+          shopifyCred.access_token as string,
+          'products.json?limit=50',
+        )) as { products?: unknown[] };
+        const rawProducts = Array.isArray(res?.products) ? res.products : [];
+        if (rawProducts.length > 0) {
+          const normalized = rawProducts
+            .map(normalizeShopifyProduct)
+            .filter((p): p is BrandProduct => p !== null);
+          return {
+            data: normalized,
+            source: 'shopify',
+            confidence: 'high',
+            isComplete: true,
+          };
+        }
+      }
+    } catch (err) {
+      console.warn('[resolveBrandProducts] shopify failed, falling through:', err);
+    }
+  }
+
+  // 2. brand_data from onboarding extraction.
+  const { data: brand } = await supabase
+    .from('brands')
+    .select('brand_data')
+    .eq('id', brandId)
+    .single();
+
+  const brandData = (brand?.brand_data ?? {}) as { products?: unknown };
+  if (Array.isArray(brandData.products) && brandData.products.length > 0) {
+    return {
+      data: brandData.products as BrandProduct[],
+      source: 'brand_data',
+      confidence: 'medium',
+      isComplete: false,
+    };
+  }
+
+  // 3. CSV and 4. scrape — not implemented yet.
+  return { data: null, source: null, confidence: 'low', isComplete: false };
+}

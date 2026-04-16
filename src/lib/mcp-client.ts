@@ -460,6 +460,16 @@ const TOOL_HANDLERS: Record<string, ToolHandler> = {
     }
     return results;
   },
+  // Brand-level resolvers (platform-agnostic — resolver picks best source)
+  // Not in TOOL_PLATFORM because resolveBrandProducts loads its own credentials
+  // internally and falls back to brand_data when shopify isn't connected.
+  // Returns a ResolverResult<BrandProduct> — the skills engine will learn to
+  // unwrap this shape in Task 6.
+  'brand.products.list': async (brandId) => {
+    const { resolveBrandProducts } = await import('@/lib/resolvers/brand-products');
+    return resolveBrandProducts(brandId);
+  },
+
   'competitor.status': async (brandId) => {
     const { checkCompetitorStatus, searchCompetitorNews } = await import('@/lib/competitor-intel');
     const admin = (await import('@/lib/supabase/service')).createServiceClient();
