@@ -469,6 +469,14 @@ const TOOL_HANDLERS: Record<string, ToolHandler> = {
     const { resolveBrandProducts } = await import('@/lib/resolvers/brand-products');
     return resolveBrandProducts(brandId);
   },
+  'brand.customers.list': async (brandId) => {
+    const { resolveBrandCustomers } = await import('@/lib/resolvers/brand-customers');
+    return resolveBrandCustomers(brandId);
+  },
+  'brand.orders.list': async (brandId) => {
+    const { resolveBrandOrders } = await import('@/lib/resolvers/brand-orders');
+    return resolveBrandOrders(brandId);
+  },
 
   'competitor.status': async (brandId) => {
     const { checkCompetitorStatus, searchCompetitorNews } = await import('@/lib/competitor-intel');

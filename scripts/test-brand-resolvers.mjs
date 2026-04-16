@@ -11,6 +11,8 @@ import { config } from 'dotenv';
 config({ path: '.env.local' });
 
 import { resolveBrandProducts } from '../src/lib/resolvers/brand-products.ts';
+import { resolveBrandCustomers } from '../src/lib/resolvers/brand-customers.ts';
+import { resolveBrandOrders } from '../src/lib/resolvers/brand-orders.ts';
 
 const TEST = process.env.TEST_BRAND_ID;
 if (!TEST) {
@@ -37,3 +39,8 @@ if (!r.source) {
   process.exit(1);
 }
 console.log('PASS');
+
+const c = await resolveBrandCustomers(TEST);
+console.log('customers:', { source: c.source, confidence: c.confidence, count: c.data?.length ?? 0 });
+const o = await resolveBrandOrders(TEST);
+console.log('orders:', { source: o.source, confidence: o.confidence, count: o.data?.length ?? 0 });
