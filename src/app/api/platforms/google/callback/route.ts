@@ -1,11 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { syncPlatformStatus } from '@/lib/knowledge/intelligence'
+import {
+  listGa4Properties,
+  listGoogleAdsCustomers,
+  type Ga4Property,
+  type GoogleAdsCustomer,
+} from '@/lib/google-admin'
 
 // ---------------------------------------------------------------------------
 // GET /api/platforms/google/callback
 // Query params from Google: code, state
 // ---------------------------------------------------------------------------
+
+export const GOOGLE_OAUTH_PENDING_COOKIE = 'google_oauth_pending'
+
+interface PendingOAuthPayload {
+  brandId: string
+  accessToken: string
+  refreshToken: string | null
+  expiresAt: string | null
+  properties: Ga4Property[]
+  adsCustomers: GoogleAdsCustomer[]
+}
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
   const { searchParams } = new URL(request.url)
@@ -91,31 +108,112 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     return NextResponse.redirect(new URL(failUrl, request.url))
   }
 
-  // 2. Store credentials
   const brandId = state
   const supabase = await createClient()
 
-  const { error: credError } = await supabase.from('credentials').upsert(
+  // 2. Auto-discover GA4 properties and Google Ads accessible customers
+  const properties = await listGa4Properties(accessToken).catch((err) => {
+    console.warn('[Google Callback] GA4 discovery failed:', err)
+    return [] as Ga4Property[]
+  })
+
+  const devToken = process.env.GOOGLE_ADS_DEVELOPER_TOKEN
+  const adsCustomers = devToken
+    ? await listGoogleAdsCustomers(accessToken, devToken).catch((err) => {
+        console.warn('[Google Callback] Google Ads discovery failed:', err)
+        return [] as GoogleAdsCustomer[]
+      })
+    : []
+
+  // 3. Always persist the raw Google OAuth credentials (used for Ads /
+  //    Search Console etc.) under platform='google'.
+  const { error: googleCredError } = await supabase.from('credentials').upsert(
     {
       brand_id: brandId,
       platform: 'google',
       access_token: accessToken,
       refresh_token: refreshToken,
       expires_at: expiresAt,
-      metadata: {},
+      metadata: {
+        ads_customers: adsCustomers,
+      },
     },
     { onConflict: 'brand_id,platform' },
   )
 
-  if (credError) {
-    console.error('[Google Callback] Failed to store credentials:', credError)
+  if (googleCredError) {
+    console.error('[Google Callback] Failed to store google credentials:', googleCredError)
     return NextResponse.redirect(new URL(failUrl, request.url))
   }
 
-  await syncPlatformStatus(brandId).catch(err =>
-    console.warn('[callback] Platform status sync failed:', err)
+  // 4. Handle GA4 property routing
+  if (properties.length === 1) {
+    const only = properties[0]!
+    const { error: gaCredError } = await supabase.from('credentials').upsert(
+      {
+        brand_id: brandId,
+        platform: 'google_analytics',
+        access_token: accessToken,
+        refresh_token: refreshToken,
+        expires_at: expiresAt,
+        metadata: {
+          property_id: only.propertyId,
+          property: only.property,
+          property_display_name: only.displayName,
+          account_display_name: only.accountDisplayName,
+        },
+      },
+      { onConflict: 'brand_id,platform' },
+    )
+    if (gaCredError) {
+      console.error('[Google Callback] Failed to store GA credentials:', gaCredError)
+      return NextResponse.redirect(new URL(failUrl, request.url))
+    }
+
+    await syncPlatformStatus(brandId).catch((err) =>
+      console.warn('[callback] Platform status sync failed:', err),
+    )
+
+    return NextResponse.redirect(
+      new URL('/onboarding/platforms?connected=google', request.url),
+    )
+  }
+
+  if (properties.length > 1) {
+    // Stash discovery result in a short-lived httpOnly cookie and redirect
+    // the user to the picker page.
+    const payload: PendingOAuthPayload = {
+      brandId,
+      accessToken,
+      refreshToken,
+      expiresAt,
+      properties,
+      adsCustomers,
+    }
+
+    await syncPlatformStatus(brandId).catch((err) =>
+      console.warn('[callback] Platform status sync failed:', err),
+    )
+
+    const response = NextResponse.redirect(
+      new URL('/onboarding/platforms/google/select', request.url),
+    )
+    response.cookies.set(GOOGLE_OAUTH_PENDING_COOKIE, JSON.stringify(payload), {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 60 * 10, // 10 minutes
+    })
+    return response
+  }
+
+  // 5. No GA4 properties found — tokens are stored, but no property to select.
+  await syncPlatformStatus(brandId).catch((err) =>
+    console.warn('[callback] Platform status sync failed:', err),
   )
 
-  // 3. Redirect to settings
-  return NextResponse.redirect(new URL('/dashboard/settings?connected=google', request.url))
+  return NextResponse.redirect(
+    new URL('/onboarding/platforms?connected=google&ga4=none', request.url),
+  )
 }
