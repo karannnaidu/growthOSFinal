@@ -1,11 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
 import { syncPlatformStatus } from '@/lib/knowledge/intelligence'
 
 // ---------------------------------------------------------------------------
 // GET /api/platforms/meta/callback
 // Query params from Meta: code, state
 // ---------------------------------------------------------------------------
+
+export const META_OAUTH_PENDING_COOKIE = 'meta_oauth_pending'
+
+export interface MetaAdAccount {
+  id: string
+  name: string
+  account_status: number
+  currency?: string
+}
+
+interface PendingMetaOAuthPayload {
+  brandId: string
+  accessToken: string
+  returnTo: string
+  accounts: MetaAdAccount[]
+}
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
   const { searchParams } = new URL(request.url)
@@ -126,21 +141,18 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     return NextResponse.redirect(new URL(failUrl, request.url))
   }
 
-  // 3. Get ad account ID
-  let adAccountId: string | null = null
+  // 3. Discover ad accounts
+  let accounts: MetaAdAccount[] = []
   try {
     const adAccountsResponse = await fetch(
-      `https://graph.facebook.com/v19.0/me/adaccounts?access_token=${longLivedToken}&fields=account_id,name`,
+      `https://graph.facebook.com/v19.0/me/adaccounts?access_token=${encodeURIComponent(longLivedToken)}&fields=id,name,account_status,currency`,
     )
 
     if (adAccountsResponse.ok) {
       const adAccountsData = (await adAccountsResponse.json()) as {
-        data?: Array<{ account_id: string; name: string }>
+        data?: MetaAdAccount[]
       }
-      const firstAccount = adAccountsData.data?.[0]
-      if (firstAccount) {
-        adAccountId = firstAccount.account_id
-      }
+      accounts = adAccountsData.data ?? []
     } else {
       console.warn(
         '[Meta Callback] Failed to fetch ad accounts:',
@@ -152,29 +164,79 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     console.warn('[Meta Callback] Ad accounts fetch error (non-fatal):', err)
   }
 
-  // 4. Store credentials (use service client — OAuth callback may not have user cookie)
+  // 4. Use service client (OAuth callback may not have user cookie)
   const { createServiceClient } = await import('@/lib/supabase/service')
   const admin = createServiceClient()
 
-  const { error: credError } = await admin.from('credentials').upsert(
-    {
-      brand_id: brandId,
-      platform: 'meta',
-      access_token: longLivedToken,
-      metadata: { ad_account_id: adAccountId },
-    },
-    { onConflict: 'brand_id,platform' },
-  )
+  // 5a. Zero accounts — persist tokens anyway so the user isn't locked out.
+  if (accounts.length === 0) {
+    const { error: credError } = await admin.from('credentials').upsert(
+      {
+        brand_id: brandId,
+        platform: 'meta',
+        access_token: longLivedToken,
+        metadata: { ad_account_id: null },
+      },
+      { onConflict: 'brand_id,platform' },
+    )
+    if (credError) {
+      console.error('[Meta Callback] Failed to store credentials (0 accounts):', credError)
+      return NextResponse.redirect(new URL(failUrl, request.url))
+    }
 
-  if (credError) {
-    console.error('[Meta Callback] Failed to store credentials:', credError)
-    return NextResponse.redirect(new URL(failUrl, request.url))
+    await syncPlatformStatus(brandId).catch((err) =>
+      console.warn('[callback] Platform status sync failed:', err),
+    )
+
+    return NextResponse.redirect(
+      new URL(`${returnTo}?connected=meta&adaccount=none`, request.url),
+    )
   }
 
-  await syncPlatformStatus(brandId).catch(err =>
-    console.warn('[callback] Platform status sync failed:', err)
-  )
+  // 5b. Exactly one account — auto-select.
+  if (accounts.length === 1) {
+    const only = accounts[0]!
+    const { error: credError } = await admin.from('credentials').upsert(
+      {
+        brand_id: brandId,
+        platform: 'meta',
+        access_token: longLivedToken,
+        metadata: { ad_account_id: only.id },
+      },
+      { onConflict: 'brand_id,platform' },
+    )
 
-  // 5. Redirect back to where the user came from
-  return NextResponse.redirect(new URL(`${returnTo}?connected=meta`, request.url))
+    if (credError) {
+      console.error('[Meta Callback] Failed to store credentials:', credError)
+      return NextResponse.redirect(new URL(failUrl, request.url))
+    }
+
+    await syncPlatformStatus(brandId).catch((err) =>
+      console.warn('[callback] Platform status sync failed:', err),
+    )
+
+    return NextResponse.redirect(
+      new URL('/onboarding/platforms?connected=meta', request.url),
+    )
+  }
+
+  // 5c. 2+ accounts — stash in cookie and redirect to picker.
+  const payload: PendingMetaOAuthPayload = {
+    brandId,
+    accessToken: longLivedToken,
+    returnTo,
+    accounts,
+  }
+
+  const response = NextResponse.redirect(
+    new URL('/onboarding/platforms/meta/select', request.url),
+  )
+  response.cookies.set(META_OAUTH_PENDING_COOKIE, JSON.stringify(payload), {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 60 * 10, // 10 minutes
+  })
+  return response
 }
