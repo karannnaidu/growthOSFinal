@@ -445,19 +445,32 @@ export async function runSkill(input: SkillRunInput, onProgress?: (event: SkillP
 
   // 8-9. Deduct credits and record transaction (only if credits were consumed)
   if (creditsUsed > 0) {
-    // Fetch the wallet again within the deduction flow
     const { data: wallet } = await supabase
       .from('wallets')
-      .select('id, balance')
+      .select('id, balance, free_credits, free_credits_expires_at')
       .eq('brand_id', input.brandId)
       .single();
 
     if (wallet) {
-      const newBalance = (wallet.balance ?? 0) - creditsUsed;
+      const now = new Date();
+      const freeExpired =
+        wallet.free_credits_expires_at &&
+        new Date(wallet.free_credits_expires_at) < now;
+      const availableFree = freeExpired ? 0 : (wallet.free_credits ?? 0);
+
+      const fromFree = Math.min(availableFree, creditsUsed);
+      const fromBalance = creditsUsed - fromFree;
+
+      const newFreeCredits = availableFree - fromFree;
+      const newBalance = (wallet.balance ?? 0) - fromBalance;
 
       await supabase
         .from('wallets')
-        .update({ balance: newBalance, updated_at: new Date().toISOString() })
+        .update({
+          free_credits: freeExpired ? wallet.free_credits : newFreeCredits,
+          balance: newBalance,
+          updated_at: now.toISOString(),
+        })
         .eq('id', wallet.id);
 
       await supabase.from('wallet_transactions').insert({
@@ -468,6 +481,7 @@ export async function runSkill(input: SkillRunInput, onProgress?: (event: SkillP
         balance_after: newBalance,
         description: `Skill run: ${skill.name} (${skill.id})`,
         skill_run_id: runId,
+        metadata: { from_free: fromFree, from_balance: fromBalance },
       });
     }
   }
