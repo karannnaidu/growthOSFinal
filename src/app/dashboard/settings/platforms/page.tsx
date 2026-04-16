@@ -6,6 +6,33 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Link2, Unlink, RefreshCw, CheckCircle2, Circle } from 'lucide-react'
+import { SetupHint, type SetupHintPlatform } from '@/components/SetupHint'
+import { Ga4Hint } from '@/content/setup-hints/ga4'
+import { KlaviyoHint } from '@/content/setup-hints/klaviyo'
+import { ShopifyHint } from '@/content/setup-hints/shopify'
+import { GoogleAdsHint } from '@/content/setup-hints/google-ads'
+
+// Map a (platform, field-key) pair to a setup-hint renderer. Only manual-entry
+// fields that users typically hunt for get hints. OAuth platforms (Meta,
+// Google) are handled by Tasks 11 and 12.
+function getFieldHint(
+  platformId: string,
+  fieldKey: string,
+): { platform: SetupHintPlatform; render: () => React.ReactElement } | null {
+  if (platformId === 'google_analytics' && fieldKey === 'property_id') {
+    return { platform: 'ga4', render: () => <Ga4Hint /> }
+  }
+  if (platformId === 'klaviyo' && fieldKey === 'api_key') {
+    return { platform: 'klaviyo', render: () => <KlaviyoHint /> }
+  }
+  if (platformId === 'shopify' && fieldKey === 'access_token') {
+    return { platform: 'shopify', render: () => <ShopifyHint /> }
+  }
+  if (platformId === 'google' && fieldKey === 'customer_id') {
+    return { platform: 'google-ads', render: () => <GoogleAdsHint /> }
+  }
+  return null
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -317,18 +344,26 @@ export default function PlatformsSettingsPage() {
                       ) : platform.connectFields ? (
                         /* Manual credential entry */
                         <>
-                          {platform.connectFields.map((field) => (
-                            <div key={field.key} className="space-y-1.5">
-                              <label className="text-xs font-medium text-muted-foreground">
-                                {field.label}
-                              </label>
-                              <Input
-                                value={fieldValues[platform.id]?.[field.key] ?? ''}
-                                onChange={(e) => setField(platform.id, field.key, e.target.value)}
-                                placeholder={field.placeholder}
-                              />
-                            </div>
-                          ))}
+                          {platform.connectFields.map((field) => {
+                            const hint = getFieldHint(platform.id, field.key)
+                            return (
+                              <div key={field.key} className="space-y-1.5">
+                                <label className="text-xs font-medium text-muted-foreground">
+                                  {field.label}
+                                </label>
+                                <Input
+                                  value={fieldValues[platform.id]?.[field.key] ?? ''}
+                                  onChange={(e) => setField(platform.id, field.key, e.target.value)}
+                                  placeholder={field.placeholder}
+                                />
+                                {hint && (
+                                  <SetupHint platform={hint.platform}>
+                                    {hint.render()}
+                                  </SetupHint>
+                                )}
+                              </div>
+                            )
+                          })}
                           <div className="flex gap-2 pt-1">
                             <Button
                               size="sm"
