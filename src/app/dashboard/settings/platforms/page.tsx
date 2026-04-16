@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -11,6 +12,7 @@ import { Ga4Hint } from '@/content/setup-hints/ga4'
 import { KlaviyoHint } from '@/content/setup-hints/klaviyo'
 import { ShopifyHint } from '@/content/setup-hints/shopify'
 import { GoogleAdsHint } from '@/content/setup-hints/google-ads'
+import { visiblePlatforms, type PlatformId } from '@/lib/platforms/registry'
 
 // Map a (platform, field-key) pair to a setup-hint renderer. Only manual-entry
 // fields that users typically hunt for get hints. OAuth platforms (Meta,
@@ -42,83 +44,65 @@ type PlatformStatus =
   | { connected: true; connectedAt: string; [key: string]: unknown }
   | { connected: false }
 
-interface PlatformConfig {
-  id: string
-  label: string
-  description: string
+interface PlatformUiExtras {
   color: string
   oauth?: boolean
   connectFields?: { key: string; label: string; placeholder: string }[]
 }
 
 // ---------------------------------------------------------------------------
-// Platform definitions
+// Per-platform UI extras (colors, OAuth flag, manual-entry fields).
+// Registry (src/lib/platforms/registry.ts) is the source of truth for which
+// platforms render and their names/descriptions. This map supplies page-level
+// rendering details keyed by PlatformId.
 // ---------------------------------------------------------------------------
 
-const PLATFORMS: PlatformConfig[] = [
-  {
-    id: 'shopify',
-    label: 'Shopify',
-    description: 'Sync orders, products, and customers',
+const PLATFORM_UI_EXTRAS: Record<PlatformId, PlatformUiExtras> = {
+  shopify: {
     color: '#96bf48',
     connectFields: [
       { key: 'shop', label: 'Shop domain', placeholder: 'your-store.myshopify.com' },
       { key: 'access_token', label: 'Access token', placeholder: 'shppa_...' },
     ],
   },
-  {
-    id: 'meta',
-    label: 'Meta Ads',
-    description: 'Facebook & Instagram advertising data',
+  meta: {
     color: '#1877f2',
     oauth: true,
   },
-  {
-    id: 'google',
-    label: 'Google Ads',
-    description: 'Google Ads and Analytics integration',
+  google: {
     color: '#4285f4',
     connectFields: [
       { key: 'refresh_token', label: 'Refresh token', placeholder: '1//...' },
       { key: 'customer_id', label: 'Customer ID', placeholder: '123-456-7890' },
     ],
   },
-  {
-    id: 'google_analytics',
-    label: 'Google Analytics',
-    description: 'GA4 website traffic and conversion data',
+  google_analytics: {
     color: '#e37400',
     connectFields: [
       { key: 'property_id', label: 'GA4 Property ID', placeholder: '123456789' },
       { key: 'refresh_token', label: 'OAuth refresh token', placeholder: '1//...' },
     ],
   },
-  {
-    id: 'klaviyo',
-    label: 'Klaviyo',
-    description: 'Email marketing flows and lists',
+  klaviyo: {
     color: '#1b4f72',
     connectFields: [
       { key: 'api_key', label: 'API key', placeholder: 'pk_...' },
     ],
   },
-  {
-    id: 'snapchat',
-    label: 'Snapchat Ads',
-    description: 'Snapchat advertising campaigns',
+  ahrefs: {
+    color: '#0055ff',
+  },
+  snapchat: {
     color: '#fffc00',
     connectFields: [
       { key: 'access_token', label: 'Access token', placeholder: '' },
       { key: 'ad_account_id', label: 'Ad account ID', placeholder: '' },
     ],
   },
-  {
-    id: 'chatgpt_ads',
-    label: 'ChatGPT Ads',
-    description: 'AI-powered ad generation (coming soon)',
+  chatgpt_ads: {
     color: '#74aa9c',
   },
-]
+}
 
 // ---------------------------------------------------------------------------
 // Page
@@ -126,6 +110,9 @@ const PLATFORMS: PlatformConfig[] = [
 
 export default function PlatformsSettingsPage() {
   const supabase = createClient()
+  const searchParams = useSearchParams()
+  const showAll = searchParams?.get('show') === 'all'
+  const platformsToShow = visiblePlatforms(showAll)
 
   const [brandId, setBrandId] = useState<string | null>(null)
   const [statuses, setStatuses] = useState<Record<string, PlatformStatus>>({})
@@ -248,11 +235,17 @@ export default function PlatformsSettingsPage() {
               <div key={i} className="h-16 animate-pulse rounded-xl bg-white/[0.04]" />
             ))
           ) : (
-            PLATFORMS.map((platform) => {
+            platformsToShow.map((platform) => {
+              const extras = PLATFORM_UI_EXTRAS[platform.id]
               const status = statuses[platform.id] ?? { connected: false }
               const isConnected = status.connected
               const isExpanded = expandedPlatform === platform.id
-              const isComingSoon = !platform.connectFields && !platform.oauth
+              // A platform is rendered as "coming soon" either because the
+              // registry flags it, or because it has no OAuth/manual-entry
+              // wiring yet. With ?show=all, stub platforms still render so
+              // devs can see them.
+              const isComingSoon =
+                platform.comingSoon || (!extras.connectFields && !extras.oauth)
 
               return (
                 <div
@@ -264,16 +257,16 @@ export default function PlatformsSettingsPage() {
                     {/* Color dot */}
                     <div
                       className="h-9 w-9 shrink-0 rounded-lg flex items-center justify-center"
-                      style={{ backgroundColor: `${platform.color}20` }}
+                      style={{ backgroundColor: `${extras.color}20` }}
                     >
                       <div
                         className="h-3 w-3 rounded-full"
-                        style={{ backgroundColor: platform.color }}
+                        style={{ backgroundColor: extras.color }}
                       />
                     </div>
 
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground">{platform.label}</p>
+                      <p className="text-sm font-medium text-foreground">{platform.name}</p>
                       <p className="text-xs text-muted-foreground">{platform.description}</p>
                     </div>
 
@@ -320,17 +313,17 @@ export default function PlatformsSettingsPage() {
                   {/* Expanded connect form */}
                   {isExpanded && !isConnected && (
                     <div className="border-t border-white/[0.06] p-4 space-y-3 bg-white/[0.02]">
-                      {platform.oauth ? (
+                      {extras.oauth ? (
                         /* OAuth platforms — single button */
                         <div className="flex flex-col items-center gap-3 py-2">
                           <p className="text-xs text-muted-foreground text-center">
-                            Click below to securely connect your {platform.label} account. You&apos;ll be redirected to authorize access.
+                            Click below to securely connect your {platform.name} account. You&apos;ll be redirected to authorize access.
                           </p>
                           <Button
                             size="sm"
                             onClick={() => handleConnect(platform.id)}
                             disabled={connecting === platform.id}
-                            style={{ background: platform.color }}
+                            style={{ background: extras.color }}
                             className="text-white hover:opacity-90"
                           >
                             {connecting === platform.id ? (
@@ -338,13 +331,13 @@ export default function PlatformsSettingsPage() {
                             ) : (
                               <Link2 className="h-3.5 w-3.5" />
                             )}
-                            {connecting === platform.id ? 'Redirecting...' : `Connect with ${platform.label}`}
+                            {connecting === platform.id ? 'Redirecting...' : `Connect with ${platform.name}`}
                           </Button>
                         </div>
-                      ) : platform.connectFields ? (
+                      ) : extras.connectFields ? (
                         /* Manual credential entry */
                         <>
-                          {platform.connectFields.map((field) => {
+                          {extras.connectFields.map((field) => {
                             const hint = getFieldHint(platform.id, field.key)
                             return (
                               <div key={field.key} className="space-y-1.5">

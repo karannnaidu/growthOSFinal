@@ -1,43 +1,70 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Shield, ArrowLeft, ArrowRight, CheckCircle2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { visiblePlatforms, type PlatformId, type PlatformDefinition } from '@/lib/platforms/registry'
 
-interface PlatformCard {
-  id: string
-  name: string
-  description: string
+interface PlatformCard extends PlatformDefinition {
   connectEndpoint: string
   logoSrc: string
   accent: string
 }
 
-const PLATFORMS: PlatformCard[] = [
-  {
-    id: 'meta',
-    name: 'Meta Ads',
-    description: 'Facebook & Instagram advertising',
+// Per-platform onboarding extras. The registry decides which platforms are
+// visible; this map supplies connect endpoint + brand accent for the cards
+// that the onboarding "Connect Ad Platforms" step supports. Only the
+// ad-platform subset (meta + google, with snapchat/chatgpt_ads gated behind
+// ?show=all) is surfaced in this step.
+const ONBOARDING_AD_PLATFORMS: readonly PlatformId[] = [
+  'meta',
+  'google',
+  'snapchat',
+  'chatgpt_ads',
+]
+
+const PLATFORM_ONBOARDING_EXTRAS: Partial<Record<PlatformId, Omit<PlatformCard, keyof PlatformDefinition>>> = {
+  meta: {
     connectEndpoint: '/api/platforms/meta/connect',
     logoSrc: '/icons/meta.svg',
     accent: '#3b82f6',
   },
-  {
-    id: 'google',
-    name: 'Google Ads',
-    description: 'Search, Shopping & Performance Max',
+  google: {
     connectEndpoint: '/api/platforms/google/connect',
     logoSrc: '/icons/google.svg',
     accent: '#f97316',
   },
-]
+  snapchat: {
+    connectEndpoint: '/api/platforms/snapchat/connect',
+    logoSrc: '/icons/snapchat.svg',
+    accent: '#fffc00',
+  },
+  chatgpt_ads: {
+    connectEndpoint: '/api/platforms/chatgpt_ads/connect',
+    logoSrc: '/icons/chatgpt.svg',
+    accent: '#74aa9c',
+  },
+}
 
 export default function PlatformsPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const showAll = searchParams?.get('show') === 'all'
   const [connecting, setConnecting] = useState<string | null>(null)
   const [connected, setConnected] = useState<Set<string>>(new Set())
   const [error, setError] = useState<string | null>(null)
+
+  // Only surface ad platforms on this onboarding step, and only the ones
+  // currently visible per the registry (comingSoon hides stubs unless
+  // ?show=all is set).
+  const platforms: PlatformCard[] = visiblePlatforms(showAll)
+    .filter((p) => ONBOARDING_AD_PLATFORMS.includes(p.id))
+    .flatMap((p) => {
+      const extras = PLATFORM_ONBOARDING_EXTRAS[p.id]
+      if (!extras) return []
+      return [{ ...p, ...extras }]
+    })
 
   async function handleConnect(platform: PlatformCard) {
     const brandId = sessionStorage.getItem('onboarding_brand_id')
@@ -93,7 +120,7 @@ export default function PlatformsPage() {
 
       {/* Platform cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-        {PLATFORMS.map((platform) => {
+        {platforms.map((platform) => {
           const isConnected = connected.has(platform.id)
           const isConnecting = connecting === platform.id
           return (
