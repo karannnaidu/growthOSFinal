@@ -5,8 +5,7 @@ agent: navi
 category: ops
 complexity: free
 credits: 0
-mcp_tools: [shopify.products.list]
-requires: [shopify]
+mcp_tools: [brand.products.list]
 chains_to: [reorder-calculator]
 schedule: "0 7 * * *"
 knowledge:
@@ -20,6 +19,8 @@ produces:
     edge_type: derived_from
   - node_type: metric
 ---
+
+Use `brand.products` as your product catalog. If `source !== 'shopify'`, caveat any quantitative claims — say "based on your product catalog" rather than "based on your store data".
 
 ## System Prompt
 
