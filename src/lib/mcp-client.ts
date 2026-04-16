@@ -500,6 +500,38 @@ const TOOL_HANDLERS: Record<string, ToolHandler> = {
   },
 };
 
+/**
+ * Per-tool invoker. Loads the platform credential if the tool requires one
+ * (and refreshes Google tokens on the fly) and calls the handler.
+ *
+ * Returns whatever the handler returned — raw payload for legacy tools, or a
+ * `ResolverResult` for brand.* tools. Never throws — errors bubble up via the
+ * handler's own try/catch, but credential failures return undefined to signal
+ * "no data source available".
+ */
+export async function callTool(
+  toolName: string,
+  args: { brandId: string },
+): Promise<unknown> {
+  const handler = TOOL_HANDLERS[toolName];
+  if (!handler) throw new Error(`[mcp] unknown tool: ${toolName}`);
+
+  const platform = TOOL_PLATFORM[toolName];
+  let cred: Credential | null = null;
+  if (platform) {
+    cred = await loadCredential(args.brandId, platform);
+    if (cred && (platform === 'google' || platform === 'google_analytics')) {
+      cred = await maybeRefreshGoogleToken(cred, args.brandId, platform);
+    }
+    if (!cred) {
+      // Tool needs credentials we don't have — signal no data source.
+      return undefined;
+    }
+  }
+
+  return handler(args.brandId, cred ?? ({} as Credential));
+}
+
 // Which platform does each tool belong to?
 const TOOL_PLATFORM: Record<string, string> = {
   'shopify.products.list': 'shopify',

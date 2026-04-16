@@ -19,7 +19,7 @@ export interface SkillRunInput {
 
 export interface SkillRunResult {
   id: string;
-  status: 'completed' | 'failed';
+  status: 'completed' | 'failed' | 'blocked';
   output: Record<string, unknown>;
   creditsUsed: number;
   modelUsed: string;
@@ -297,13 +297,68 @@ export async function runSkill(input: SkillRunInput, onProgress?: (event: SkillP
 
   onProgress?.({ agent: skill.agent, skill: skill.id, step: 'pre_flight', message: preFlightResult?.dataGapsNote || 'Pre-flight checks passed', progress: 15 })
 
-  // 5. Fetch live platform data via MCP client (non-fatal if it fails)
+  // 5. Tool-level resolution — classify each declared tool's data source.
+  //    Hard-block if ANY declared tool has no resolvable data.
+  const { resolveDeclaredTools, computeBlockage } = await import('@/lib/skills-engine/preflight');
+  type ToolResolution = import('@/lib/skills-engine/preflight').ToolResolution;
+
   let liveData: SkillDataContext = {};
+  let toolResolutions: Record<string, ToolResolution> = {};
   if (skill.mcpTools && skill.mcpTools.length > 0) {
     try {
-      liveData = await fetchSkillData(input.brandId, skill.mcpTools);
+      const { resolutions } = await resolveDeclaredTools(input.brandId, skill.mcpTools);
+      toolResolutions = resolutions;
+
+      const blockage = computeBlockage(resolutions);
+      if (blockage) {
+        const durationMs = Date.now() - startTime;
+
+        onProgress?.({ agent: skill.agent, skill: skill.id, step: 'pre_flight', message: blockage.blockedReason, progress: 0 })
+
+        const { data: blockedRun } = await supabase
+          .from('skill_runs')
+          .insert({
+            brand_id: input.brandId,
+            agent_id: skill.agent,
+            skill_id: skill.id,
+            status: 'blocked',
+            blocked_reason: blockage.blockedReason,
+            missing_platforms: blockage.missingPlatforms,
+            data_source_summary: toolResolutions,
+            triggered_by: input.triggeredBy,
+            parent_run_id: input.parentRunId ?? null,
+            chain_depth: input.chainDepth ?? 0,
+            credits_used: 0,
+            input: input.additionalContext ?? {},
+            output: {},
+            duration_ms: durationMs,
+            completed_at: new Date().toISOString(),
+          })
+          .select('id')
+          .single();
+
+        return {
+          id: blockedRun?.id ?? '',
+          status: 'blocked',
+          output: {},
+          creditsUsed: 0,
+          modelUsed: 'none',
+          durationMs,
+          error: blockage.blockedReason,
+        };
+      }
+
+      // All tools resolved — fetch the platform-grouped SkillDataContext the
+      // prompt builder expects. fetchSkillData handles the per-tool unwrapping
+      // (shopify → products[], meta → data[], etc.) that we don't want to
+      // duplicate here.
+      try {
+        liveData = await fetchSkillData(input.brandId, skill.mcpTools);
+      } catch (err) {
+        console.warn('[SkillsEngine] fetchSkillData failed (continuing without live data):', err);
+      }
     } catch (err) {
-      console.warn('[SkillsEngine] fetchSkillData failed (continuing without live data):', err);
+      console.warn('[SkillsEngine] resolveDeclaredTools failed (continuing without live data):', err);
     }
   }
 
@@ -327,18 +382,36 @@ export async function runSkill(input: SkillRunInput, onProgress?: (event: SkillP
     }
   }
 
-  // Inject pre-flight intelligence into context
-  if (preFlightResult) {
-    const enrichedContext = { ...(input.additionalContext ?? {}) }
-    if (preFlightResult.instruction) {
-      enrichedContext._mia_instruction = preFlightResult.instruction
+  // Inject pre-flight intelligence + data-source caveats into context.
+  {
+    const enrichedContext: Record<string, unknown> = { ...(input.additionalContext ?? {}) }
+
+    if (preFlightResult) {
+      if (preFlightResult.instruction) {
+        enrichedContext._mia_instruction = preFlightResult.instruction
+      }
+      if (Object.keys(preFlightResult.supplementaryData).length > 0) {
+        enrichedContext._supplementary_data = preFlightResult.supplementaryData
+      }
+      if (preFlightResult.dataGapsNote) {
+        enrichedContext._data_gaps = preFlightResult.dataGapsNote
+      }
     }
-    if (Object.keys(preFlightResult.supplementaryData).length > 0) {
-      enrichedContext._supplementary_data = preFlightResult.supplementaryData
+
+    // Inject tool-resolution metadata so the LLM can caveat lower-confidence claims.
+    const lowConfidence = Object.values(toolResolutions).filter((r) => r.confidence !== 'high')
+    if (lowConfidence.length > 0) {
+      enrichedContext._data_caveats = lowConfidence
+        .map(
+          (r) =>
+            `Data for ${r.tool} is from ${r.source ?? 'unknown'} (${r.confidence} confidence, isComplete=${r.isComplete}). Caveat any quantitative claims that depend on this tool.`,
+        )
+        .join('\n')
     }
-    if (preFlightResult.dataGapsNote) {
-      enrichedContext._data_gaps = preFlightResult.dataGapsNote
+    if (Object.keys(toolResolutions).length > 0) {
+      enrichedContext._data_source_summary = toolResolutions
     }
+
     input = { ...input, additionalContext: enrichedContext }
   }
 
@@ -422,6 +495,7 @@ export async function runSkill(input: SkillRunInput, onProgress?: (event: SkillP
       parent_run_id: input.parentRunId ?? null,
       chain_depth: input.chainDepth ?? 0,
       duration_ms: durationMs,
+      data_source_summary: toolResolutions,
       completed_at: new Date().toISOString(),
     })
     .select('id')
