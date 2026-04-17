@@ -43,6 +43,11 @@ interface BrandContextData {
   aiPreset: string
 }
 
+interface ActiveAgentData {
+  agentId: string
+  status: string
+}
+
 // ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
@@ -51,6 +56,8 @@ export default function ChatPage() {
   const [brandId, setBrandId] = useState<string | null>(null)
   const [brandName, setBrandName] = useState<string>('')
   const [brandContext, setBrandContext] = useState<BrandContextData | undefined>(undefined)
+  const [activeAgents, setActiveAgents] = useState<ActiveAgentData[]>([])
+  const [ingestedSources, setIngestedSources] = useState<string[]>([])
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
@@ -167,6 +174,35 @@ export default function ChatPage() {
 
   // Reset restore guard when brandId changes so brand switches trigger a fresh restore
   useEffect(() => { didRestoreRef.current = false }, [brandId])
+
+  // Load chat-context sidebar data (brand focus, active agents, sources).
+  // Re-runs every 30s so agent status reflects in-flight skill runs.
+  useEffect(() => {
+    if (!brandId) return
+    let cancelled = false
+
+    async function fetchContext() {
+      try {
+        const res = await fetch(`/api/mia/chat-context?brandId=${brandId}`)
+        if (!res.ok || cancelled) return
+        const data = await res.json() as {
+          brandContext?: BrandContextData
+          activeAgents?: ActiveAgentData[]
+          sources?: string[]
+        }
+        if (cancelled) return
+        if (data.brandContext) setBrandContext(data.brandContext)
+        if (data.activeAgents) setActiveAgents(data.activeAgents)
+        if (data.sources) setIngestedSources(data.sources)
+      } catch {
+        // Non-fatal — sidebar shows empty state
+      }
+    }
+
+    fetchContext()
+    const interval = setInterval(fetchContext, 30_000)
+    return () => { cancelled = true; clearInterval(interval) }
+  }, [brandId])
 
   // Start a new conversation (clear state)
   const startNewConversation = useCallback(() => {
@@ -462,6 +498,8 @@ export default function ChatPage() {
           activeId={activeConversationId}
           onSelect={loadConversation}
           onNew={startNewConversation}
+          onPrompt={sendMessage}
+          shortcutsDisabled={isStreaming || !brandId}
         />
       </div>
 
@@ -596,12 +634,8 @@ export default function ChatPage() {
       <div className="hidden xl:flex">
         <ActiveContext
           brandContext={brandContext}
-          activeAgents={[
-            { agentId: 'scout', status: 'idle' },
-            { agentId: 'aria', status: 'idle' },
-            { agentId: 'max', status: 'idle' },
-          ]}
-          sources={[]}
+          activeAgents={activeAgents}
+          sources={ingestedSources}
         />
       </div>
     </div>

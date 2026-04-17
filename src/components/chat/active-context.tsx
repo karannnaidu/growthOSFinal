@@ -44,23 +44,15 @@ export function ActiveContext({ brandContext, activeAgents, sources }: ActiveCon
               brandContext.focusAreas.map((area, i) => (
                 <div
                   key={i}
-                  className="px-3 py-2 rounded-lg bg-white/[0.03] border border-white/[0.06] text-xs text-foreground"
+                  className="px-3 py-2 rounded-lg bg-white/[0.03] border border-white/[0.06] text-xs text-foreground capitalize"
                 >
                   {area}
                 </div>
               ))
             ) : (
-              <>
-                <div className="px-3 py-2 rounded-lg bg-white/[0.03] border border-white/[0.06] text-xs text-foreground">
-                  Strategy
-                </div>
-                <div className="px-3 py-2 rounded-lg bg-white/[0.03] border border-white/[0.06] text-xs text-foreground">
-                  Brand Voice
-                </div>
-                <div className="px-3 py-2 rounded-lg bg-white/[0.03] border border-white/[0.06] text-xs text-foreground">
-                  Target ROI
-                </div>
-              </>
+              <p className="px-3 py-2 text-xs text-muted-foreground/60">
+                No focus areas set — add them in Settings → Brand.
+              </p>
             )}
           </div>
           {brandContext?.aiPreset && (

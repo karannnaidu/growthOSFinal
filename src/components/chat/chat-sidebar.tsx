@@ -14,16 +14,51 @@ interface ChatSidebarProps {
   activeId: string | null
   onSelect: (id: string) => void
   onNew: () => void
+  /** Called when a Quick Access shortcut is clicked. Receives the prompt to send to Mia. */
+  onPrompt?: (prompt: string) => void
+  /** Disable shortcuts while a stream is in flight. */
+  shortcutsDisabled?: boolean
 }
 
 const AGENT_SHORTCUTS = [
-  { id: 'scout', label: 'Intelligence Hub', icon: Search, color: '#0D9488' },
-  { id: 'aria', label: 'Aria Creative', icon: Paintbrush, color: '#F97316' },
-  { id: 'scout-diag', label: 'Scout Diagnosis', icon: Stethoscope, color: '#0D9488' },
-  { id: 'max', label: 'Max Budget', icon: DollarSign, color: '#3B82F6' },
+  {
+    id: 'intelligence-hub',
+    label: 'Intelligence Hub',
+    icon: Search,
+    color: '#0D9488',
+    prompt: 'Give me a cross-platform intelligence brief for today — top wins, top issues, and what needs my attention.',
+  },
+  {
+    id: 'aria-creative',
+    label: 'Aria Creative',
+    icon: Paintbrush,
+    color: '#F97316',
+    prompt: 'Aria, check for creative fatigue on my Meta ads and propose refresh variants for anything underperforming.',
+  },
+  {
+    id: 'scout-diag',
+    label: 'Scout Diagnosis',
+    icon: Stethoscope,
+    color: '#0D9488',
+    prompt: 'Scout, run a full brand health check and surface the 3-5 most important findings.',
+  },
+  {
+    id: 'max-budget',
+    label: 'Max Budget',
+    icon: DollarSign,
+    color: '#3B82F6',
+    prompt: 'Max, analyze my Meta ad performance and flag campaigns to scale, pause, or reallocate budget on.',
+  },
 ]
 
-export function ChatSidebar({ conversations, activeId, onSelect, onNew }: ChatSidebarProps) {
+export function ChatSidebar({
+  conversations,
+  activeId,
+  onSelect,
+  onNew,
+  onPrompt,
+  shortcutsDisabled,
+}: ChatSidebarProps) {
   return (
     <aside className="flex w-64 flex-col glass-panel border-r border-white/[0.06] overflow-hidden shrink-0">
       {/* Header */}
@@ -53,12 +88,20 @@ export function ChatSidebar({ conversations, activeId, onSelect, onNew }: ChatSi
         <div className="space-y-0.5">
           {AGENT_SHORTCUTS.map((shortcut) => {
             const Icon = shortcut.icon
+            const canRun = !!onPrompt && !shortcutsDisabled
             return (
               <button
                 key={shortcut.id}
-                onClick={onNew}
+                onClick={() => {
+                  if (!onPrompt) return
+                  onNew()
+                  onPrompt(shortcut.prompt)
+                }}
+                disabled={!canRun}
+                title={shortcut.prompt}
                 className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs text-muted-foreground
-                  hover:bg-white/[0.06] hover:text-foreground transition-colors duration-150"
+                  hover:bg-white/[0.06] hover:text-foreground transition-colors duration-150
+                  disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Icon className="h-3.5 w-3.5 shrink-0" style={{ color: shortcut.color }} aria-hidden="true" />
                 {shortcut.label}
