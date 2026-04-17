@@ -1,7 +1,7 @@
 ---
-id: geo-visibility
-name: Geographic Visibility Analyzer
-agent: nova
+id: geographic-markets
+name: Geographic Markets Analyzer
+agent: atlas
 category: growth
 complexity: cheap
 credits: 1

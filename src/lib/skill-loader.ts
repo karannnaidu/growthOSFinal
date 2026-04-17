@@ -185,6 +185,14 @@ export function getSkillPath(skillId: string): string | null {
  * filesystem, then falls back to the `custom_skills` table in Supabase.
  */
 export async function loadSkill(skillId: string): Promise<SkillDefinition> {
+  // 30-day backwards-compat alias: geo-visibility was renamed to
+  // geographic-markets on 2026-04-17 and moved from Nova to Atlas. Remove
+  // this shim after 2026-05-17 or after zero hits for 7 days, whichever is
+  // later. Historical skill_runs rows keep their original skill_id.
+  if (skillId === 'geo-visibility') {
+    skillId = 'geographic-markets';
+  }
+
   // 1. Cache hit
   const cached = skillCache.get(skillId);
   if (cached) return cached;
