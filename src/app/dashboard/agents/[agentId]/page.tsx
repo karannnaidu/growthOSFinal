@@ -32,6 +32,7 @@ interface SkillRun {
   blocked_reason?: string | null
   missing_platforms?: string[] | null
   data_source_summary?: Record<string, unknown> | null
+  diagnostics?: import('@/lib/knowledge/diagnostics').SkillRunDiagnostics | null
 }
 
 interface BrandAgentConfig {
@@ -669,6 +670,30 @@ export default function AgentDetailPage() {
 
                           {isExpanded && (
                             <div className="mt-3 rounded-lg bg-white/[0.03] border border-white/[0.06] p-3">
+                              {run.diagnostics && (() => {
+                                const d = run.diagnostics
+                                const issues: string[] = []
+                                if (d.rag?.status === 'failed') issues.push(`RAG failed: ${d.rag.error ?? 'unknown'}`)
+                                if (d.extract?.status === 'failed') issues.push(`Entity extraction failed: ${d.extract.error ?? 'unknown'}`)
+                                if (d.extract?.status === 'partial' && d.extract.unexpected_node_types?.length) {
+                                  issues.push(`Dropped unexpected node types: ${d.extract.unexpected_node_types.join(', ')}`)
+                                }
+                                if (d.postRun?.status === 'failed') issues.push(`postRun failed: ${d.postRun.error ?? 'unknown'}`)
+                                if (d.coverage) {
+                                  for (const [engine, status] of Object.entries(d.coverage)) {
+                                    if (status !== 'ok') issues.push(`${engine} coverage: ${status}`)
+                                  }
+                                }
+                                if (issues.length === 0) return null
+                                return (
+                                  <div className="mb-2 rounded-md border border-yellow-500/30 bg-yellow-500/10 px-3 py-2 text-xs text-yellow-200">
+                                    <div className="font-medium">Completed with degraded enrichment</div>
+                                    <ul className="mt-1 list-disc list-inside space-y-0.5">
+                                      {issues.map((i, idx) => <li key={idx}>{i}</li>)}
+                                    </ul>
+                                  </div>
+                                )
+                              })()}
                               {run.error_message ? (
                                 <p className="text-xs text-destructive font-mono break-all">{run.error_message}</p>
                               ) : (

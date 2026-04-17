@@ -67,7 +67,7 @@ export async function GET(
   //    on skill_runs → brands → brand_members.  Brand access is already verified above.
   const { data: recentRuns } = await admin
     .from('skill_runs')
-    .select('id, skill_id, status, output, model_used, credits_used, duration_ms, created_at, triggered_by, error_message, blocked_reason, missing_platforms, data_source_summary')
+    .select('id, skill_id, status, output, model_used, credits_used, duration_ms, created_at, triggered_by, error_message, blocked_reason, missing_platforms, data_source_summary, diagnostics')
     .eq('brand_id', brandId)
     .eq('agent_id', agentId)
     .order('created_at', { ascending: false })
