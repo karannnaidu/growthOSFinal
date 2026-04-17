@@ -3,8 +3,10 @@
 // brand.products.list — resolve a brand's product catalog from the best
 // available source. Precedence:
 //   1. Shopify (high confidence — live storefront data)
-//   2. brands.brand_data.products from onboarding extraction (medium)
-//   3. CSV upload (medium) — not implemented in this task; returns null
+//   2. brands.product_context from onboarding extraction (medium)
+//      (also falls back to brand_guidelines.products, which is what the
+//      Settings page writes to — keeps parity until we unify storage)
+//   3. CSV upload (medium)
 //   4. Website scrape (low) — future
 //
 // Return shape is shared with brand-customers and brand-orders resolvers.
@@ -127,17 +129,20 @@ export async function resolveBrandProducts(
     };
   }
 
-  // 3. brand_data from onboarding extraction.
+  // 3. product_context from onboarding extraction; fall back to
+  //    brand_guidelines.products (what the Settings page writes to).
   const { data: brand } = await supabase
     .from('brands')
-    .select('brand_data')
+    .select('product_context, brand_guidelines')
     .eq('id', brandId)
     .single();
 
-  const brandData = (brand?.brand_data ?? {}) as { products?: unknown };
-  if (Array.isArray(brandData.products) && brandData.products.length > 0) {
+  const rawProducts = extractProducts(brand?.product_context)
+    ?? extractProducts((brand?.brand_guidelines as { products?: unknown } | null)?.products);
+
+  if (rawProducts && rawProducts.length > 0) {
     return {
-      data: brandData.products as BrandProduct[],
+      data: rawProducts.map(normalizeExtractedProduct),
       source: 'brand_data',
       confidence: 'medium',
       isComplete: false,
@@ -146,4 +151,41 @@ export async function resolveBrandProducts(
 
   // 4. scrape — not implemented yet.
   return { data: null, source: null, confidence: 'low', isComplete: false };
+}
+
+/**
+ * Normalize a product from the onboarding extraction shape
+ * ({ name, description, price, image_url, category }) into BrandProduct.
+ * Price may be a string (e.g. "$29.99", "5100") or number.
+ */
+function normalizeExtractedProduct(raw: unknown): BrandProduct {
+  const p = (raw ?? {}) as {
+    id?: string | number;
+    name?: string;
+    title?: string;
+    price?: string | number | null;
+    sku?: string | null;
+    description?: string | null;
+  };
+  const title = p.title ?? p.name ?? 'Untitled product';
+  let price: number | undefined;
+  if (typeof p.price === 'number' && Number.isFinite(p.price)) {
+    price = p.price;
+  } else if (typeof p.price === 'string') {
+    const parsed = Number.parseFloat(p.price.replace(/[^0-9.\-]/g, ''));
+    price = Number.isFinite(parsed) ? parsed : undefined;
+  }
+  return {
+    id: p.id !== undefined ? String(p.id) : title,
+    title,
+    price,
+    sku: p.sku ?? undefined,
+    description: p.description ?? undefined,
+  };
+}
+
+/** Returns the array if the value is a non-empty array, else null. */
+function extractProducts(v: unknown): unknown[] | null {
+  if (Array.isArray(v) && v.length > 0) return v;
+  return null;
 }

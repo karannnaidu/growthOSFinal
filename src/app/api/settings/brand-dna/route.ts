@@ -103,7 +103,14 @@ export async function PATCH(request: NextRequest): Promise<NextResponse> {
   const products = body.products as unknown[] | undefined
 
   const update: Record<string, unknown> = {}
-  if (dna !== undefined) update.brand_guidelines = dna
+  if (dna !== undefined) {
+    update.brand_guidelines = dna
+    // Keep product_context in sync with dna.products so resolvers and
+    // the skills engine (which read from product_context) see edits made
+    // via the Brand DNA UI.
+    const dnaProducts = (dna as { products?: unknown }).products
+    if (Array.isArray(dnaProducts)) update.product_context = dnaProducts
+  }
   if (products !== undefined) update.product_context = products
 
   if (Object.keys(update).length === 0) {
