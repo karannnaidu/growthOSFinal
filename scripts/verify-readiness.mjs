@@ -182,12 +182,12 @@ const TOOL_PLATFORM = {
   'gos.wallet.summary': 'gos',
 };
 
-// Tools that are stubbed server-side even if platform is "connected"
+// Tools that are stubbed server-side even if platform is "connected".
+// Ahrefs / Google Ads / GSC are now live via SDKs (Phase 4), but still
+// degrade gracefully to { stub: true } when required metadata (target_domain,
+// customer_id, gsc_site_url) is missing — so they're reported as RUNNABLE
+// when the credential is configured fully.
 const STUB_TOOLS = new Set([
-  'google_ads.campaigns',
-  'ahrefs.backlinks',
-  'ahrefs.keywords',
-  'gsc.performance', // stub unless gsc_site_url in metadata
   'snapchat_ads.campaigns',
   'chatgpt_ads.campaigns',
 ]);

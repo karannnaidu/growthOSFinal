@@ -10,7 +10,11 @@
  * gracefully — partial data is returned rather than throwing.
  */
 
-import { shopifyFetch } from '@/lib/shopify';
+import { createShopifyMcpClient } from '@/lib/platforms/shopify-mcp';
+import { createAhrefsMcpClient } from '@/lib/platforms/ahrefs-mcp';
+import { metaAdAccount } from '@/lib/platforms/meta-sdk';
+import { ga4Client } from '@/lib/platforms/ga4-sdk';
+import { googleAdsCustomer } from '@/lib/platforms/google-ads-sdk';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -60,113 +64,43 @@ interface Credential {
 }
 
 // ---------------------------------------------------------------------------
-// Google token refresh
-// ---------------------------------------------------------------------------
-
-/**
- * If the credential has an expires_at in the past (or within 60 s), attempt
- * to refresh using the refresh_token and persist the new access_token.
- * Returns an updated credential object (or the original if refresh is not
- * needed / not possible).
- */
-async function maybeRefreshGoogleToken(
-  cred: Credential,
-  brandId: string,
-  platform: string = 'google',
-): Promise<Credential> {
-  if (!cred.refresh_token) return cred;
-  if (!cred.expires_at) return cred;
-
-  const expiresAt = new Date(cred.expires_at).getTime();
-  const nowPlus60 = Date.now() + 60_000;
-
-  if (expiresAt > nowPlus60) {
-    // Token still valid
-    return cred;
-  }
-
-  const clientId = process.env.GOOGLE_CLIENT_ID ?? '';
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET ?? '';
-
-  if (!clientId || !clientSecret) {
-    console.warn('[MCP] Google token expired but GOOGLE_CLIENT_ID/SECRET not set — skipping refresh');
-    return cred;
-  }
-
-  try {
-    const res = await fetch('https://oauth2.googleapis.com/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        client_id: clientId,
-        client_secret: clientSecret,
-        refresh_token: cred.refresh_token,
-        grant_type: 'refresh_token',
-      }),
-    });
-
-    if (!res.ok) {
-      console.warn('[MCP] Google token refresh failed:', res.status, res.statusText);
-      return cred;
-    }
-
-    const json = (await res.json()) as {
-      access_token?: string;
-      expires_in?: number;
-    };
-
-    if (!json.access_token) return cred;
-
-    const newExpiresAt = new Date(
-      Date.now() + (json.expires_in ?? 3600) * 1000,
-    ).toISOString();
-
-    // Persist refreshed token to the database
-    try {
-      const { createServiceClient } = await import('@/lib/supabase/service');
-      const admin = createServiceClient();
-      await admin
-        .from('credentials')
-        .update({ access_token: json.access_token, expires_at: newExpiresAt })
-        .eq('brand_id', brandId)
-        .eq('platform', platform);
-    } catch (dbErr) {
-      console.warn('[MCP] Failed to persist refreshed Google token:', dbErr);
-    }
-
-    return { ...cred, access_token: json.access_token, expires_at: newExpiresAt };
-  } catch (err) {
-    console.warn('[MCP] Google token refresh error:', err);
-    return cred;
-  }
-}
-
-// ---------------------------------------------------------------------------
 // Provider-specific fetch functions
+//
+// Google OAuth refresh is handled automatically by OAuth2Client inside the
+// per-platform SDK wrappers (see ga4-sdk, google-ads-sdk, and the googleapis
+// usage in fetchGSCPerformance). The manual refresh helper that used to live
+// here was removed in Task 17 of the MCP+SDK migration.
 // ---------------------------------------------------------------------------
 
 async function fetchMetaInsights(cred: Credential): Promise<unknown> {
   const rawId = cred.metadata?.ad_account_id;
   if (!rawId) {
     console.warn('[MCP] Meta: ad_account_id not set in credential metadata');
-    return null;
+    return { data: [] };
   }
-  const adAccountId = rawId.startsWith('act_') ? rawId : `act_${rawId}`;
   try {
-    const res = await fetch(
-      `https://graph.facebook.com/v19.0/${adAccountId}/insights` +
-        `?date_preset=last_30d` +
-        `&fields=impressions,clicks,spend,cpc,ctr,actions` +
-        `&access_token=${cred.access_token}`,
+    const account = metaAdAccount(cred.access_token, rawId);
+    const insights = await account.getInsights(
+      [
+        'campaign_id',
+        'campaign_name',
+        'impressions',
+        'clicks',
+        'spend',
+        'cpc',
+        'ctr',
+        'frequency',
+        'actions',
+        'action_values',
+        'purchase_roas',
+      ],
+      { date_preset: 'last_30d', level: 'campaign' },
     );
-    if (!res.ok) {
-      console.warn('[MCP] Meta insights fetch failed:', res.status, res.statusText);
-      return null;
-    }
-    return res.json();
+    const data = (insights as { _data?: unknown }[]).map((i) => i._data ?? i);
+    return { data };
   } catch (err) {
     console.warn('[MCP] Meta insights error:', err);
-    return null;
+    return { data: [] };
   }
 }
 
@@ -174,23 +108,23 @@ async function fetchMetaAdSets(cred: Credential): Promise<unknown> {
   const rawId = cred.metadata?.ad_account_id;
   if (!rawId) {
     console.warn('[MCP] Meta: ad_account_id not set in credential metadata');
-    return null;
+    return { data: [] };
   }
-  const adAccountId = rawId.startsWith('act_') ? rawId : `act_${rawId}`;
   try {
-    const res = await fetch(
-      `https://graph.facebook.com/v19.0/${adAccountId}/adsets` +
-        `?fields=id,name,status,daily_budget,lifetime_budget,optimization_goal` +
-        `&access_token=${cred.access_token}`,
-    );
-    if (!res.ok) {
-      console.warn('[MCP] Meta adsets fetch failed:', res.status, res.statusText);
-      return null;
-    }
-    return res.json();
+    const account = metaAdAccount(cred.access_token, rawId);
+    const adSets = await account.getAdSets([
+      'id',
+      'name',
+      'status',
+      'daily_budget',
+      'lifetime_budget',
+      'optimization_goal',
+    ]);
+    const data = (adSets as { _data?: unknown }[]).map((a) => a._data ?? a);
+    return { data };
   } catch (err) {
     console.warn('[MCP] Meta adsets error:', err);
-    return null;
+    return { data: [] };
   }
 }
 
@@ -200,31 +134,19 @@ async function fetchGA4Report(cred: Credential): Promise<unknown> {
     return { stub: true, message: 'GA4 integration requires property_id in credential metadata' };
   }
   try {
-    const res = await fetch(
-      `https://analyticsdata.googleapis.com/v1beta/properties/${propertyId}:runReport`,
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${cred.access_token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          dateRanges: [{ startDate: '30daysAgo', endDate: 'today' }],
-          dimensions: [{ name: 'date' }],
-          metrics: [
-            { name: 'sessions' },
-            { name: 'activeUsers' },
-            { name: 'newUsers' },
-            { name: 'bounceRate' },
-          ],
-        }),
-      },
-    );
-    if (!res.ok) {
-      console.warn('[MCP] GA4 report fetch failed:', res.status, res.statusText);
-      return { stub: true, message: `GA4 API error: ${res.status}` };
-    }
-    return res.json();
+    const client = ga4Client(cred.access_token, cred.refresh_token ?? undefined);
+    const [response] = await client.runReport({
+      property: `properties/${propertyId}`,
+      dateRanges: [{ startDate: '30daysAgo', endDate: 'today' }],
+      dimensions: [{ name: 'date' }],
+      metrics: [
+        { name: 'sessions' },
+        { name: 'activeUsers' },
+        { name: 'newUsers' },
+        { name: 'bounceRate' },
+      ],
+    });
+    return { rows: response.rows ?? [], metadata: response.metadata ?? null };
   } catch (err) {
     console.warn('[MCP] GA4 report error:', err);
     return { stub: true, message: 'GA4 fetch error' };
@@ -232,40 +154,35 @@ async function fetchGA4Report(cred: Credential): Promise<unknown> {
 }
 
 async function fetchGSCPerformance(cred: Credential): Promise<unknown> {
-  // TODO: GSC requires a siteUrl stored in cred.metadata.gsc_site_url
-  // POST https://www.googleapis.com/webmasters/v3/sites/{siteUrl}/searchAnalytics/query
   const siteUrl = cred.metadata?.gsc_site_url;
   if (!siteUrl) {
     return { stub: true, message: 'GSC integration requires gsc_site_url in credential metadata' };
   }
   try {
-    const encodedSite = encodeURIComponent(siteUrl);
+    const { google } = await import('googleapis');
+    const auth = new google.auth.OAuth2(
+      process.env.GOOGLE_CLIENT_ID,
+      process.env.GOOGLE_CLIENT_SECRET,
+    );
+    auth.setCredentials({
+      access_token: cred.access_token,
+      refresh_token: cred.refresh_token ?? undefined,
+    });
+    const sc = google.searchconsole({ version: 'v1', auth });
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
       .toISOString()
       .slice(0, 10);
     const today = new Date().toISOString().slice(0, 10);
-
-    const res = await fetch(
-      `https://www.googleapis.com/webmasters/v3/sites/${encodedSite}/searchAnalytics/query`,
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${cred.access_token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          startDate: thirtyDaysAgo,
-          endDate: today,
-          dimensions: ['query'],
-          rowLimit: 50,
-        }),
+    const res = await sc.searchanalytics.query({
+      siteUrl,
+      requestBody: {
+        startDate: thirtyDaysAgo,
+        endDate: today,
+        dimensions: ['query'],
+        rowLimit: 50,
       },
-    );
-    if (!res.ok) {
-      console.warn('[MCP] GSC fetch failed:', res.status, res.statusText);
-      return { stub: true, message: `GSC API error: ${res.status}` };
-    }
-    return res.json();
+    });
+    return { rows: res.data.rows ?? [] };
   } catch (err) {
     console.warn('[MCP] GSC error:', err);
     return { stub: true, message: 'GSC fetch error' };
@@ -273,9 +190,32 @@ async function fetchGSCPerformance(cred: Credential): Promise<unknown> {
 }
 
 async function fetchGoogleAdsCampaigns(cred: Credential): Promise<unknown> {
-  // TODO: Google Ads API requires developer token and customer ID
-  // For now return a stub — proper implementation needs google-ads-api library
-  return { stub: true, message: 'Google Ads integration requires developer token setup' };
+  const customerId = cred.metadata?.customer_id;
+  if (!customerId || !cred.refresh_token) {
+    return { stub: true, message: 'Google Ads requires customer_id + refresh_token' };
+  }
+  if (!process.env.GOOGLE_ADS_DEVELOPER_TOKEN) {
+    return { stub: true, message: 'GOOGLE_ADS_DEVELOPER_TOKEN not configured' };
+  }
+  try {
+    const customer = googleAdsCustomer(customerId, cred.refresh_token);
+    const rows = await customer.query(`
+      SELECT
+        campaign.id,
+        campaign.name,
+        campaign.status,
+        metrics.impressions,
+        metrics.clicks,
+        metrics.cost_micros,
+        metrics.conversions
+      FROM campaign
+      WHERE segments.date DURING LAST_30_DAYS
+    `);
+    return { rows };
+  } catch (err) {
+    console.warn('[MCP] Google Ads query error:', err);
+    return { stub: true, message: 'Google Ads query failed' };
+  }
 }
 
 async function fetchKlaviyoLists(cred: Credential): Promise<unknown> {
@@ -319,15 +259,51 @@ async function fetchKlaviyoFlows(cred: Credential): Promise<unknown> {
 }
 
 async function fetchAhrefsBacklinks(cred: Credential): Promise<unknown> {
-  // TODO: Ahrefs API v3 — requires target domain from metadata
-  // GET https://api.ahrefs.com/v3/site-explorer/backlinks
-  return { stub: true, message: 'Ahrefs backlinks integration pending API key and target setup' };
+  const target = cred.metadata?.target_domain;
+  if (!target) {
+    return { stub: true, message: 'Ahrefs backlinks requires target_domain in metadata' };
+  }
+  const client = await createAhrefsMcpClient(cred.access_token).catch((err) => {
+    console.warn('[MCP] Ahrefs connect error:', err);
+    return null;
+  });
+  if (!client) return { stub: true, message: 'Ahrefs MCP connect failed' };
+  try {
+    const result = await client.callTool({
+      name: 'backlinks',
+      arguments: { target, mode: 'domain' },
+    });
+    return { rows: result?.content ?? [] };
+  } catch (err) {
+    console.warn('[MCP] Ahrefs backlinks error:', err);
+    return { stub: true, message: 'Ahrefs backlinks fetch failed' };
+  } finally {
+    await client.close().catch(() => undefined);
+  }
 }
 
 async function fetchAhrefsKeywords(cred: Credential): Promise<unknown> {
-  // TODO: Ahrefs API v3 — requires target domain from metadata
-  // GET https://api.ahrefs.com/v3/keywords-explorer/overview
-  return { stub: true, message: 'Ahrefs keywords integration pending API key and target setup' };
+  const target = cred.metadata?.target_domain;
+  if (!target) {
+    return { stub: true, message: 'Ahrefs keywords requires target_domain in metadata' };
+  }
+  const client = await createAhrefsMcpClient(cred.access_token).catch((err) => {
+    console.warn('[MCP] Ahrefs connect error:', err);
+    return null;
+  });
+  if (!client) return { stub: true, message: 'Ahrefs MCP connect failed' };
+  try {
+    const result = await client.callTool({
+      name: 'organic_keywords',
+      arguments: { target, mode: 'domain' },
+    });
+    return { rows: result?.content ?? [] };
+  } catch (err) {
+    console.warn('[MCP] Ahrefs keywords error:', err);
+    return { stub: true, message: 'Ahrefs keywords fetch failed' };
+  } finally {
+    await client.close().catch(() => undefined);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -336,28 +312,53 @@ async function fetchAhrefsKeywords(cred: Credential): Promise<unknown> {
 
 type ToolHandler = (brandId: string, cred: Credential) => Promise<unknown>;
 
+async function shopifyMcpCall(
+  cred: Credential,
+  tool: string,
+  args: Record<string, unknown> = {},
+): Promise<unknown> {
+  const shop = cred.metadata?.shop;
+  if (!shop) return null;
+  const client = await createShopifyMcpClient({
+    shop,
+    accessToken: cred.access_token,
+  }).catch((err) => {
+    console.warn('[MCP] Shopify connect error:', err);
+    return null;
+  });
+  if (!client) return null;
+  try {
+    const result = await client.callTool({ name: tool, arguments: args });
+    return result?.content ?? null;
+  } catch (err) {
+    console.warn(`[MCP] Shopify ${tool} error:`, err);
+    return null;
+  } finally {
+    await client.close().catch(() => undefined);
+  }
+}
+
 const TOOL_HANDLERS: Record<string, ToolHandler> = {
-  // Shopify
-  'shopify.products.list': async (_brandId, cred) =>
-    shopifyFetch(
-      cred.metadata.shop ?? '',
-      cred.access_token,
-      'products.json?limit=50',
-    ),
-  'shopify.orders.list': async (_brandId, cred) =>
-    shopifyFetch(
-      cred.metadata.shop ?? '',
-      cred.access_token,
-      'orders.json?limit=50&status=any',
-    ),
-  'shopify.customers.list': async (_brandId, cred) =>
-    shopifyFetch(
-      cred.metadata.shop ?? '',
-      cred.access_token,
-      'customers.json?limit=50',
-    ),
-  'shopify.shop.get': async (_brandId, cred) =>
-    shopifyFetch(cred.metadata.shop ?? '', cred.access_token, 'shop.json'),
+  // Shopify — via Shopify's remote MCP server at https://{shop}/api/mcp
+  'shopify.products.list': async (_brandId, cred) => {
+    const content = await shopifyMcpCall(cred, 'products_list', { limit: 50 });
+    return { products: (content as unknown[]) ?? [] };
+  },
+  'shopify.orders.list': async (_brandId, cred) => {
+    const content = await shopifyMcpCall(cred, 'orders_list', {
+      limit: 50,
+      status: 'any',
+    });
+    return { orders: (content as unknown[]) ?? [] };
+  },
+  'shopify.customers.list': async (_brandId, cred) => {
+    const content = await shopifyMcpCall(cred, 'customers_list', { limit: 50 });
+    return { customers: (content as unknown[]) ?? [] };
+  },
+  'shopify.shop.get': async (_brandId, cred) => {
+    const content = await shopifyMcpCall(cred, 'shop_get');
+    return { shop: content ?? {} };
+  },
 
   // Meta Ads
   'meta_ads.campaigns.insights': async (_brandId, cred) => fetchMetaInsights(cred),
@@ -575,11 +576,10 @@ export async function callTool(
   let cred: Credential | null = null;
   if (platform) {
     cred = await loadCredential(args.brandId, platform);
-    if (cred && (platform === 'google' || platform === 'google_analytics')) {
-      cred = await maybeRefreshGoogleToken(cred, args.brandId, platform);
-    }
     if (!cred) {
       // Tool needs credentials we don't have — signal no data source.
+      // Google OAuth refresh is now handled by OAuth2Client inside each
+      // Google SDK wrapper, so no manual refresh step is needed here.
       return undefined;
     }
   }
@@ -657,18 +657,14 @@ export async function fetchSkillData(
     if (platform) platformsNeeded.add(platform);
   }
 
-  // Load credentials for each platform (with Google token refresh)
+  // Load credentials for each platform. Google OAuth refresh is now handled
+  // by OAuth2Client inside each Google SDK wrapper (see ga4-sdk,
+  // google-ads-sdk, and the googleapis path in fetchGSCPerformance).
   const credentials = new Map<string, Credential>();
   await Promise.all(
     Array.from(platformsNeeded).map(async (platform) => {
-      let cred = await loadCredential(brandId, platform);
+      const cred = await loadCredential(brandId, platform);
       if (!cred) return;
-
-      // Refresh Google access token if expired
-      if (platform === 'google' || platform === 'google_analytics') {
-        cred = await maybeRefreshGoogleToken(cred, brandId, platform);
-      }
-
       credentials.set(platform, cred);
     }),
   );
