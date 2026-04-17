@@ -17,6 +17,9 @@ COMMENT ON COLUMN skill_runs.data_source_summary IS
   'Per-tool resolver trace: { toolName: { source, confidence, isComplete } }.';
 
 -- Cron dedupe: one running/completed run per brand+skill+UTC day.
+-- Note: expression must be IMMUTABLE for a unique index. `date_trunc` on
+-- timestamptz is STABLE (depends on session TZ) — casting to UTC first makes
+-- the result IMMUTABLE.
 CREATE UNIQUE INDEX IF NOT EXISTS skill_runs_daily_unique
-  ON skill_runs (brand_id, skill_id, (DATE_TRUNC('day', created_at)))
+  ON skill_runs (brand_id, skill_id, ((created_at AT TIME ZONE 'UTC')::date))
   WHERE status IN ('completed', 'running');
