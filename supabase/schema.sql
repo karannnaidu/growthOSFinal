@@ -414,6 +414,29 @@ ALTER TABLE error_log               ENABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_log               ENABLE ROW LEVEL SECURITY;
 
 -- ---------------------------------------------------------------------------
+-- SECURITY DEFINER helper to break the brands ↔ brand_members RLS recursion.
+-- Both policies below used to cross-reference each other's tables, which
+-- Postgres detects as "infinite recursion". This helper checks ownership
+-- against brands without triggering RLS.
+-- ---------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.is_brand_owner(_brand_id uuid)
+RETURNS boolean
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.brands
+    WHERE id = _brand_id
+      AND owner_id = auth.uid()
+  );
+$$;
+
+REVOKE ALL ON FUNCTION public.is_brand_owner(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.is_brand_owner(uuid) TO authenticated, service_role;
+
+-- ---------------------------------------------------------------------------
 -- brands — owner or member
 -- ---------------------------------------------------------------------------
 CREATE POLICY "owner_access" ON brands
@@ -425,14 +448,13 @@ CREATE POLICY "owner_access" ON brands
   );
 
 -- ---------------------------------------------------------------------------
--- brand_members — self or brand owner
+-- brand_members — self or brand owner (via SECURITY DEFINER helper to avoid
+-- recursing back into the brands policy).
 -- ---------------------------------------------------------------------------
 CREATE POLICY "member_access" ON brand_members
   FOR ALL USING (
     user_id = auth.uid()
-    OR brand_id IN (
-      SELECT id FROM brands WHERE owner_id = auth.uid()
-    )
+    OR public.is_brand_owner(brand_id)
   );
 
 -- ---------------------------------------------------------------------------
