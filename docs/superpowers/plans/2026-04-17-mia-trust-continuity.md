@@ -337,7 +337,7 @@ const recentSkillRunsSummary =
 const thirtyDaysAgoIso = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
 const { data: runs30d } = await admin
   .from('skill_runs')
-  .select('skill_id, agent_id, status, output, error, blocked_reason, created_at')
+  .select('skill_id, agent_id, status, output, error_message, blocked_reason, created_at')
   .eq('brand_id', brandId)
   .gte('created_at', thirtyDaysAgoIso)
   .order('created_at', { ascending: false })
@@ -348,7 +348,7 @@ type Run30d = {
   agent_id: string | null
   status: string
   output: unknown
-  error: string | null
+  error_message: string | null
   blocked_reason: string | null
   created_at: string
 }
@@ -374,7 +374,7 @@ const agentDigest = Array.from(firstBySkill.values())
       return `- ${label} (${ago}, BLOCKED: ${r.blocked_reason ?? 'unknown reason'})`
     }
     if (r.status === 'failed') {
-      return `- ${label} (${ago}, FAILED: ${r.error ?? 'unknown error'})`
+      return `- ${label} (${ago}, FAILED: ${r.error_message ?? 'unknown error'})`
     }
     return `- ${label} (${ago}, ${r.status})`
   })

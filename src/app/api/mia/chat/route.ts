@@ -285,20 +285,21 @@ export async function POST(request: NextRequest): Promise<Response> {
 
   // 7b. 30-day agent activity digest — last completed run per skill + blocked/failed visibility
   const thirtyDaysAgoIso = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
-  const { data: runs30d } = await admin
+  const { data: runs30d, error: runs30dError } = await admin
     .from('skill_runs')
-    .select('skill_id, agent_id, status, output, error, blocked_reason, created_at')
+    .select('skill_id, agent_id, status, output, error_message, blocked_reason, created_at')
     .eq('brand_id', brandId)
     .gte('created_at', thirtyDaysAgoIso)
     .order('created_at', { ascending: false })
     .limit(300)
+  if (runs30dError) console.warn('[mia-chat] 30d digest query failed:', runs30dError)
 
   type Run30d = {
     skill_id: string
     agent_id: string | null
     status: string
     output: unknown
-    error: string | null
+    error_message: string | null
     blocked_reason: string | null
     created_at: string
   }
@@ -323,7 +324,7 @@ export async function POST(request: NextRequest): Promise<Response> {
         return `- ${label} (${ago}, BLOCKED: ${r.blocked_reason ?? 'unknown reason'})`
       }
       if (r.status === 'failed') {
-        return `- ${label} (${ago}, FAILED: ${r.error ?? 'unknown error'})`
+        return `- ${label} (${ago}, FAILED: ${r.error_message ?? 'unknown error'})`
       }
       return `- ${label} (${ago}, ${r.status})`
     })
