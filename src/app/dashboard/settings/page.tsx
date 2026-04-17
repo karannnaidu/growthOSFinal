@@ -6,8 +6,9 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import {
   Palette, Type, Users, Target, Package, RefreshCw, Dna,
-  Plus, ExternalLink, X, Pencil, Check, Upload,
+  Plus, ExternalLink, X, Pencil, Check, Upload, Image as ImageIcon, Search,
 } from 'lucide-react'
+import { BRAND_FONTS, FONT_CATEGORY_LABELS, googleFontsPreviewUrl, type FontCategory } from '@/lib/brand-fonts'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -52,6 +53,7 @@ interface BrandDna {
     secondary_colors: string[]
     font_families: string[]
     logo_url: string | null
+    logo_variants?: LogoVariant[]
     aesthetic: string
   }
   brand_story: string | null
@@ -59,6 +61,21 @@ interface BrandDna {
   trust_signals: string[]
   extraction_confidence: Record<string, number>
 }
+
+export type LogoVariantKind = 'primary' | 'mono-dark' | 'mono-light'
+
+export interface LogoVariant {
+  url: string
+  variant: LogoVariantKind
+}
+
+const LOGO_VARIANT_LABELS: Record<LogoVariantKind, { label: string; hint: string; swatch: string }> = {
+  'primary': { label: 'Primary', hint: 'Full-color logo', swatch: 'transparent' },
+  'mono-dark': { label: 'Mono / Dark', hint: 'For light backgrounds', swatch: '#ffffff' },
+  'mono-light': { label: 'Mono / Light', hint: 'For dark backgrounds', swatch: '#111827' },
+}
+
+const LOGO_VARIANT_ORDER: LogoVariantKind[] = ['primary', 'mono-dark', 'mono-light']
 
 // ---------------------------------------------------------------------------
 // Editable Components
@@ -231,6 +248,272 @@ function EditablePills({
           <Plus className="w-3 h-3" /> Add
         </button>
       )}
+    </div>
+  )
+}
+
+function FontPicker({
+  items,
+  onUpdate,
+}: {
+  items: string[]
+  onUpdate: (items: string[]) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState('')
+  const [category, setCategory] = useState<'all' | FontCategory>('all')
+
+  // Inject a preview stylesheet covering selected + filtered candidates so
+  // each option renders in its own typeface. Cap at 40 families to keep the
+  // network hit small; names beyond that still show in system font.
+  useEffect(() => {
+    const selected = items
+    const candidates = BRAND_FONTS
+      .filter((f) => category === 'all' || f.category === category)
+      .filter((f) => !query.trim() || f.name.toLowerCase().includes(query.trim().toLowerCase()))
+      .slice(0, 40)
+      .map((f) => f.name)
+    const families = Array.from(new Set([...selected, ...candidates]))
+    if (families.length === 0) return
+    const href = googleFontsPreviewUrl(families)
+    const id = 'brand-font-preview'
+    let link = document.getElementById(id) as HTMLLinkElement | null
+    if (!link) {
+      link = document.createElement('link')
+      link.id = id
+      link.rel = 'stylesheet'
+      document.head.appendChild(link)
+    }
+    if (link.href !== href) link.href = href
+  }, [items, query, category, open])
+
+  const filtered = BRAND_FONTS
+    .filter((f) => category === 'all' || f.category === category)
+    .filter((f) => !query.trim() || f.name.toLowerCase().includes(query.trim().toLowerCase()))
+
+  function toggle(name: string) {
+    if (items.includes(name)) onUpdate(items.filter((i) => i !== name))
+    else onUpdate([...items, name])
+  }
+
+  return (
+    <div className="space-y-2">
+      {items.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {items.map((name) => (
+            <span
+              key={name}
+              className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs group"
+              style={{ background: '#f9731622', color: '#f97316', fontFamily: `'${name}', system-ui` }}
+            >
+              {name}
+              <button
+                onClick={() => onUpdate(items.filter((i) => i !== name))}
+                className="opacity-0 group-hover:opacity-100 transition-opacity hover:text-red-400"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+
+      {!open ? (
+        <button
+          onClick={() => setOpen(true)}
+          className="inline-flex items-center gap-1 rounded-full border border-dashed border-white/15 px-2 py-0.5 text-[10px] text-muted-foreground/50 hover:text-muted-foreground hover:border-white/30 transition-colors"
+        >
+          <Plus className="w-3 h-3" /> Browse fonts
+        </button>
+      ) : (
+        <div className="rounded-lg border border-border/40 bg-white/[0.02] p-2.5 space-y-2">
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="w-3 h-3 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground/50" />
+              <input
+                autoFocus
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search 50+ fonts…"
+                className="w-full rounded bg-white/5 border border-border/40 pl-7 pr-2 py-1 text-xs text-foreground placeholder:text-muted-foreground/50 focus:border-[#f97316] focus:outline-none"
+              />
+            </div>
+            <button
+              onClick={() => setOpen(false)}
+              className="text-[10px] text-muted-foreground hover:text-foreground px-1.5"
+            >
+              Done
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-1">
+            {(['all', 'sans', 'serif', 'display', 'handwriting', 'mono'] as const).map((c) => (
+              <button
+                key={c}
+                onClick={() => setCategory(c)}
+                className={`rounded-full px-2 py-0.5 text-[10px] transition-colors ${
+                  category === c
+                    ? 'bg-[#f97316] text-white'
+                    : 'bg-white/5 text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {c === 'all' ? 'All' : FONT_CATEGORY_LABELS[c]}
+              </button>
+            ))}
+          </div>
+          <div className="max-h-48 overflow-y-auto space-y-0.5 pr-1">
+            {filtered.length === 0 ? (
+              <p className="text-[10px] text-muted-foreground/50 text-center py-3">No matches.</p>
+            ) : (
+              filtered.map((f) => {
+                const selected = items.includes(f.name)
+                return (
+                  <button
+                    key={f.name}
+                    onClick={() => toggle(f.name)}
+                    className={`w-full flex items-center justify-between rounded px-2 py-1 text-left transition-colors ${
+                      selected ? 'bg-[#f97316]/20' : 'hover:bg-white/5'
+                    }`}
+                  >
+                    <span
+                      className="text-sm text-foreground"
+                      style={{ fontFamily: `'${f.name}', system-ui` }}
+                    >
+                      {f.name}
+                    </span>
+                    <span className="text-[9px] uppercase tracking-widest text-muted-foreground/50">
+                      {selected ? '✓' : FONT_CATEGORY_LABELS[f.category]}
+                    </span>
+                  </button>
+                )
+              })
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function LogoManager({
+  brandId,
+  primaryUrl,
+  variants,
+  onUpdate,
+}: {
+  brandId: string | null
+  primaryUrl: string | null
+  variants: LogoVariant[]
+  onUpdate: (next: { primary: string | null; variants: LogoVariant[] }) => void
+}) {
+  const [uploading, setUploading] = useState<LogoVariantKind | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  async function uploadFile(file: File, kind: LogoVariantKind) {
+    if (!brandId) { setError('Brand not loaded yet'); return }
+    setError(null)
+    setUploading(kind)
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      fd.append('brandId', brandId)
+      fd.append('bucket', 'brand-assets')
+      const res = await fetch('/api/media/upload', { method: 'POST', body: fd })
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({})) as { error?: string }
+        setError(j.error || 'Upload failed')
+        return
+      }
+      const data = await res.json() as { publicUrl: string | null }
+      if (!data.publicUrl) { setError('Upload returned no URL'); return }
+
+      const rest = variants.filter((v) => v.variant !== kind)
+      const nextVariants = [...rest, { url: data.publicUrl, variant: kind }]
+      const nextPrimary = kind === 'primary' ? data.publicUrl : primaryUrl
+      onUpdate({ primary: nextPrimary, variants: nextVariants })
+    } catch {
+      setError('Upload failed')
+    } finally {
+      setUploading(null)
+    }
+  }
+
+  function removeVariant(kind: LogoVariantKind) {
+    const rest = variants.filter((v) => v.variant !== kind)
+    const nextPrimary = kind === 'primary' ? null : primaryUrl
+    onUpdate({ primary: nextPrimary, variants: rest })
+  }
+
+  const urlFor = (kind: LogoVariantKind): string | null => {
+    if (kind === 'primary') {
+      return variants.find((v) => v.variant === 'primary')?.url ?? primaryUrl ?? null
+    }
+    return variants.find((v) => v.variant === kind)?.url ?? null
+  }
+
+  return (
+    <div>
+      <span className="block text-[10px] uppercase tracking-widest text-muted-foreground mb-2">Brand Logo</span>
+      <div className="grid grid-cols-3 gap-2">
+        {LOGO_VARIANT_ORDER.map((kind) => {
+          const url = urlFor(kind)
+          const meta = LOGO_VARIANT_LABELS[kind]
+          const isUploading = uploading === kind
+          return (
+            <label
+              key={kind}
+              className="relative flex flex-col items-center gap-1.5 rounded-lg border border-dashed border-white/15 hover:border-[#f97316]/40 p-2 cursor-pointer group transition-colors"
+              style={{ background: meta.swatch === 'transparent' ? 'rgba(255,255,255,0.02)' : meta.swatch }}
+            >
+              <div className="aspect-square w-full flex items-center justify-center overflow-hidden rounded">
+                {url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={url} alt={`${meta.label} logo`} className="max-w-full max-h-full object-contain" />
+                ) : (
+                  <div className="flex flex-col items-center gap-1 text-muted-foreground/50">
+                    {isUploading ? (
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <>
+                        <ImageIcon className="w-4 h-4" />
+                        <Upload className="w-3 h-3" />
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+              <div className="text-center">
+                <span className={`block text-[10px] font-medium ${meta.swatch === '#111827' ? 'text-white' : 'text-foreground'}`}>
+                  {meta.label}
+                </span>
+                <span className={`block text-[9px] ${meta.swatch === '#111827' ? 'text-white/60' : 'text-muted-foreground/60'}`}>
+                  {meta.hint}
+                </span>
+              </div>
+              {url && !isUploading && (
+                <button
+                  type="button"
+                  onClick={(e) => { e.preventDefault(); removeVariant(kind) }}
+                  className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 text-white/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:text-red-400"
+                  title="Remove"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0]
+                  if (f) uploadFile(f, kind)
+                  e.target.value = ''
+                }}
+              />
+            </label>
+          )
+        })}
+      </div>
+      {error && <div className="mt-1.5 text-[10px] text-[#ef4444]">{error}</div>}
     </div>
   )
 }
@@ -675,13 +958,24 @@ export default function BrandDnaPage() {
                 </div>
               </div>
             </div>
-            {dna.visual_identity?.font_families !== undefined && (
-              <div className="mb-3">
-                <span className="block text-[10px] uppercase tracking-widest text-muted-foreground mb-2">Fonts</span>
-                <EditablePills items={dna.visual_identity.font_families} color="#f97316"
-                  onUpdate={(items) => update((d) => ({ ...d, visual_identity: { ...d.visual_identity, font_families: items } }))} placeholder="Add font..." />
-              </div>
-            )}
+            <div className="mb-3">
+              <span className="block text-[10px] uppercase tracking-widest text-muted-foreground mb-2">Fonts</span>
+              <FontPicker
+                items={dna.visual_identity?.font_families ?? []}
+                onUpdate={(items) => update((d) => ({ ...d, visual_identity: { ...d.visual_identity, font_families: items } }))}
+              />
+            </div>
+            <div className="mb-3">
+              <LogoManager
+                brandId={brandId}
+                primaryUrl={dna.visual_identity?.logo_url ?? null}
+                variants={dna.visual_identity?.logo_variants ?? []}
+                onUpdate={({ primary, variants }) => update((d) => ({
+                  ...d,
+                  visual_identity: { ...d.visual_identity, logo_url: primary, logo_variants: variants },
+                }))}
+              />
+            </div>
             <div>
               <span className="block text-[10px] uppercase tracking-widest text-muted-foreground mb-1 px-1">Aesthetic</span>
               <EditableText value={dna.visual_identity?.aesthetic || ''} multiline

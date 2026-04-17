@@ -6,6 +6,12 @@
 export interface ImageGenOptions {
   prompt: string
   referenceImageUrl?: string
+  /**
+   * Extra reference images appended after the primary. Used for logos,
+   * brand marks, or supplementary product angles that the model should
+   * preserve while generating the scene.
+   */
+  additionalReferenceUrls?: string[]
   width?: number
   height?: number
   numberOfImages?: number
@@ -72,6 +78,12 @@ export async function generateWithNanoBanana(
 
   if (options.referenceImageUrl) {
     const fetched = await fetchReferenceImage(options.referenceImageUrl)
+    if (fetched) parts.push({ inlineData: fetched })
+  }
+
+  for (const extra of options.additionalReferenceUrls ?? []) {
+    if (!extra) continue
+    const fetched = await fetchReferenceImage(extra)
     if (fetched) parts.push({ inlineData: fetched })
   }
 
