@@ -568,17 +568,6 @@ export async function runSkill(input: SkillRunInput, onProgress?: (event: SkillP
     }
   }
 
-  // 10. Entity extraction — fire-and-forget, non-fatal
-  if (status === 'completed' && runId) {
-    import('@/lib/knowledge/extract')
-      .then(({ extractEntities }) =>
-        extractEntities(input.brandId, input.skillId, runId, output),
-      )
-      .catch((err) => {
-        console.warn('[SkillsEngine] Entity extraction failed (non-fatal):', err);
-      });
-  }
-
   // 11. Post-flight intelligence — Mia decides follow-ups
   //     MUST await so the mia_decision node is saved before Vercel kills the function.
   if (status === 'completed' && runId) {
