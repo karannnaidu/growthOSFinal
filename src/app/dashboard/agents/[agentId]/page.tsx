@@ -12,6 +12,7 @@ import { AgentOutput } from '@/components/agents/agent-output'
 import { MiaControl } from '@/components/agents/mia-control'
 import { AgentActivity } from '@/components/agents/agent-activity'
 import { BlockedRunCard } from '@/components/skill-runs/BlockedRunCard'
+import { NovaArtifactReview } from '@/components/agents/nova-artifact-review'
 import type { AgentConfig } from '@/lib/agents-data'
 
 // ---------------------------------------------------------------------------
@@ -594,6 +595,16 @@ export default function AgentDetailPage() {
               {/* Live activity terminal when skill is running */}
               {runningSkill && brandId && (
                 <AgentActivity brandId={brandId} agentId={agentId} skillId={runningSkill} onComplete={handleSkillComplete} />
+              )}
+
+              {/* Nova-specific: AI visibility artifact review */}
+              {agentId === 'nova' && brandId && (
+                <section className="glass-panel rounded-xl p-4">
+                  <p className="text-[10px] uppercase tracking-widest text-muted-foreground/60 mb-3">
+                    AI Visibility Artifacts
+                  </p>
+                  <NovaArtifactReview brandId={brandId} />
+                </section>
               )}
 
               {/* Recent output */}
