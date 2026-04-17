@@ -504,6 +504,7 @@ export async function runSkill(input: SkillRunInput, onProgress?: (event: SkillP
       chain_depth: input.chainDepth ?? 0,
       duration_ms: durationMs,
       data_source_summary: toolResolutions,
+      diagnostics: Object.keys(diagnostics).length > 0 ? diagnostics : null,
       completed_at: new Date().toISOString(),
     })
     .select('id')
@@ -524,6 +525,52 @@ export async function runSkill(input: SkillRunInput, onProgress?: (event: SkillP
   onProgress?.({ agent: skill.agent, skill: skill.id, step: 'storing', message: 'Saving results...', progress: 90 })
 
   const runId = skillRun?.id ?? '';
+
+  // 8.5. Entity extraction + postRun hook (with real runId). Both non-fatal.
+  // We persist any new diagnostics via an UPDATE since the INSERT is done.
+  let extractDiagSet = false;
+  if (status === 'completed' && runId) {
+    try {
+      const { extractEntities } = await import('@/lib/knowledge/extract');
+      const extractResult = await extractEntities(input.brandId, input.skillId, runId, output);
+      diagnostics.extract = extractResult.error
+        ? { status: 'failed', error: extractResult.error }
+        : {
+            status: extractResult.unexpectedNodeTypes.length > 0 ? 'partial' : 'ok',
+            nodes_created: extractResult.nodesCreated,
+            unexpected_node_types: extractResult.unexpectedNodeTypes.length > 0
+              ? extractResult.unexpectedNodeTypes
+              : undefined,
+          };
+      extractDiagSet = true;
+    } catch (err) {
+      diagnostics.extract = { status: 'failed', error: err instanceof Error ? err.message : String(err) };
+      extractDiagSet = true;
+    }
+
+    try {
+      const { loadPostRun } = await import('@/lib/post-run');
+      const postRun = await loadPostRun(input.skillId);
+      if (postRun) {
+        const { createServiceClient } = await import('@/lib/supabase/service');
+        await postRun({
+          brandId: input.brandId, skillId: input.skillId, runId,
+          output, supabase: createServiceClient(), liveData: liveData as unknown as Record<string, unknown>,
+        });
+        diagnostics.postRun = { status: 'ok' };
+        extractDiagSet = true;
+      }
+    } catch (err) {
+      diagnostics.postRun = { status: 'failed', error: err instanceof Error ? err.message : String(err) };
+      extractDiagSet = true;
+    }
+
+    if (extractDiagSet && Object.keys(diagnostics).length > 0) {
+      await supabase.from('skill_runs')
+        .update({ diagnostics })
+        .eq('id', runId);
+    }
+  }
 
   // 8-9. Deduct credits and record transaction (only if credits were consumed)
   if (creditsUsed > 0) {
