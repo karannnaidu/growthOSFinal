@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server'
+import { after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { callModel } from '@/lib/model-client'
@@ -420,13 +421,20 @@ export async function POST(request: NextRequest): Promise<Response> {
         // Send done event
         controller.enqueue(sseEvent({ type: 'done' }))
 
-        // Fire-and-forget memory extraction — do NOT await. If it fails, we log.
-        void extractMemories({
-          brandId,
-          userMessage: message.trim(),
-          assistantMessage: result.content,
-          sourceMessageId: null,
-        }).catch((err) => console.warn('[mia-chat] memory extraction failed:', err))
+        // Schedule memory extraction after the response is sent. `after()`
+        // uses waitUntil on Vercel so the serverless invocation isn't frozen
+        // mid-extraction; on Node it runs post-response too. Extractor never
+        // throws — .catch is belt-and-suspenders.
+        const userMessageSnapshot = message.trim()
+        const assistantMessageSnapshot = result.content
+        after(() => {
+          void extractMemories({
+            brandId,
+            userMessage: userMessageSnapshot,
+            assistantMessage: assistantMessageSnapshot,
+            sourceMessageId: null,
+          }).catch((err) => console.warn('[mia-chat] memory extraction failed:', err))
+        })
       } catch (err) {
         controller.enqueue(
           sseEvent({
