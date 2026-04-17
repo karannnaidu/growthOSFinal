@@ -116,7 +116,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // (needs to happen before brief generation so product info is available)
     const { data: brandData } = await admin
       .from('brands')
-      .select('brand_guidelines, product_context')
+      .select('brand_guidelines, product_context, logo_url')
       .eq('id', brandId)
       .single()
 
@@ -133,6 +133,22 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       }
     }
     console.log(`[creative/generate] Product images: ${productImages.length} (${hasTransparent ? 'has transparent' : 'originals only'})`)
+
+    // Resolve the brand's primary logo — prefer logo_variants[primary] in
+    // brand_guidelines.visual_identity, fall back to visual_identity.logo_url,
+    // then to the top-level brands.logo_url column the onboarding scraper fills.
+    const vi = (brandData?.brand_guidelines as Record<string, unknown>)?.visual_identity as {
+      logo_url?: string | null
+      logo_variants?: Array<{ url: string; variant?: string }>
+    } | undefined
+    const logoVariants = vi?.logo_variants ?? []
+    const primaryLogoUrl =
+      logoVariants.find((v) => v.variant === 'primary')?.url
+      ?? logoVariants[0]?.url
+      ?? vi?.logo_url
+      ?? (brandData?.logo_url as string | null | undefined)
+      ?? undefined
+    console.log(`[creative/generate] Brand logo: ${primaryLogoUrl ? 'present' : 'none'}`)
 
     // 3. Generate intelligent brief
     console.log(`[creative/generate] Step 3: generating brief via Claude`)
@@ -171,8 +187,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         `Create a professional ${brandCategory} social media ad for ${brandName}.`,
         `Scene: ${copyVariant?.sceneDescription || p.prompt}`,
         productImageUrl
-          ? `Keep the product EXACTLY as shown in the reference image. Do not modify labels or branding.`
+          ? `Keep the product EXACTLY as shown in the first reference image. Do not modify labels or branding.`
           : `Show a relevant ${brandCategory} visual that represents ${brandName}.`,
+        primaryLogoUrl
+          ? `A brand logo is provided as ${productImageUrl ? 'the second' : 'a'} reference image. Render it cleanly in a corner (top-left or bottom-right) at a reasonable size — preserve its exact colors and letterforms; do not redraw or stylize it.`
+          : '',
         `Text overlay on the image:`,
         copyVariant?.headline ? `- Headline (prominent, top): "${copyVariant.headline}"` : '',
         copyVariant?.cta ? `- CTA button (bottom): "${copyVariant.cta}"` : '',
@@ -185,6 +204,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         const result = await generateAdImage({
           prompt: adPrompt,
           referenceImageUrl: productImageUrl,
+          additionalReferenceUrls: primaryLogoUrl ? [primaryLogoUrl] : undefined,
           width: 1024,
           height: 1024,
         })
