@@ -25,6 +25,7 @@ export default function MiaMemoryPage() {
   const [memories, setMemories] = useState<MiaMemory[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   useEffect(() => {
     async function init() {
@@ -57,13 +58,20 @@ export default function MiaMemoryPage() {
   async function handleDelete(memoryId: string) {
     if (!brandId || deletingId) return
     setDeletingId(memoryId)
+    setDeleteError(null)
     try {
       const res = await fetch('/api/mia/memory', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ brandId, memoryId }),
       })
-      if (res.ok) setMemories((prev) => prev.filter((m) => m.id !== memoryId))
+      if (res.ok) {
+        setMemories((prev) => prev.filter((m) => m.id !== memoryId))
+      } else {
+        setDeleteError("Couldn't delete that memory. Try again.")
+      }
+    } catch {
+      setDeleteError("Couldn't delete that memory. Try again.")
     } finally { setDeletingId(null) }
   }
 
@@ -89,6 +97,15 @@ export default function MiaMemoryPage() {
         </div>
       </div>
 
+      {deleteError && (
+        <div
+          role="alert"
+          className="rounded-lg border border-[#ef4444]/30 bg-[#ef4444]/10 px-3 py-2 text-xs text-[#ef4444]"
+        >
+          {deleteError}
+        </div>
+      )}
+
       {memories.length === 0 ? (
         <Card className="glass-panel">
           <CardContent className="py-10 text-center">
@@ -113,6 +130,7 @@ export default function MiaMemoryPage() {
                   size="sm"
                   onClick={() => handleDelete(m.id)}
                   disabled={deletingId === m.id}
+                  aria-label={`Delete memory: ${m.content.slice(0, 60)}`}
                   className="shrink-0 text-muted-foreground hover:text-[#ef4444]"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
