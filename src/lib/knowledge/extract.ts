@@ -20,6 +20,10 @@ export interface ExtractionResult {
   nodesCreated: number;
   edgesCreated: number;
   snapshotsCreated: number;
+  /** Node types the LLM returned that weren't in the skill's `produces` list. */
+  unexpectedNodeTypes: string[];
+  /** Set to a Node error message if the LLM call itself failed. */
+  error?: string;
 }
 
 // Shape of the JSON we ask the LLM to produce
@@ -117,7 +121,7 @@ export async function extractEntities(
   // Short-circuit if output is empty or trivially small
   const outputJson = JSON.stringify(output);
   if (outputJson.length < 30) {
-    return { nodesCreated: 0, edgesCreated: 0, snapshotsCreated: 0 };
+    return { nodesCreated: 0, edgesCreated: 0, snapshotsCreated: 0, unexpectedNodeTypes: [] };
   }
 
   // ------------------------------------------------------------------
@@ -156,7 +160,13 @@ export async function extractEntities(
     extracted = JSON.parse(cleaned) as ExtractedGraph;
   } catch (err) {
     console.warn('[Extract] LLM extraction failed (non-fatal):', err);
-    return { nodesCreated: 0, edgesCreated: 0, snapshotsCreated: 0 };
+    return {
+      nodesCreated: 0,
+      edgesCreated: 0,
+      snapshotsCreated: 0,
+      unexpectedNodeTypes: [],
+      error: err instanceof Error ? err.message : String(err),
+    };
   }
 
   // ------------------------------------------------------------------
@@ -173,9 +183,28 @@ export async function extractEntities(
   const nodeIdByName = new Map<string, string>();
 
   // --- Nodes ---
+  // Build per-skill allow-list from `produces`. If the skill declares no
+  // produces, we fall back to the global VALID_NODE_TYPES (old behaviour).
+  let allowedTypes: Set<string> | null = null;
+  try {
+    const skill = await loadSkill(skillId);
+    if (skill.produces && skill.produces.length > 0) {
+      allowedTypes = new Set(skill.produces.map(p => p.nodeType));
+    }
+  } catch { /* already logged above */ }
+
+  const unexpectedNodeTypes: string[] = [];
+
   for (const node of extracted.nodes ?? []) {
     if (!node.name || !node.node_type) continue;
-    if (!VALID_NODE_TYPES.has(node.node_type)) continue;
+    if (!VALID_NODE_TYPES.has(node.node_type)) {
+      unexpectedNodeTypes.push(node.node_type);
+      continue;
+    }
+    if (allowedTypes && !allowedTypes.has(node.node_type)) {
+      unexpectedNodeTypes.push(node.node_type);
+      continue;
+    }
 
     // Generate embedding inline so the node is immediately searchable via RAG
     let embedding: number[] | null = null;
@@ -184,7 +213,6 @@ export async function extractEntities(
       embedding = await embedText(textForEmbedding);
     } catch (err) {
       console.warn(`[extract] Embedding generation failed for "${node.name}":`, err);
-      // Continue with null embedding — backfill job will catch it
     }
 
     const { data: inserted, error } = await supabase
@@ -262,5 +290,5 @@ export async function extractEntities(
     }
   }
 
-  return { nodesCreated, edgesCreated, snapshotsCreated };
+  return { nodesCreated, edgesCreated, snapshotsCreated, unexpectedNodeTypes };
 }
