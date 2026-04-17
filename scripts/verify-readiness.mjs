@@ -171,6 +171,8 @@ const TOOL_PLATFORM = {
   'klaviyo.flows.get': 'klaviyo',
   'ahrefs.backlinks': 'ahrefs',
   'ahrefs.keywords': 'ahrefs',
+  'snapchat_ads.campaigns': 'snapchat',
+  'chatgpt_ads.campaigns': 'chatgpt_ads',
   // brand.* resolvers are virtual — they always have SOME source
   // (brand_data extraction is populated at onboarding). Treat as always-runnable.
   'brand.products.list': 'brand',
@@ -186,6 +188,8 @@ const STUB_TOOLS = new Set([
   'ahrefs.backlinks',
   'ahrefs.keywords',
   'gsc.performance', // stub unless gsc_site_url in metadata
+  'snapchat_ads.campaigns',
+  'chatgpt_ads.campaigns',
 ]);
 
 // ---------------------------------------------------------------------------

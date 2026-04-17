@@ -6,7 +6,8 @@ import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Link2, Unlink, RefreshCw, CheckCircle2, Circle } from 'lucide-react'
+import Link from 'next/link'
+import { Link2, Unlink, RefreshCw, CheckCircle2, Circle, FileUp } from 'lucide-react'
 import { SetupHint, type SetupHintPlatform } from '@/components/SetupHint'
 import { Ga4Hint } from '@/content/setup-hints/ga4'
 import { KlaviyoHint } from '@/content/setup-hints/klaviyo'
@@ -94,13 +95,13 @@ const PLATFORM_UI_EXTRAS: Record<PlatformId, PlatformUiExtras> = {
   },
   snapchat: {
     color: '#fffc00',
-    connectFields: [
-      { key: 'access_token', label: 'Access token', placeholder: '' },
-      { key: 'ad_account_id', label: 'Ad account ID', placeholder: '' },
-    ],
+    oauth: true,
   },
   chatgpt_ads: {
     color: '#74aa9c',
+    connectFields: [
+      { key: 'apiKey', label: 'OpenAI API key', placeholder: 'sk-...' },
+    ],
   },
 }
 
@@ -389,6 +390,23 @@ export default function PlatformsSettingsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* CSV import card — fallback when Shopify OAuth is absent */}
+      <Link href="/dashboard/settings/platforms/csv-import" className="block">
+        <Card className="glass-panel hover:border-white/[0.12] transition-colors cursor-pointer">
+          <CardContent className="flex items-center gap-4 p-4">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/[0.06]">
+              <FileUp className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-foreground">CSV Import (offline brands)</p>
+              <p className="text-xs text-muted-foreground">
+                Upload orders / customers / products CSVs when Shopify OAuth is not available.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </Link>
     </div>
   )
 }

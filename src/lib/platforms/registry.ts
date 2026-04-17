@@ -27,8 +27,8 @@ export const PLATFORMS: PlatformDefinition[] = [
   { id: 'google', name: 'Google (Analytics + Ads)', comingSoon: false, description: 'Google Analytics 4 and Google Ads — single OAuth.' },
   { id: 'klaviyo', name: 'Klaviyo', comingSoon: false, description: 'Email + SMS flows and subscriber profiles.' },
   { id: 'ahrefs', name: 'Ahrefs', comingSoon: true, description: 'Backlinks + keyword research.' },
-  { id: 'snapchat', name: 'Snapchat Ads', comingSoon: true, description: 'Gen-Z reach and campaign performance.' },
-  { id: 'chatgpt_ads', name: 'ChatGPT Ads', comingSoon: true, description: 'AI-native ad platform.' },
+  { id: 'snapchat', name: 'Snapchat Ads', comingSoon: false, description: 'Gen-Z reach and campaign performance.' },
+  { id: 'chatgpt_ads', name: 'ChatGPT Ads', comingSoon: false, description: 'AI-native ad platform.' },
 ];
 
 export function visiblePlatforms(showAll: boolean): PlatformDefinition[] {

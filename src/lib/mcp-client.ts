@@ -541,6 +541,18 @@ const TOOL_HANDLERS: Record<string, ToolHandler> = {
     }
     return results;
   },
+
+  // Snapchat Ads — stub. Real fetch pending SDK work (no public TS SDK yet).
+  'snapchat_ads.campaigns': async () => ({
+    data: [],
+    note: 'Snapchat Ads connector live; real fetch pending SDK work',
+  }),
+
+  // ChatGPT Ads — stub. Real fetch pending OpenAI public Ads API.
+  'chatgpt_ads.campaigns': async () => ({
+    data: [],
+    note: 'ChatGPT Ads connector live; real fetch pending OpenAI public API',
+  }),
 };
 
 /**
@@ -590,6 +602,8 @@ const TOOL_PLATFORM: Record<string, string> = {
   'klaviyo.flows.get': 'klaviyo',
   'ahrefs.backlinks': 'ahrefs',
   'ahrefs.keywords': 'ahrefs',
+  'snapchat_ads.campaigns': 'snapchat',
+  'chatgpt_ads.campaigns': 'chatgpt_ads',
 };
 
 // ---------------------------------------------------------------------------
