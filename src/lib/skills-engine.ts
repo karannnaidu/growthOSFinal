@@ -626,7 +626,7 @@ export async function runSkill(input: SkillRunInput, onProgress?: (event: SkillP
           }
           await createMediaNode(
             input.brandId, 'ad_creative',
-            (brief.name as string | undefined) || `Creative from image-brief`,
+            (brief.name as string | undefined) || `Creative from image-brief · ${runId.slice(-8)}`,
             storagePath, 'generated-assets', img.mimeType,
             skill.id, runId,
             { prompt, dimensions: `${img.width}x${img.height}` },

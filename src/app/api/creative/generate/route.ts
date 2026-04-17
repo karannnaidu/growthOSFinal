@@ -243,7 +243,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         const nodeId = await createMediaNode(
           brandId,
           'ad_creative',
-          `Creative ${idx + 1} — ${campaignGoal.slice(0, 80)}`,
+          `Creative ${idx + 1} — ${campaignGoal.slice(0, 60)} · ${runId.slice(-8)}`,
           storagePath,
           'generated-assets',
           img.mimeType,
@@ -286,7 +286,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         const nodeId = await createMediaNode(
           brandId,
           'video_asset',
-          `Video ${idx + 1} — ${campaignGoal.slice(0, 80)}`,
+          `Video ${idx + 1} — ${campaignGoal.slice(0, 60)} · ${runId.slice(-8)}`,
           storagePath,
           'generated-assets',
           vid.content_type,
