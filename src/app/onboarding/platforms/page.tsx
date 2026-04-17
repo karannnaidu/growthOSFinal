@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Shield, ArrowLeft, ArrowRight, CheckCircle2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -48,6 +48,14 @@ const PLATFORM_ONBOARDING_EXTRAS: Partial<Record<PlatformId, Omit<PlatformCard, 
 }
 
 export default function PlatformsPage() {
+  return (
+    <Suspense fallback={null}>
+      <PlatformsPageInner />
+    </Suspense>
+  )
+}
+
+function PlatformsPageInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const showAll = searchParams?.get('show') === 'all'

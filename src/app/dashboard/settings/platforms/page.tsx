@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -110,6 +110,14 @@ const PLATFORM_UI_EXTRAS: Record<PlatformId, PlatformUiExtras> = {
 // ---------------------------------------------------------------------------
 
 export default function PlatformsSettingsPage() {
+  return (
+    <Suspense fallback={null}>
+      <PlatformsSettingsPageInner />
+    </Suspense>
+  )
+}
+
+function PlatformsSettingsPageInner() {
   const supabase = createClient()
   const searchParams = useSearchParams()
   const showAll = searchParams?.get('show') === 'all'
