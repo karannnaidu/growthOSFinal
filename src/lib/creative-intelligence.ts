@@ -94,22 +94,25 @@ export function getVideoDuration(campaignGoal: string): number {
 function parseLLMJson<T>(raw: string, fallback: T): T {
   let cleaned = raw.trim();
 
-  // Strip markdown code fences — handle various formats:
-  // ```json\n{...}\n```  or  ```\n{...}\n```  or  ```json{...}```
-  const fenceMatch = cleaned.match(/^```(?:json)?\s*\n?([\s\S]*?)\n?\s*```$/);
-  if (fenceMatch) {
-    cleaned = (fenceMatch[1] ?? '').trim();
-  } else {
-    // Also try non-anchored match (fence might be surrounded by other text)
-    const innerMatch = cleaned.match(/```(?:json)?\s*\n([\s\S]*?)\n\s*```/);
-    if (innerMatch) {
-      cleaned = (innerMatch[1] ?? '').trim();
-    }
-  }
+  // Strip opening/closing markdown fences permissively — tolerates trailing
+  // whitespace, truncation, or extra prose around the block.
+  cleaned = cleaned.replace(/^```(?:json)?\s*\n?/i, '');
+  cleaned = cleaned.replace(/\n?\s*```\s*$/, '');
+  cleaned = cleaned.trim();
 
   try {
     return JSON.parse(cleaned) as T;
   } catch {
+    // Last-resort: extract the largest {...} block and retry.
+    const firstBrace = cleaned.indexOf('{');
+    const lastBrace = cleaned.lastIndexOf('}');
+    if (firstBrace !== -1 && lastBrace > firstBrace) {
+      try {
+        return JSON.parse(cleaned.slice(firstBrace, lastBrace + 1)) as T;
+      } catch {
+        // fall through
+      }
+    }
     console.warn('[CreativeIntelligence] Failed to parse LLM JSON, using fallback. Raw (first 200 chars):', raw.slice(0, 200));
     return fallback;
   }
