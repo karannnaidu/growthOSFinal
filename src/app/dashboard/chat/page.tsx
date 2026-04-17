@@ -13,6 +13,14 @@ import { CollectCard } from '@/components/chat/collect-card'
 import { type MiaAction, type SkillAction, type CollectAction } from '@/lib/mia-actions'
 
 // ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function storageKeyForActiveConv(brandId: string): string {
+  return `mia_active_conversation_${brandId}`
+}
+
+// ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
@@ -114,6 +122,10 @@ export default function ChatPage() {
       setActiveConversationId(conversationId)
       setMessages([])
 
+      if (brandId) {
+        try { localStorage.setItem(storageKeyForActiveConv(brandId), conversationId) } catch { /* quota or privacy mode */ }
+      }
+
       const { data: msgs } = await supabase
         .from('conversation_messages')
         .select('id, role, content, created_at')
@@ -136,14 +148,30 @@ export default function ChatPage() {
       setIsLoadingHistory(false)
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
+    [brandId],
   )
+
+  // Restore last active conversation after brandId resolves
+  useEffect(() => {
+    if (!brandId) return
+    let stored: string | null = null
+    try { stored = localStorage.getItem(storageKeyForActiveConv(brandId)) } catch { /* noop */ }
+    if (stored) {
+      loadConversation(stored).catch(() => {
+        // If load fails (conversation deleted server-side), drop the stale key
+        try { localStorage.removeItem(storageKeyForActiveConv(brandId)) } catch { /* noop */ }
+      })
+    }
+  }, [brandId, loadConversation])
 
   // Start a new conversation (clear state)
   const startNewConversation = useCallback(() => {
     setActiveConversationId(null)
     setMessages([])
-  }, [])
+    if (brandId) {
+      try { localStorage.removeItem(storageKeyForActiveConv(brandId)) } catch { /* noop */ }
+    }
+  }, [brandId])
 
   const handleActionsFound = useCallback((messageId: string, actions: MiaAction[]) => {
     setMessageActions((prev) => {
@@ -225,6 +253,9 @@ export default function ChatPage() {
             if (event.type === 'start' && event.conversationId) {
               const newConvId = event.conversationId as string
               setActiveConversationId(newConvId)
+              if (brandId) {
+                try { localStorage.setItem(storageKeyForActiveConv(brandId), newConvId) } catch { /* noop */ }
+              }
               // Add to sidebar if new
               setConversations((prev) => {
                 if (prev.some((c) => c.id === newConvId)) return prev
