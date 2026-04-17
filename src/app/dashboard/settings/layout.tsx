@@ -9,6 +9,7 @@ const TABS = [
   { label: 'Platforms', href: '/dashboard/settings/platforms' },
   { label: 'AI Model',  href: '/dashboard/settings/ai-model' },
   { label: 'Team',      href: '/dashboard/settings/team' },
+  { label: "Mia's Memory", href: '/dashboard/settings/mia-memory' },
 ]
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {
