@@ -759,13 +759,14 @@ export default function BrandDnaPage() {
     load()
   }, [brandId])
 
-  // Update helper — marks dirty and updates local state
+  // Update helper — marks dirty and updates local state.
+  // NOTE: setDirty MUST be called outside the setDna updater. React 19 does
+  // not guarantee that setState calls invoked *inside* another setState's
+  // updater function are committed — doing so would leave the Save button
+  // hidden even though dna changed.
   const update = useCallback((updater: (d: BrandDna) => BrandDna) => {
-    setDna((prev) => {
-      if (!prev) return prev
-      setDirty(true)
-      return updater(prev)
-    })
+    setDna((prev) => (prev ? updater(prev) : prev))
+    setDirty(true)
   }, [])
 
   // Save to API
@@ -1043,12 +1044,16 @@ export default function BrandDnaPage() {
         <CardContent className="pt-5 pb-5">
           <SectionHeader icon={Package} iconColor="#0d9488" title={`Products (${dna.products?.length || 0})`} />
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-            {(dna.products || []).map((product, idx) => (
+            {(dna.products || []).map((product, idx) => {
+              const displayImage = product.bg_approved && product.transparent_image_url
+                ? product.transparent_image_url
+                : product.image_url
+              return (
               <div key={product.name + idx} className="rounded-lg bg-white/5 overflow-hidden flex flex-col group relative">
-                {product.image_url ? (
+                {displayImage ? (
                   <div className="aspect-square bg-white/5 relative">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={product.image_url} alt={product.name} className="absolute inset-0 w-full h-full object-cover" />
+                    <img src={displayImage} alt={product.name} className={`absolute inset-0 w-full h-full ${product.bg_approved ? 'object-contain' : 'object-cover'}`} />
                   </div>
                 ) : (
                   <div className="aspect-square bg-white/5 flex items-center justify-center">
@@ -1103,7 +1108,8 @@ export default function BrandDnaPage() {
                   <X className="w-3 h-3" />
                 </button>
               </div>
-            ))}
+              )
+            })}
             <AddProductCard brandId={brandId} onAdd={(p) => update((d) => ({ ...d, products: [...d.products, p] }))} />
           </div>
         </CardContent>
