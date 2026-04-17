@@ -1,5 +1,6 @@
 import path from 'path';
 import fs from 'fs';
+import { pathToFileURL } from 'url';
 import { getSkillPath } from '@/lib/skill-loader';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
@@ -36,10 +37,9 @@ export async function loadPostRun(skillId: string): Promise<PostRunFn | null> {
     return null;
   }
 
-  // Dynamic import. Next.js server builds bundle everything under /skills at
-  // build time when reachable from src/. Since this is server-only code we can
-  // use require() with the resolved absolute path.
-  const mod = await import(/* @vite-ignore */ path.resolve(tsPath));
+  // Dynamic import — convert to file:// URL so Windows absolute paths work
+  // under the ESM loader (bare `c:\...` paths are rejected).
+  const mod = await import(/* @vite-ignore */ pathToFileURL(path.resolve(tsPath)).href);
   const fn = (mod.postRun ?? mod.default) as PostRunFn | undefined;
   if (typeof fn !== 'function') {
     console.warn(`[post-run] ${tsPath} loaded but has no exported postRun function`);

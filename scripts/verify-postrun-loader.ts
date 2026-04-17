@@ -20,6 +20,18 @@ async function main() {
   }
   console.log('does-not-exist -> null OK');
 
+  const cs = await loadPostRun('competitor-scan');
+  if (typeof cs !== 'function') { console.error('FAIL: competitor-scan postRun not found'); process.exit(1); }
+  console.log('competitor-scan -> function OK');
+
+  const ccl = await loadPostRun('competitor-creative-library');
+  if (typeof ccl !== 'function') { console.error('FAIL: competitor-creative-library postRun not found'); process.exit(1); }
+  console.log('competitor-creative-library -> function OK');
+
+  const ib = await loadPostRun('image-brief');
+  if (typeof ib !== 'function') { console.error('FAIL: image-brief postRun not found'); process.exit(1); }
+  console.log('image-brief -> function OK');
+
   console.log('OK');
 }
 
