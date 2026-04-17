@@ -10,6 +10,9 @@ import {
 } from '@/lib/knowledge/intelligence'
 import { createServiceClient } from '@/lib/supabase/service'
 
+export { getPlatformStatus, syncPlatformStatus }
+export type { PlatformStatus }
+
 // ---------------------------------------------------------------------------
 // Tool → Platform mapping
 // ---------------------------------------------------------------------------

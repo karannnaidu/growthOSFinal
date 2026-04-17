@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { callModel } from '@/lib/model-client'
 import { buildSkillsCatalog } from '@/lib/mia-actions'
+import { getPlatformStatus, syncPlatformStatus } from '@/lib/knowledge/intelligence'
 import agentsJson from '../../../../../skills/agents.json'
 
 // ---------------------------------------------------------------------------
@@ -34,7 +35,21 @@ Brand context:
 - Focus: {focusAreas}
 - Plan: {plan}
 
-Recent activity:
+## Connected platforms (source of truth — trust these over conversation history)
+
+{connectedPlatforms}
+
+Rules when a platform is CONNECTED:
+- Never ask the user to paste numbers, CSVs, or screenshots from that platform.
+- To answer questions about it, dispatch the owning agent's skill. It has direct read access.
+- If the user doubts the connection, say "Meta is connected — let me pull it now" and trigger the skill.
+
+Rules when a platform is NOT CONNECTED:
+- Offer the integration page as the default path: "Connect Meta in Settings → Platforms."
+- Manual data entry is allowed only as an explicit second option.
+
+## Recent activity (last 24h — status only)
+
 {recentSkillRunsSummary}
 
 {skillsCatalog}
@@ -51,6 +66,7 @@ function buildSystemPrompt(
   domain: string,
   focusAreas: string,
   plan: string,
+  connectedPlatforms: string,
   recentSkillRunsSummary: string,
   skillsCatalog: string,
 ): string {
@@ -59,6 +75,7 @@ function buildSystemPrompt(
     .replace(/{domain}/g, domain)
     .replace(/{focusAreas}/g, focusAreas)
     .replace(/{plan}/g, plan)
+    .replace(/{connectedPlatforms}/g, connectedPlatforms)
     .replace(/{recentSkillRunsSummary}/g, recentSkillRunsSummary)
     .replace(/{skillsCatalog}/g, skillsCatalog)
 }
@@ -180,6 +197,22 @@ export async function POST(request: NextRequest): Promise<Response> {
     content: message.trim(),
   })
 
+  // 6b. Platform connection status (source of truth for "is Meta connected?")
+  let platformStatus = await getPlatformStatus(brandId)
+  if (!platformStatus) {
+    try { platformStatus = await syncPlatformStatus(brandId) } catch { platformStatus = null }
+  }
+
+  const connectedPlatformsBlock = platformStatus
+    ? [
+        `Meta Ads: ${platformStatus.meta ? 'connected' : 'not connected'}`,
+        `Shopify: ${platformStatus.shopify ? 'connected' : 'not connected'}`,
+        `GA4: ${platformStatus.ga4 ? 'connected' : 'not connected'}`,
+        `GSC: ${platformStatus.gsc ? 'connected' : 'not connected'}`,
+        `Klaviyo: ${platformStatus.klaviyo ? 'connected' : 'not connected'}`,
+      ].join('\n')
+    : 'Platform status unknown — verify in Settings → Platforms.'
+
   // 7. Build recent skill runs summary for Mia's context
   const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
   const { data: recentRuns } = await admin
@@ -212,6 +245,7 @@ export async function POST(request: NextRequest): Promise<Response> {
       ? (brand.focus_areas as string[]).join(', ')
       : (brand.focus_areas as string) ?? 'general marketing',
     (brand.plan as string) ?? 'standard',
+    connectedPlatformsBlock,
     recentSkillRunsSummary,
     skillsCatalog,
   )
