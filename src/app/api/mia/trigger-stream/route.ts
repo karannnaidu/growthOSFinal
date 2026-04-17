@@ -128,6 +128,15 @@ export async function POST(request: NextRequest): Promise<Response> {
           message: messageToUser,
         })
 
+        // Persist Mia's decision immediately so the Activity Feed shows it
+        // even if the client disconnects mid-run (navigates away).
+        if (filtered.length > 0) {
+          await createMiaDecision(brandId, {
+            decision: 'auto_run', reasoning, follow_up_skills: filtered,
+            pending_chain: [], target_agent: 'mia',
+          })
+        }
+
         // 3. Run each skill with streaming
         for (const skillId of filtered) {
           send('status', { agent: 'mia', message: `Dispatching ${skillId}...`, phase: 'dispatch' })
@@ -145,14 +154,6 @@ export async function POST(request: NextRequest): Promise<Response> {
           } catch (err) {
             send('error', { agent: lastAgent, skill: skillId, message: err instanceof Error ? err.message : 'Failed' })
           }
-        }
-
-        // Store decision
-        if (filtered.length > 0) {
-          await createMiaDecision(brandId, {
-            decision: 'auto_run', reasoning, follow_up_skills: filtered,
-            pending_chain: [], target_agent: 'mia',
-          })
         }
 
         send('complete', { totalSkills: filtered.length })

@@ -8,7 +8,7 @@ import { InternalLog, type LogEntry } from '@/components/dashboard/internal-log'
 import { RecommendationCard } from '@/components/dashboard/recommendation-card'
 import { ChatFAB } from '@/components/dashboard/chat-fab'
 import { AGENTS, AGENT_MAP } from '@/lib/agents-data'
-import { MissionControl } from '@/components/dashboard/mission-control'
+import { MissionControl, type InitialAgentState } from '@/components/dashboard/mission-control'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -172,6 +172,32 @@ function deriveLogEntries(skillRuns: Record<string, unknown>[], miaDecisions: Ar
   return entries.slice(0, 20)
 }
 
+function deriveAgentStatuses(skillRuns: Record<string, unknown>[]): InitialAgentState[] {
+  // For each agent, take the most recent skill_run within the last 2h and
+  // translate status → MissionControl state. Older runs leave the agent idle.
+  const cutoff = Date.now() - 2 * 60 * 60 * 1000
+  const byAgent = new Map<string, { state: InitialAgentState['state']; skill?: string; ts: number }>()
+  for (const r of skillRuns) {
+    const agentId = r.agent_id as string | undefined
+    const status = r.status as string | undefined
+    const createdAt = r.created_at as string | undefined
+    if (!agentId || !createdAt) continue
+    const ts = new Date(createdAt).getTime()
+    if (ts < cutoff) continue
+    const existing = byAgent.get(agentId)
+    if (existing && existing.ts >= ts) continue
+    const state: InitialAgentState['state'] =
+      status === 'running' ? 'running'
+      : status === 'completed' ? 'done'
+      : status === 'failed' || status === 'blocked' ? 'error'
+      : 'idle'
+    byAgent.set(agentId, { state, skill: r.skill_id as string | undefined, ts })
+  }
+  return Array.from(byAgent.entries()).map(([agentId, v]) => ({
+    agentId, state: v.state, currentSkill: v.skill,
+  }))
+}
+
 function deriveMetrics(skillRuns: Record<string, unknown>[], todayStart: string) {
   const todayRuns = skillRuns.filter((r) => {
     const createdAt = r.created_at as string | undefined
@@ -301,6 +327,7 @@ export default async function DashboardPage() {
   const metrics = deriveMetrics(skillRuns, todayStart)
   const chainNodes = deriveChainNodes(skillRuns)
   const logEntries = deriveLogEntries(skillRuns, miaDecisions)
+  const initialAgentStatuses = deriveAgentStatuses(skillRuns)
 
   // Latest run ID for "View Full Audit" link
   const latestRunId = skillRuns[0]?.id as string | undefined
@@ -367,7 +394,7 @@ export default async function DashboardPage() {
           </div>
 
           {/* Mission Control — live agent activity */}
-          <MissionControl brandId={ctx.brandId} isRunning={false} />
+          <MissionControl brandId={ctx.brandId} isRunning={false} initialStatuses={initialAgentStatuses} />
 
           {/* Internal Log */}
           <InternalLog entries={logEntries} />

@@ -44,19 +44,44 @@ const ALL_AGENTS = [
 // Props
 // ---------------------------------------------------------------------------
 
+export interface InitialAgentState {
+  agentId: string
+  state: 'idle' | 'running' | 'done' | 'error'
+  currentSkill?: string
+}
+
 interface MissionControlProps {
   brandId: string
   isRunning: boolean
   onRunComplete?: () => void
+  initialStatuses?: InitialAgentState[]
 }
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
-export function MissionControl({ brandId, isRunning, onRunComplete }: MissionControlProps) {
+export function MissionControl({ brandId, isRunning, onRunComplete, initialStatuses }: MissionControlProps) {
   const [events, setEvents] = useState<ActivityEvent[]>([])
-  const [agentStatuses, setAgentStatuses] = useState<Record<string, AgentStatus>>({})
+  const [agentStatuses, setAgentStatuses] = useState<Record<string, AgentStatus>>(() => {
+    // Hydrate from server-rendered recent skill_runs so the agent dots reflect
+    // the last known state (done/running/error) across page navigations.
+    const seed: Record<string, AgentStatus> = {}
+    for (const a of ALL_AGENTS) {
+      seed[a.id] = { ...a, state: 'idle' }
+    }
+    for (const s of initialStatuses ?? []) {
+      const base = ALL_AGENTS.find(a => a.id === s.agentId)
+      if (!base) continue
+      seed[s.agentId] = {
+        ...base,
+        state: s.state,
+        currentSkill: s.currentSkill,
+        progress: s.state === 'done' ? 100 : undefined,
+      }
+    }
+    return seed
+  })
   const terminalRef = useRef<HTMLDivElement>(null)
   const eventSourceRef = useRef<EventSource | null>(null)
 
