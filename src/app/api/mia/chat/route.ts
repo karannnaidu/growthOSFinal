@@ -3,7 +3,6 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { callModel } from '@/lib/model-client'
 import { buildSkillsCatalog } from '@/lib/mia-actions'
-import { getPlatformStatus, syncPlatformStatus } from '@/lib/knowledge/intelligence'
 import agentsJson from '../../../../../skills/agents.json'
 
 // ---------------------------------------------------------------------------
@@ -198,6 +197,7 @@ export async function POST(request: NextRequest): Promise<Response> {
   })
 
   // 6b. Platform connection status (source of truth for "is Meta connected?")
+  const { getPlatformStatus, syncPlatformStatus } = await import('@/lib/mia-intelligence')
   let platformStatus = await getPlatformStatus(brandId)
   if (!platformStatus) {
     try { platformStatus = await syncPlatformStatus(brandId) } catch { platformStatus = null }
