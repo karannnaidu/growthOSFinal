@@ -88,10 +88,19 @@ function ActionRow({
           </button>
         )}
         {state.status === 'failed' && (
-          <div className="flex items-center gap-1 text-[10px] text-red-400">
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className="flex items-center gap-1 text-[10px] text-red-400 hover:text-red-300 transition-colors"
+            title={state.error ?? 'Failed'}
+          >
             <XCircle className="h-3.5 w-3.5" />
-            <span className="truncate max-w-[120px]">{state.error ?? 'Failed'}</span>
-          </div>
+            <span className="truncate max-w-[160px]">{state.error ?? 'Failed'}</span>
+            {expanded ? (
+              <ChevronDown className="h-3 w-3" />
+            ) : (
+              <ChevronRight className="h-3 w-3" />
+            )}
+          </button>
         )}
         {state.status === 'pending' && (
           <span className="text-[10px] text-muted-foreground">Pending</span>
@@ -102,6 +111,13 @@ function ActionRow({
       {expanded && state.output && (
         <div className="mt-2">
           <SkillOutput output={state.output} compact maxHeight={240} />
+        </div>
+      )}
+
+      {/* Expanded error — shows the full failure reason so it isn't truncated */}
+      {expanded && state.status === 'failed' && state.error && (
+        <div className="mt-2 rounded-md border border-red-500/20 bg-red-500/[0.04] px-2.5 py-2 text-[11px] text-red-300 whitespace-pre-wrap break-words">
+          {state.error}
         </div>
       )}
     </div>

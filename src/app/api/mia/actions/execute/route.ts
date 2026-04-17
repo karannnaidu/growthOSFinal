@@ -126,6 +126,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     async start(controller) {
       const outputs = new Map<string, Record<string, unknown>>()
       const failed = new Set<string>()
+      const errors = new Map<string, string>()
 
       for (const action of validation.sorted) {
         if (action.type !== 'skill') continue
@@ -134,13 +135,15 @@ export async function POST(request: NextRequest): Promise<Response> {
         const depFailed = action.dependsOn.some((dep) => failed.has(dep))
         if (depFailed) {
           failed.add(action.id)
+          const skipMsg = 'Skipped — a dependency failed'
+          errors.set(action.id, skipMsg)
           controller.enqueue(
             sseEvent({
               type: 'action_failed',
               actionId: action.id,
               skillId: action.skillId,
               agentId: action.agentId,
-              error: 'Skipped — a dependency failed',
+              error: skipMsg,
             }),
           )
           continue
@@ -186,25 +189,29 @@ export async function POST(request: NextRequest): Promise<Response> {
             )
           } else {
             failed.add(action.id)
+            const errMsg = result.error ?? 'Skill run failed'
+            errors.set(action.id, errMsg)
             controller.enqueue(
               sseEvent({
                 type: 'action_failed',
                 actionId: action.id,
                 skillId: action.skillId,
                 agentId: action.agentId,
-                error: result.error ?? 'Skill run failed',
+                error: errMsg,
               }),
             )
           }
         } catch (err) {
           failed.add(action.id)
+          const errMsg = err instanceof Error ? err.message : 'Unexpected error'
+          errors.set(action.id, errMsg)
           controller.enqueue(
             sseEvent({
               type: 'action_failed',
               actionId: action.id,
               skillId: action.skillId,
               agentId: action.agentId,
-              error: err instanceof Error ? err.message : 'Unexpected error',
+              error: errMsg,
             }),
           )
         }
@@ -220,7 +227,15 @@ export async function POST(request: NextRequest): Promise<Response> {
 
       const failedSummary =
         failed.size > 0
-          ? `\n\nFailed actions: ${Array.from(failed).join(', ')}`
+          ? `\n\nFailed actions:\n${Array.from(failed)
+              .map((id) => {
+                const action = validation.sorted.find((a) => a.id === id)
+                const skillId = action?.type === 'skill' ? action.skillId : id
+                const agentId = action?.type === 'skill' ? action.agentId : 'unknown'
+                const err = errors.get(id) ?? 'Unknown error'
+                return `- ${skillId} (${agentId}): ${err}`
+              })
+              .join('\n')}`
           : ''
 
       let summaryContent: string
@@ -228,7 +243,7 @@ export async function POST(request: NextRequest): Promise<Response> {
         const summaryResult = await callModel({
           model: 'claude-sonnet-4-6',
           provider: 'anthropic',
-          systemPrompt: `You are Mia, an AI marketing manager for ${brand.name ?? 'the brand'}. Summarize the skill results below for the user. Be concise, highlight key findings and next steps. Do NOT include action blocks.`,
+          systemPrompt: `You are Mia, an AI marketing manager for ${brand.name ?? 'the brand'}. Summarize the skill results below for the user. Be concise, highlight key findings and next steps. If any actions failed, name the skill and the actual error (paraphrased if noisy) and suggest a next step. Do NOT include action blocks.`,
           userPrompt: `Skill results:\n\n${outputSummary}${failedSummary}\n\nProvide a concise summary for the user.`,
           maxTokens: 512,
           temperature: 0.5,

@@ -166,12 +166,97 @@ export function validateAndSort(actions: MiaAction[]): ValidationResult {
 // Skills catalog builder (for system prompt)
 // ---------------------------------------------------------------------------
 
+/** Minimal skill shape the catalog needs — kept narrow so callers can pass
+ * either `SkillDefinition` from the loader or a test fixture. */
+export interface CatalogSkill {
+  id: string
+  name?: string
+  agent?: string
+  requires?: string[]
+  mcpTools?: string[]
+}
+
+/** Map an MCP tool id like `meta_ads.campaigns.insights` to a coarse platform. */
+function toolToPlatform(tool: string): string | null {
+  if (tool.startsWith('meta_ads') || tool.startsWith('meta.')) return 'meta'
+  if (tool.startsWith('shopify') || tool.startsWith('brand.')) return 'shopify'
+  if (tool.startsWith('ga4')) return 'ga4'
+  if (tool.startsWith('gsc')) return 'gsc'
+  if (tool.startsWith('klaviyo')) return 'klaviyo'
+  if (tool.startsWith('google_ads')) return 'google_ads'
+  return null
+}
+
+function skillPlatforms(skill: CatalogSkill): string[] {
+  const set = new Set<string>(skill.requires ?? [])
+  for (const t of skill.mcpTools ?? []) {
+    const p = toolToPlatform(t)
+    if (p) set.add(p)
+  }
+  return Array.from(set)
+}
+
 export function buildSkillsCatalog(
-  agents: Array<{ id: string; name: string; skills: string[] }>,
+  agents: Array<{ id: string; name: string; role?: string; skills: string[] }>,
+  skills?: Map<string, CatalogSkill> | Record<string, CatalogSkill>,
 ): string {
-  const lines = agents
-    .filter((a) => a.id !== 'mia') // Mia doesn't trigger herself
-    .map((a) => `- ${a.id} (${a.name}): ${a.skills.join(', ')}`)
+  const skillMap = skills instanceof Map
+    ? skills
+    : skills
+      ? new Map(Object.entries(skills))
+      : null
+
+  const ownerAgents = agents.filter((a) => a.id !== 'mia')
+
+  const perAgent = ownerAgents.map((a) => {
+    const header = a.role ? `### ${a.id} (${a.name} — ${a.role})` : `### ${a.id} (${a.name})`
+    if (!skillMap) {
+      return `${header}\n  skills: ${a.skills.join(', ')}`
+    }
+    const rows = a.skills.map((sid) => {
+      const def = skillMap.get(sid)
+      if (!def) return `  - \`${sid}\``
+      const plats = skillPlatforms(def)
+      const requiresTag = def.requires && def.requires.length > 0
+        ? ` [requires: ${def.requires.join(', ')}]`
+        : ''
+      const readsTag = plats.length > 0 && !(def.requires && def.requires.length === plats.length)
+        ? ` [reads: ${plats.filter((p) => !(def.requires ?? []).includes(p)).join(', ')}]`
+        : ''
+      const name = def.name ? ` — ${def.name}` : ''
+      return `  - \`${sid}\`${name}${requiresTag}${readsTag}`
+    })
+    return `${header}\n${rows.join('\n')}`
+  })
+
+  // Build platform → owner-agent index so Mia routes by platform, not skill name.
+  const platformOwner: Record<string, string[]> = {}
+  if (skillMap) {
+    for (const a of ownerAgents) {
+      for (const sid of a.skills) {
+        const def = skillMap.get(sid)
+        if (!def) continue
+        for (const p of skillPlatforms(def)) {
+          ;(platformOwner[p] ??= []).push(`${a.id}.${sid}`)
+        }
+      }
+    }
+  }
+  const platformIndex = Object.keys(platformOwner).length > 0
+    ? Object.entries(platformOwner)
+        .map(([plat, entries]) => `- **${plat}** → ${Array.from(new Set(entries.map((e) => e.split('.')[0]))).join(', ')}`)
+        .join('\n')
+    : ''
+
+  const routingRules = `
+## Routing rules (important)
+- Pick the agent that OWNS the platform, not the one whose skill name sounds related.
+- Meta Ads questions → **max** (ad-performance-analyzer, campaign-optimizer, ad-scaling, budget-allocation).
+- Shopify / orders / products → **navi** or **scout** depending on intent (inventory vs. diagnostics).
+- Email / SMS → **luna**. SEO / content → **hugo**. Creative / ads copy → **aria**. CRO / landing pages → **sage**.
+- \`health-check\` (scout) is a holistic cross-platform diagnostic — use it for "how's my brand doing" questions, NOT for a single-platform connectivity or performance check.
+- If a skill has \`[requires: X]\` and X is not connected, ask the user to connect in Settings → Platforms instead of running it.
+${platformIndex ? `\n### Platform → agent index\n${platformIndex}\n` : ''}`
 
   return `## Available Skills
 
@@ -179,9 +264,8 @@ You can trigger skills by including an \`\`\`actions block in your response.
 Only include actions when the user's request clearly needs a skill to run.
 Do NOT include actions for simple conversational questions.
 
-Available skills by agent:
-${lines.join('\n')}
-
+${perAgent.join('\n\n')}
+${routingRules}
 If a skill requires data the user hasn't provided, use a "collect" action first.
 
 Action block format — include this fenced block after your message text:

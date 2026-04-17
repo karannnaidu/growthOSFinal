@@ -3,8 +3,9 @@ import { after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { callModel } from '@/lib/model-client'
-import { buildSkillsCatalog } from '@/lib/mia-actions'
+import { buildSkillsCatalog, type CatalogSkill } from '@/lib/mia-actions'
 import { extractMemories, getRelevantMemories, type MiaMemory } from '@/lib/mia-memory'
+import { loadAllSkills } from '@/lib/skill-loader'
 import agentsJson from '../../../../../skills/agents.json'
 
 // ---------------------------------------------------------------------------
@@ -348,9 +349,25 @@ export async function POST(request: NextRequest): Promise<Response> {
     ? memories.map((m) => `- [${m.kind}] ${m.content}`).join('\n')
     : 'No durable memories yet — anything the user tells you about their preferences, decisions, or context will be remembered across sessions.'
 
-  // 8. Build system prompt with brand context
+  // 8. Build system prompt with brand context.
+  //    Load every skill definition so the catalog can surface name, requires,
+  //    and mcp-tool-derived platform hints — otherwise Mia sees flat IDs and
+  //    routes Meta questions to whichever skill has the nicest-sounding name
+  //    instead of to the agent that owns the platform.
+  const skillDefs = await loadAllSkills()
+  const catalogSkillMap = new Map<string, CatalogSkill>()
+  for (const [id, def] of skillDefs) {
+    catalogSkillMap.set(id, {
+      id: def.id,
+      name: def.name,
+      agent: def.agent,
+      requires: def.requires,
+      mcpTools: def.mcpTools,
+    })
+  }
   const skillsCatalog = buildSkillsCatalog(
-    (agentsJson as Array<{ id: string; name: string; skills: string[] }>),
+    (agentsJson as Array<{ id: string; name: string; role?: string; skills: string[] }>),
+    catalogSkillMap,
   )
 
   const systemPrompt = buildSystemPrompt(
