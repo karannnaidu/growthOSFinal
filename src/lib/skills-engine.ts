@@ -633,55 +633,6 @@ export async function runSkill(input: SkillRunInput, onProgress?: (event: SkillP
     }
   }
 
-  // Post-execution: image generation for image-brief skill.
-  // Uses Nano Banana 2 (primary) / Imagen 4.0 (fallback) via imagen-client.
-  // Legacy fal.ai flux-schnell path was replaced here in Apr 2026 to match
-  // the Creative Studio pipeline at /api/creative/generate.
-  if (skill.id === 'image-brief' && status === 'completed') {
-    Promise.all([
-      import('@/lib/imagen-client'),
-      import('@/lib/fal-client'),
-      import('@/lib/supabase/service'),
-    ]).then(async ([{ generateAdImage }, { createMediaNode }, { createServiceClient }]) => {
-      try {
-        const admin = createServiceClient();
-        const briefs = Array.isArray(output.briefs) ? output.briefs : [output];
-        for (const briefRaw of briefs.slice(0, 4)) {
-          const brief = briefRaw as Record<string, unknown>;
-          const prompt = (brief.prompt || brief.description || JSON.stringify(brief)) as string;
-          const referenceImageUrl = (brief.reference_image_url || brief.product_image_url) as string | undefined;
-          const img = await generateAdImage({
-            prompt,
-            referenceImageUrl,
-            width: (brief.width as number | undefined) ?? 1024,
-            height: (brief.height as number | undefined) ?? 1024,
-          });
-          if (!img) continue;
-
-          const ext = img.mimeType.includes('png') ? 'png' : 'jpg';
-          const storagePath = `${input.brandId}/ad-creatives/${runId}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}.${ext}`;
-          const buffer = Buffer.from(img.base64, 'base64');
-          const { error: uploadErr } = await admin.storage
-            .from('generated-assets')
-            .upload(storagePath, buffer, { contentType: img.mimeType, upsert: true });
-          if (uploadErr) {
-            console.warn('[SkillsEngine] image-brief upload failed:', uploadErr.message);
-            continue;
-          }
-          await createMediaNode(
-            input.brandId, 'ad_creative',
-            (brief.name as string | undefined) || `Creative from image-brief · ${runId.slice(-8)}`,
-            storagePath, 'generated-assets', img.mimeType,
-            skill.id, runId,
-            { prompt, dimensions: `${img.width}x${img.height}` },
-          );
-        }
-      } catch (err) {
-        console.warn('[SkillsEngine] imagen post-execution failed:', err);
-      }
-    }).catch(console.warn);
-  }
-
   // Post-execution: persist brand guidelines for brand-voice-extractor
   if (skill.id === 'brand-voice-extractor' && status === 'completed') {
     import('@/lib/supabase/server').then(async ({ createClient: createSC }) => {
