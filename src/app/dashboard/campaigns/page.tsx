@@ -11,6 +11,8 @@ import {
   Pause,
   Play,
   Loader2,
+  Zap,
+  AlertCircle,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -73,11 +75,25 @@ const STATUS_CONFIG: Record<
 // Page
 // ---------------------------------------------------------------------------
 
+interface QuickResult {
+  success: boolean
+  partialFailure?: boolean
+  campaignName?: string
+  copyRunId?: string
+  imageRunId?: string
+  targetingRunId?: string
+  creditsUsed?: number
+  failures?: Array<{ skill: string; status: string; error: string }>
+  error?: string
+}
+
 export default function CampaignsPage() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const [quickRunning, setQuickRunning] = useState(false)
+  const [quickResult, setQuickResult] = useState<QuickResult | null>(null)
 
   // Resolve brand id, then fetch campaigns via API (bypasses RLS)
   const load = useCallback(async () => {
@@ -158,6 +174,37 @@ export default function CampaignsPage() {
     }
   }
 
+  async function handleQuickGenerate() {
+    setQuickRunning(true)
+    setQuickResult(null)
+
+    const brandId =
+      sessionStorage.getItem('onboarding_brand_id') ||
+      localStorage.getItem('growth_os_brand_id')
+    if (!brandId) {
+      setQuickResult({ success: false, error: 'No brand found' })
+      setQuickRunning(false)
+      return
+    }
+
+    try {
+      const res = await fetch('/api/mia/auto-campaign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ brandId, objective: 'conversion' }),
+      })
+      const data = (await res.json()) as QuickResult
+      setQuickResult(data)
+    } catch (err) {
+      setQuickResult({
+        success: false,
+        error: err instanceof Error ? err.message : 'Request failed',
+      })
+    } finally {
+      setQuickRunning(false)
+    }
+  }
+
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
@@ -170,13 +217,108 @@ export default function CampaignsPage() {
             Create and manage AI-powered marketing campaigns.
           </p>
         </div>
-        <Link href="/dashboard/campaigns/new">
-          <Button className="bg-indigo-600 hover:bg-indigo-700 text-white">
-            <Plus className="h-4 w-4 mr-1.5" />
-            New Campaign
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            className="border-amber-400/40 text-amber-200 hover:bg-amber-500/10 hover:text-amber-100"
+            onClick={handleQuickGenerate}
+            disabled={quickRunning}
+            title="Mia chains ad-copy → image-brief → audience-targeting"
+          >
+            {quickRunning ? (
+              <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+            ) : (
+              <Zap className="h-4 w-4 mr-1.5" />
+            )}
+            {quickRunning ? 'Generating...' : 'Quick Generate (Mia)'}
           </Button>
-        </Link>
+          <Link href="/dashboard/campaigns/new">
+            <Button className="bg-indigo-600 hover:bg-indigo-700 text-white">
+              <Plus className="h-4 w-4 mr-1.5" />
+              New Campaign
+            </Button>
+          </Link>
+        </div>
       </div>
+
+      {/* Quick-generate result */}
+      {quickResult && (
+        <div
+          className={cn(
+            'glass-panel rounded-xl p-4 border',
+            quickResult.success && !quickResult.partialFailure
+              ? 'border-emerald-500/30 bg-emerald-500/[0.04]'
+              : quickResult.partialFailure
+                ? 'border-amber-500/30 bg-amber-500/[0.04]'
+                : 'border-red-500/30 bg-red-500/[0.04]',
+          )}
+        >
+          <div className="flex items-start gap-3">
+            {quickResult.success && !quickResult.partialFailure ? (
+              <Zap className="h-4 w-4 mt-0.5 shrink-0 text-emerald-400" />
+            ) : (
+              <AlertCircle
+                className={cn(
+                  'h-4 w-4 mt-0.5 shrink-0',
+                  quickResult.partialFailure ? 'text-amber-400' : 'text-red-400',
+                )}
+              />
+            )}
+            <div className="flex-1 min-w-0 space-y-2">
+              <p className="text-sm font-medium text-foreground">
+                {quickResult.success && !quickResult.partialFailure
+                  ? `Generated: ${quickResult.campaignName ?? 'campaign'}`
+                  : quickResult.partialFailure
+                    ? 'Partial success'
+                    : 'Generation failed'}
+              </p>
+              {quickResult.creditsUsed != null && quickResult.creditsUsed > 0 && (
+                <p className="text-[11px] text-muted-foreground">
+                  {quickResult.creditsUsed} credits used
+                </p>
+              )}
+              {quickResult.error && (
+                <p className="text-[11px] text-red-300">{quickResult.error}</p>
+              )}
+              {quickResult.failures && quickResult.failures.length > 0 && (
+                <ul className="text-[11px] text-amber-200/80 space-y-0.5">
+                  {quickResult.failures.map((f) => (
+                    <li key={f.skill}>
+                      <span className="font-mono">{f.skill}</span>: {f.error}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {(quickResult.copyRunId || quickResult.imageRunId || quickResult.targetingRunId) && (
+                <div className="flex gap-3 text-[11px] text-muted-foreground flex-wrap">
+                  {quickResult.copyRunId && (
+                    <Link href={`/dashboard/runs/${quickResult.copyRunId}`} className="hover:text-foreground underline underline-offset-2">
+                      View copy run
+                    </Link>
+                  )}
+                  {quickResult.imageRunId && (
+                    <Link href={`/dashboard/runs/${quickResult.imageRunId}`} className="hover:text-foreground underline underline-offset-2">
+                      View image brief
+                    </Link>
+                  )}
+                  {quickResult.targetingRunId && (
+                    <Link href={`/dashboard/runs/${quickResult.targetingRunId}`} className="hover:text-foreground underline underline-offset-2">
+                      View targeting
+                    </Link>
+                  )}
+                </div>
+              )}
+            </div>
+            <button
+              onClick={() => setQuickResult(null)}
+              className="shrink-0 text-xs text-muted-foreground hover:text-foreground"
+              aria-label="Dismiss"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Loading skeleton */}
       {isLoading && (
