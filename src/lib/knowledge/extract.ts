@@ -109,6 +109,58 @@ Rules:
 - Skip nodes with generic names like "output" or "result".`;
 
 // ---------------------------------------------------------------------------
+// Tolerant JSON parser
+//
+// Even with Gemini's responseMimeType=application/json, occasional replies
+// come back with trailing commas or get truncated mid-object when the model
+// hits the token limit. We salvage what we can rather than losing the whole
+// extraction.
+// ---------------------------------------------------------------------------
+
+function parseExtractedGraph(raw: string): ExtractedGraph {
+  let text = raw
+    .replace(/^```(?:json)?\s*/i, '')
+    .replace(/\s*```$/, '')
+    .trim();
+
+  const firstBrace = text.indexOf('{');
+  if (firstBrace > 0) text = text.slice(firstBrace);
+
+  try {
+    return JSON.parse(text) as ExtractedGraph;
+  } catch {
+    // Salvage path: trim to the last complete array element, strip trailing
+    // commas, then close any open braces/brackets.
+    let salvaged = text.replace(/,\s*([}\]])/g, '$1');
+
+    // If JSON.parse still fails, walk back to the last `}` or `]` that sits
+    // at a shallow depth and truncate there. This handles the common case of
+    // "cut off mid-node".
+    try {
+      return JSON.parse(salvaged) as ExtractedGraph;
+    } catch {
+      const lastObjEnd = Math.max(salvaged.lastIndexOf('}'), salvaged.lastIndexOf(']'));
+      if (lastObjEnd > 0) {
+        salvaged = salvaged.slice(0, lastObjEnd + 1);
+        // Close any still-open containers the truncation left dangling.
+        let depth = 0;
+        const stack: string[] = [];
+        for (const ch of salvaged) {
+          if (ch === '{') { stack.push('}'); depth++; }
+          else if (ch === '[') { stack.push(']'); depth++; }
+          else if (ch === '}' || ch === ']') { stack.pop(); depth--; }
+        }
+        while (stack.length > 0) salvaged += stack.pop();
+        // Strip trailing commas one more time before parsing.
+        salvaged = salvaged.replace(/,(\s*[}\]])/g, '$1');
+        return JSON.parse(salvaged) as ExtractedGraph;
+      }
+      throw new Error('Unparseable LLM JSON output');
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Main function
 // ---------------------------------------------------------------------------
 
@@ -148,16 +200,12 @@ export async function extractEntities(
       provider: 'google',
       systemPrompt: EXTRACTION_SYSTEM_PROMPT + producesHint,
       userPrompt: `## Skill Output\n${outputJson.slice(0, 8000)}`, // cap to avoid token limit
-      maxTokens: 1024,
+      maxTokens: 2048,
       temperature: 0.1,
+      jsonMode: true,
     });
 
-    const cleaned = result.content
-      .replace(/^```(?:json)?\s*/i, '')
-      .replace(/\s*```$/, '')
-      .trim();
-
-    extracted = JSON.parse(cleaned) as ExtractedGraph;
+    extracted = parseExtractedGraph(result.content);
   } catch (err) {
     console.warn('[Extract] LLM extraction failed (non-fatal):', err);
     return {
