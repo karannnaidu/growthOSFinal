@@ -67,6 +67,8 @@ const VALID_EDGE_TYPES = new Set([
   'performs_on', 'belongs_to', 'generated_by', 'reviewed_by',
   'derived_from', 'part_of', 'sends_to', 'has_variant',
   'supersedes', 'similar_to', 'mentions',
+  // Nova AI visibility:
+  'measures',
 ]);
 
 // ---------------------------------------------------------------------------

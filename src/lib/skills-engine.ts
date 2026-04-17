@@ -390,6 +390,80 @@ export async function runSkill(input: SkillRunInput, onProgress?: (event: SkillP
     }
   }
 
+  // 5.6. AI-visibility-probe specific: pre-fetch engine probes so the LLM
+  // synthesizes from real data. Runs only for skill.id === 'ai-visibility-probe'.
+  if (skill.id === 'ai-visibility-probe') {
+    try {
+      const { probeAll } = await import('@/lib/ai-engines');
+      const { openaiSearch } = await import('@/lib/ai-engines/openai-search');
+      const { perplexitySearch } = await import('@/lib/ai-engines/perplexity');
+      const { geminiSearch } = await import('@/lib/ai-engines/gemini-search');
+
+      // Resolve latest brand_dna for canonical name + competitors.
+      const { data: dnaNode } = await supabase.from('knowledge_nodes')
+        .select('properties, name')
+        .eq('brand_id', input.brandId)
+        .eq('node_type', 'brand_dna')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const dnaProps = (dnaNode?.properties as Record<string, unknown> | undefined) ?? {};
+      const brandCanonicalName = (dnaProps.canonical_name as string | undefined) ?? 'Brand';
+      const competitorNames = Array.isArray(dnaProps.competitors)
+        ? (dnaProps.competitors as string[])
+        : [];
+
+      // Fetch high-priority queries (fallback to medium if low-count).
+      const { data: queryNodes } = await supabase.from('knowledge_nodes')
+        .select('name, properties')
+        .eq('brand_id', input.brandId)
+        .eq('node_type', 'ai_query')
+        .eq('is_active', true)
+        .limit(40);
+      const queries = (queryNodes ?? [])
+        .filter(n => (n.properties as Record<string, unknown>)?.priority !== 'low')
+        .slice(0, 20)
+        .map(n => n.name as string);
+
+      const engines = {
+        chatgpt: openaiSearch,
+        perplexity: perplexitySearch,
+        gemini: geminiSearch,
+      };
+      const probeResults: Array<{ query: string; engines: Record<string, unknown> }> = [];
+      for (const q of queries) {
+        const r = await probeAll({ query: q, brandCanonicalName, competitorNames }, engines);
+        probeResults.push({ query: q, engines: r });
+      }
+
+      input = {
+        ...input,
+        additionalContext: {
+          ...(input.additionalContext ?? {}),
+          _probe_results: probeResults,
+        },
+      };
+
+      // Record per-engine coverage in diagnostics.
+      const engineOk: Record<string, 'ok' | 'failed'> = {
+        chatgpt: 'ok',
+        perplexity: 'ok',
+        gemini: 'ok',
+      };
+      for (const r of probeResults) {
+        for (const [eng, per] of Object.entries(r.engines)) {
+          const errored = (per as { error?: string }).error;
+          if (errored) engineOk[eng] = 'failed';
+        }
+      }
+      diagnostics.coverage = engineOk;
+    } catch (err) {
+      console.warn('[SkillsEngine] ai-visibility-probe pre-fetch failed:', err);
+      diagnostics.coverage = { chatgpt: 'failed', perplexity: 'failed', gemini: 'failed' };
+    }
+  }
+
   // Inject pre-flight intelligence + data-source caveats into context.
   {
     const enrichedContext: Record<string, unknown> = { ...(input.additionalContext ?? {}) }
