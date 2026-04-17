@@ -394,8 +394,9 @@ Generate the creative brief as JSON.`;
       provider: 'google',
       systemPrompt: BRIEF_SYSTEM_PROMPT,
       userPrompt,
-      maxTokens: 4096,
+      maxTokens: 8192,
       temperature: 0.7,
+      jsonMode: true,
     });
     return parseLLMJson<CreativeBrief>(result.content, fallback);
   } catch (err) {
@@ -485,6 +486,7 @@ Score the creative as JSON.`;
       userPrompt,
       maxTokens: 2048,
       temperature: 0.3,
+      jsonMode: true,
     });
     return parseLLMJson<CreativeScore>(result.content, fallback);
   } catch (err) {

@@ -17,6 +17,10 @@ export interface ModelCallInput {
   userPrompt: string;
   maxTokens?: number;
   temperature?: number;
+  // Force raw JSON output (no markdown fences, no prose). Currently honored
+  // by Gemini via responseMimeType; OpenAI-compatible providers rely on
+  // prompt discipline.
+  jsonMode?: boolean;
 }
 
 export interface ModelCallResult {
@@ -49,6 +53,7 @@ async function callGemini(input: ModelCallInput): Promise<ModelCallResult> {
     generationConfig: {
       maxOutputTokens: input.maxTokens ?? 4096,
       temperature: input.temperature ?? 0.7,
+      ...(input.jsonMode ? { responseMimeType: 'application/json' } : {}),
     },
   });
 
