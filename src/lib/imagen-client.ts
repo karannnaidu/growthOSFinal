@@ -18,6 +18,50 @@ export interface GeneratedImage {
   height: number
 }
 
+/**
+ * Fetch a user-supplied reference image and inline it for the model.
+ * Falls back to a TLS-insecure dispatcher on CERT_HAS_EXPIRED etc. — reference
+ * URLs are public images going straight into a generative model; a bad cert on
+ * the brand's CDN shouldn't silently drop the product reference.
+ */
+async function fetchReferenceImage(
+  url: string,
+): Promise<{ mimeType: string; data: string } | null> {
+  const toInlineData = async (res: Response) => {
+    const buffer = Buffer.from(await res.arrayBuffer())
+    const mimeType = res.headers.get('content-type') || 'image/png'
+    return { mimeType, data: buffer.toString('base64') }
+  }
+
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(10000) })
+    if (res.ok) return await toInlineData(res)
+  } catch (err) {
+    const cause = (err as { cause?: { code?: string } })?.cause?.code
+    const tlsIssue = cause === 'CERT_HAS_EXPIRED' || cause === 'UNABLE_TO_VERIFY_LEAF_SIGNATURE' || cause === 'SELF_SIGNED_CERT_IN_CHAIN'
+    if (!tlsIssue) {
+      console.warn('[imagen-client] Failed to fetch reference image:', err)
+      return null
+    }
+    try {
+      const { Agent } = await import('undici')
+      const dispatcher = new Agent({ connect: { rejectUnauthorized: false } })
+      const res = await fetch(url, {
+        signal: AbortSignal.timeout(10000),
+        // @ts-expect-error undici dispatcher is not in the fetch type but is supported at runtime
+        dispatcher,
+      })
+      if (res.ok) {
+        console.warn(`[imagen-client] Reference image has bad TLS cert (${cause}); fetched insecurely.`)
+        return await toInlineData(res)
+      }
+    } catch (retryErr) {
+      console.warn('[imagen-client] Insecure retry failed:', retryErr)
+    }
+  }
+  return null
+}
+
 export async function generateWithNanoBanana(
   options: ImageGenOptions,
 ): Promise<GeneratedImage[]> {
@@ -27,16 +71,8 @@ export async function generateWithNanoBanana(
   const parts: Array<Record<string, unknown>> = []
 
   if (options.referenceImageUrl) {
-    try {
-      const imgRes = await fetch(options.referenceImageUrl, { signal: AbortSignal.timeout(10000) })
-      if (imgRes.ok) {
-        const buffer = Buffer.from(await imgRes.arrayBuffer())
-        const mimeType = imgRes.headers.get('content-type') || 'image/png'
-        parts.push({ inlineData: { mimeType, data: buffer.toString('base64') } })
-      }
-    } catch (err) {
-      console.warn('[imagen-client] Failed to fetch reference image:', err)
-    }
+    const fetched = await fetchReferenceImage(options.referenceImageUrl)
+    if (fetched) parts.push({ inlineData: fetched })
   }
 
   parts.push({ text: options.prompt })
