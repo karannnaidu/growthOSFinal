@@ -364,9 +364,11 @@ export async function runSkill(input: SkillRunInput, onProgress?: (event: SkillP
 
   onProgress?.({ agent: skill.agent, skill: skill.id, step: 'fetching_data', message: 'Platform data loaded', progress: 25 })
 
-  // 5.5. Fetch knowledge graph context via RAG (non-fatal)
+  // 5.5. Fetch knowledge graph context via RAG (non-fatal — records diagnostics)
   let ragContext: import('@/lib/knowledge/rag').RAGResult | null = null;
+  const diagnostics: import('@/lib/knowledge/diagnostics').SkillRunDiagnostics = {};
   if (skill.knowledge?.semanticQuery) {
+    const ragStart = Date.now();
     try {
       const { ragQuery } = await import('@/lib/knowledge/rag');
       ragContext = await ragQuery({
@@ -377,8 +379,14 @@ export async function runSkill(input: SkillRunInput, onProgress?: (event: SkillP
         traverseDepth: skill.knowledge.traverseDepth ?? 1,
         includeAgencyPatterns: skill.knowledge.includeAgencyPatterns ?? false,
       });
+      diagnostics.rag = { status: 'ok', latency_ms: Date.now() - ragStart };
     } catch (err) {
       console.warn('[SkillsEngine] ragQuery failed (continuing without knowledge context):', err);
+      diagnostics.rag = {
+        status: 'failed',
+        error: err instanceof Error ? err.message : String(err),
+        latency_ms: Date.now() - ragStart,
+      };
     }
   }
 
