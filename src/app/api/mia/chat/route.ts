@@ -51,6 +51,27 @@ Rules when a platform is NOT CONNECTED:
 
 {recentSkillRunsSummary}
 
+## What your team has said recently (last 30 days)
+
+{agentDigest}
+
+## When to suggest a skill (trigger-based, not menu-based)
+
+Default to leading with results, decisions, or creative output. Suggest a diagnostic/audit only when:
+- The user explicitly asked for it or described a matching problem.
+- A concrete signal warrants it: spend anomaly, revenue dip, new creatives live, new platform connected, competitor event, a completed brief ready to activate.
+- The last run was stale AND a new decision depends on fresh data.
+
+Re-run cool-downs (do NOT re-suggest inside these windows unless a fresh trigger above applies):
+- health-check: 30 days
+- anomaly-detection: 7 days
+- customer-signal-analyzer: 7 days
+- Any other audit / scan / scorer / analyzer: 14 days
+
+If a diagnostic is inside its cool-down, prefer (a) surfacing results already in the digest, (b) dispatching a creative or decision skill, or (c) one specific clarifying question — never a blanket "let me run some checks". Brand owners lose trust when the same checks keep being re-run.
+
+If the digest shows an agent is BLOCKED or FAILED, say so plainly and tell the user what to do (e.g. "Max is blocked because his Meta tool returned zero rows — check the ad account id in Settings").
+
 {skillsCatalog}
 
 Keep responses concise but insightful. You're a busy marketing manager, not a verbose chatbot.
@@ -67,6 +88,7 @@ function buildSystemPrompt(
   plan: string,
   connectedPlatforms: string,
   recentSkillRunsSummary: string,
+  agentDigest: string,
   skillsCatalog: string,
 ): string {
   return MIA_CHAT_SYSTEM_PROMPT
@@ -76,11 +98,39 @@ function buildSystemPrompt(
     .replace(/{plan}/g, plan)
     .replace(/{connectedPlatforms}/g, connectedPlatforms)
     .replace(/{recentSkillRunsSummary}/g, recentSkillRunsSummary)
+    .replace(/{agentDigest}/g, agentDigest)
     .replace(/{skillsCatalog}/g, skillsCatalog)
 }
 
 function sseEvent(data: Record<string, unknown>): Uint8Array {
   return new TextEncoder().encode(`data: ${JSON.stringify(data)}\n\n`)
+}
+
+/** Extract a short, user-facing line from a completed skill's JSON output. */
+function extractHeadline(output: unknown): string {
+  if (!output || typeof output !== 'object') return ''
+  const o = output as Record<string, unknown>
+
+  // Prefer explicit fields skills commonly set
+  for (const key of ['headline', 'summary', 'top_finding', 'recommendation', 'decision']) {
+    const v = o[key]
+    if (typeof v === 'string' && v.trim().length > 0) return v.slice(0, 200)
+  }
+  // Then any top-level string field
+  for (const v of Object.values(o)) {
+    if (typeof v === 'string' && v.trim().length > 0) return v.slice(0, 200)
+  }
+  // Then the first finding in a findings[] array
+  if (Array.isArray(o.findings) && o.findings.length > 0) {
+    const f = o.findings[0]
+    if (typeof f === 'string') return f.slice(0, 200)
+    if (f && typeof f === 'object') {
+      const fr = f as Record<string, unknown>
+      const cand = fr.title ?? fr.message ?? fr.summary
+      if (typeof cand === 'string') return cand.slice(0, 200)
+    }
+  }
+  return ''
 }
 
 function errorSSE(code: string, message: string): Response {
@@ -233,6 +283,54 @@ export async function POST(request: NextRequest): Promise<Response> {
           .join('\n')
       : 'No recent skill runs in the last 24 hours.'
 
+  // 7b. 30-day agent activity digest — last completed run per skill + blocked/failed visibility
+  const thirtyDaysAgoIso = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+  const { data: runs30d } = await admin
+    .from('skill_runs')
+    .select('skill_id, agent_id, status, output, error, blocked_reason, created_at')
+    .eq('brand_id', brandId)
+    .gte('created_at', thirtyDaysAgoIso)
+    .order('created_at', { ascending: false })
+    .limit(300)
+
+  type Run30d = {
+    skill_id: string
+    agent_id: string | null
+    status: string
+    output: unknown
+    error: string | null
+    blocked_reason: string | null
+    created_at: string
+  }
+
+  const firstBySkill = new Map<string, Run30d>()
+  for (const r of (runs30d ?? []) as Run30d[]) {
+    if (!firstBySkill.has(r.skill_id)) firstBySkill.set(r.skill_id, r)
+  }
+
+  const now = Date.now()
+  const agentDigest = Array.from(firstBySkill.values())
+    .slice(0, 12)
+    .map((r) => {
+      const days = Math.max(0, Math.floor((now - new Date(r.created_at).getTime()) / (24 * 60 * 60 * 1000)))
+      const ago = days === 0 ? 'today' : `${days}d ago`
+      const label = `${r.agent_id ?? 'unknown'}/${r.skill_id}`
+      if (r.status === 'completed') {
+        const headline = extractHeadline(r.output)
+        return headline ? `- ${label} (${ago}, completed) — "${headline}"` : `- ${label} (${ago}, completed)`
+      }
+      if (r.status === 'blocked') {
+        return `- ${label} (${ago}, BLOCKED: ${r.blocked_reason ?? 'unknown reason'})`
+      }
+      if (r.status === 'failed') {
+        return `- ${label} (${ago}, FAILED: ${r.error ?? 'unknown error'})`
+      }
+      return `- ${label} (${ago}, ${r.status})`
+    })
+    .join('\n')
+
+  const agentDigestBlock = agentDigest || 'No agent activity in the last 30 days.'
+
   // 8. Build system prompt with brand context
   const skillsCatalog = buildSkillsCatalog(
     (agentsJson as Array<{ id: string; name: string; skills: string[] }>),
@@ -247,6 +345,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     (brand.plan as string) ?? 'standard',
     connectedPlatformsBlock,
     recentSkillRunsSummary,
+    agentDigestBlock,
     skillsCatalog,
   )
 
