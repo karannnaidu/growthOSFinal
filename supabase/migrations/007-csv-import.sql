@@ -74,21 +74,25 @@ alter table brand_csv_orders enable row level security;
 alter table brand_csv_customers enable row level security;
 alter table brand_csv_products enable row level security;
 
+drop policy if exists "brand members read csv_imports" on brand_csv_imports;
 create policy "brand members read csv_imports" on brand_csv_imports
   for select using (brand_id in (
     select brand_id from brand_members where user_id = auth.uid()
     union select id from brands where owner_id = auth.uid()
   ));
+drop policy if exists "brand members read csv_orders" on brand_csv_orders;
 create policy "brand members read csv_orders" on brand_csv_orders
   for select using (brand_id in (
     select brand_id from brand_members where user_id = auth.uid()
     union select id from brands where owner_id = auth.uid()
   ));
+drop policy if exists "brand members read csv_customers" on brand_csv_customers;
 create policy "brand members read csv_customers" on brand_csv_customers
   for select using (brand_id in (
     select brand_id from brand_members where user_id = auth.uid()
     union select id from brands where owner_id = auth.uid()
   ));
+drop policy if exists "brand members read csv_products" on brand_csv_products;
 create policy "brand members read csv_products" on brand_csv_products
   for select using (brand_id in (
     select brand_id from brand_members where user_id = auth.uid()
