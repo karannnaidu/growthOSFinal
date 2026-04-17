@@ -656,51 +656,6 @@ export async function runSkill(input: SkillRunInput, onProgress?: (event: SkillP
     }).catch(console.warn);
   }
 
-  // Post-execution: persist competitor ad creatives with thumbnails
-  if ((skill.id === 'competitor-scan' || skill.id === 'competitor-creative-library') && status === 'completed') {
-    try {
-      const competitorAds = liveData.competitor?.ads as Array<{ competitor: string; ads: Array<{
-        id: string; page_name: string; ad_creative_body: string | null;
-        media_type: string; thumbnail_url: string | null; ad_snapshot_url: string | null;
-        estimated_days_active: number; ad_creative_link_title: string | null;
-      }> }> | undefined
-
-      if (competitorAds) {
-        for (const group of competitorAds) {
-          for (const ad of (group.ads ?? []).slice(0, 25)) {
-            // Upsert competitor_creative node with actual thumbnail URL
-            await supabase.from('knowledge_nodes').upsert({
-              brand_id: input.brandId,
-              node_type: 'competitor_creative',
-              name: `${group.competitor}: ${ad.ad_creative_link_title || ad.id}`,
-              summary: ad.ad_creative_body?.slice(0, 300) ?? null,
-              properties: {
-                competitor_name: group.competitor,
-                ad_id: ad.id,
-                ad_creative_body: ad.ad_creative_body,
-                ad_creative_link_title: ad.ad_creative_link_title,
-                media_type: ad.media_type,
-                thumbnail_url: ad.thumbnail_url,
-                ad_snapshot_url: ad.ad_snapshot_url,
-                estimated_days_active: ad.estimated_days_active,
-                format: ad.media_type === 'video' ? 'video' : ad.media_type === 'image' ? 'static_image' : 'unknown',
-                messaging_approach: 'unknown',
-                estimated_performance: ad.estimated_days_active >= 14 ? 'high' : ad.estimated_days_active >= 7 ? 'medium' : 'low',
-              },
-              source_skill: skill.id,
-              source_run_id: runId,
-              confidence: ad.estimated_days_active >= 14 ? 0.9 : 0.7,
-              is_active: true,
-              updated_at: new Date().toISOString(),
-            }, { onConflict: 'brand_id,name', ignoreDuplicates: false })
-          }
-        }
-      }
-    } catch (err) {
-      console.warn('[SkillsEngine] competitor creative persist failed:', err)
-    }
-  }
-
   // Post-execution: bridge top content after health-check
   if (skill.id === 'health-check' && status === 'completed') {
     import('@/lib/knowledge/bridges').then(async ({ bridgeTopContent }) => {
