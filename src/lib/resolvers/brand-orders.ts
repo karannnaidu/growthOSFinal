@@ -107,6 +107,28 @@ export async function resolveBrandOrders(
     }
   }
 
-  // 2. CSV upload — not implemented yet.
+  // 2. CSV upload — from brand_csv_orders table.
+  const { data: csvRows } = await supabase
+    .from('brand_csv_orders')
+    .select('order_id, customer_email, total_price, currency, created_at')
+    .eq('brand_id', brandId)
+    .order('created_at', { ascending: false })
+    .limit(500);
+
+  if (csvRows && csvRows.length > 0) {
+    return {
+      data: csvRows.map((r) => ({
+        id: r.order_id,
+        created_at: r.created_at ?? '',
+        total: r.total_price != null ? Number(r.total_price) : 0,
+        currency: r.currency ?? 'USD',
+        customer_id: r.customer_email ?? undefined,
+      })),
+      source: 'csv',
+      confidence: 'medium',
+      isComplete: true,
+    };
+  }
+
   return { data: null, source: null, confidence: 'low', isComplete: false };
 }

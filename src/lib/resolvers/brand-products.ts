@@ -106,7 +106,28 @@ export async function resolveBrandProducts(
     }
   }
 
-  // 2. brand_data from onboarding extraction.
+  // 2. CSV upload — from brand_csv_products table.
+  const { data: csvRows } = await supabase
+    .from('brand_csv_products')
+    .select('product_id, sku, title, price, inventory')
+    .eq('brand_id', brandId)
+    .limit(500);
+
+  if (csvRows && csvRows.length > 0) {
+    return {
+      data: csvRows.map((r) => ({
+        id: String(r.product_id ?? r.sku ?? r.title),
+        title: r.title,
+        price: r.price != null ? Number(r.price) : undefined,
+        sku: r.sku ?? undefined,
+      })),
+      source: 'csv',
+      confidence: 'medium',
+      isComplete: true,
+    };
+  }
+
+  // 3. brand_data from onboarding extraction.
   const { data: brand } = await supabase
     .from('brands')
     .select('brand_data')
@@ -123,6 +144,6 @@ export async function resolveBrandProducts(
     };
   }
 
-  // 3. CSV and 4. scrape — not implemented yet.
+  // 4. scrape — not implemented yet.
   return { data: null, source: null, confidence: 'low', isComplete: false };
 }

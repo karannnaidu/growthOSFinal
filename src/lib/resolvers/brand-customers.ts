@@ -118,7 +118,30 @@ export async function resolveBrandCustomers(
     }
   }
 
-  // 2. Try Klaviyo — clone of klaviyo.lists.get pattern, but hit /profiles
+  // 2. CSV upload — richer fields than Klaviyo profiles, user-curated.
+  const { data: csvRows } = await supabase
+    .from('brand_csv_customers')
+    .select('email, first_name, last_name, total_spent, orders_count')
+    .eq('brand_id', brandId)
+    .limit(500);
+
+  if (csvRows && csvRows.length > 0) {
+    return {
+      data: csvRows.map((r, i) => ({
+        id: r.email ?? `csv-${i}`,
+        email: r.email ?? undefined,
+        first_name: r.first_name ?? undefined,
+        last_name: r.last_name ?? undefined,
+        total_spent: r.total_spent != null ? Number(r.total_spent) : undefined,
+        orders_count: r.orders_count ?? undefined,
+      })),
+      source: 'csv',
+      confidence: 'medium',
+      isComplete: true,
+    };
+  }
+
+  // 3. Try Klaviyo — clone of klaviyo.lists.get pattern, but hit /profiles
   //    since we want individual customers rather than list metadata.
   const { data: klaviyoCred } = await supabase
     .from('credentials')
@@ -162,6 +185,5 @@ export async function resolveBrandCustomers(
     }
   }
 
-  // 3. CSV upload — not implemented yet.
   return { data: null, source: null, confidence: 'low', isComplete: false };
 }
