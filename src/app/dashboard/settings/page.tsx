@@ -6,7 +6,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import {
   Palette, Type, Users, Target, Package, RefreshCw, Dna,
-  Plus, ExternalLink, X, Pencil, Check,
+  Plus, ExternalLink, X, Pencil, Check, Upload,
 } from 'lucide-react'
 
 // ---------------------------------------------------------------------------
@@ -235,16 +235,70 @@ function EditablePills({
   )
 }
 
-function AddProductCard({ onAdd }: { onAdd: (p: BrandDna['products'][0]) => void }) {
+function AddProductCard({ brandId, onAdd }: { brandId: string | null; onAdd: (p: BrandDna['products'][0]) => void }) {
   const [open, setOpen] = useState(false)
   const [name, setName] = useState('')
   const [price, setPrice] = useState('')
   const [category, setCategory] = useState('')
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [uploading, setUploading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  function handleSubmit() {
-    if (!name.trim()) return
-    onAdd({ name: name.trim(), description: '', price: price.trim() || null, image_url: null, category: category.trim() || 'General' })
-    setName(''); setPrice(''); setCategory(''); setOpen(false)
+  function resetAndClose() {
+    setName(''); setPrice(''); setCategory(''); setError(null)
+    setImageFile(null)
+    if (previewUrl) URL.revokeObjectURL(previewUrl)
+    setPreviewUrl(null)
+    setOpen(false)
+  }
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0] ?? null
+    if (previewUrl) URL.revokeObjectURL(previewUrl)
+    setImageFile(f)
+    setPreviewUrl(f ? URL.createObjectURL(f) : null)
+    setError(null)
+  }
+
+  async function handleSubmit() {
+    if (!name.trim() || uploading) return
+    setError(null)
+
+    let imageUrl: string | null = null
+    if (imageFile) {
+      if (!brandId) { setError('Brand not loaded yet'); return }
+      setUploading(true)
+      try {
+        const fd = new FormData()
+        fd.append('file', imageFile)
+        fd.append('brandId', brandId)
+        fd.append('bucket', 'brand-assets')
+        const res = await fetch('/api/media/upload', { method: 'POST', body: fd })
+        if (!res.ok) {
+          const j = await res.json().catch(() => ({})) as { error?: string }
+          setError(j.error || 'Upload failed')
+          setUploading(false)
+          return
+        }
+        const data = await res.json() as { publicUrl: string | null }
+        imageUrl = data.publicUrl
+      } catch {
+        setError('Upload failed')
+        setUploading(false)
+        return
+      }
+      setUploading(false)
+    }
+
+    onAdd({
+      name: name.trim(),
+      description: '',
+      price: price.trim() || null,
+      image_url: imageUrl,
+      category: category.trim() || 'General',
+    })
+    resetAndClose()
   }
 
   if (!open) {
@@ -259,15 +313,37 @@ function AddProductCard({ onAdd }: { onAdd: (p: BrandDna['products'][0]) => void
 
   return (
     <div className="rounded-lg bg-white/5 border border-border/40 p-3 flex flex-col gap-2">
+      <label className="aspect-square bg-white/5 rounded border border-dashed border-white/15 hover:border-[#0d9488]/40 flex items-center justify-center cursor-pointer overflow-hidden relative group/img">
+        {previewUrl ? (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={previewUrl} alt="Preview" className="absolute inset-0 w-full h-full object-cover" />
+            <span className="absolute inset-0 bg-black/50 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center text-[10px] text-white">
+              Change image
+            </span>
+          </>
+        ) : (
+          <div className="flex flex-col items-center gap-1 text-muted-foreground/50 text-[10px]">
+            <Upload className="w-4 h-4" />
+            <span>Add image</span>
+          </div>
+        )}
+        <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+      </label>
       <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Product name *" autoFocus
         className="w-full rounded bg-white/5 border border-border/40 px-2.5 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/50 focus:border-[#0d9488] focus:outline-none" />
       <input value={price} onChange={(e) => setPrice(e.target.value)} placeholder="Price (e.g. $29.99)"
         className="w-full rounded bg-white/5 border border-border/40 px-2.5 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/50 focus:border-[#0d9488] focus:outline-none" />
       <input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Category"
         className="w-full rounded bg-white/5 border border-border/40 px-2.5 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/50 focus:border-[#0d9488] focus:outline-none" />
+      {error && <div className="text-[10px] text-[#ef4444]">{error}</div>}
       <div className="flex gap-1.5">
-        <button onClick={handleSubmit} className="rounded bg-[#0d9488] px-2.5 py-1 text-[10px] font-medium text-white hover:bg-[#0d9488]/80">Add</button>
-        <button onClick={() => setOpen(false)} className="rounded px-2.5 py-1 text-[10px] text-muted-foreground hover:text-foreground">Cancel</button>
+        <button onClick={handleSubmit} disabled={uploading || !name.trim()}
+          className="rounded bg-[#0d9488] px-2.5 py-1 text-[10px] font-medium text-white hover:bg-[#0d9488]/80 disabled:opacity-50">
+          {uploading ? 'Uploading...' : 'Add'}
+        </button>
+        <button onClick={resetAndClose} disabled={uploading}
+          className="rounded px-2.5 py-1 text-[10px] text-muted-foreground hover:text-foreground disabled:opacity-50">Cancel</button>
       </div>
     </div>
   )
@@ -734,7 +810,7 @@ export default function BrandDnaPage() {
                 </button>
               </div>
             ))}
-            <AddProductCard onAdd={(p) => update((d) => ({ ...d, products: [...d.products, p] }))} />
+            <AddProductCard brandId={brandId} onAdd={(p) => update((d) => ({ ...d, products: [...d.products, p] }))} />
           </div>
         </CardContent>
       </Card>

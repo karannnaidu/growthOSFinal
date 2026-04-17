@@ -5,7 +5,7 @@
 // FormData fields: file (File), brandId (string), bucket (string)
 //   bucket must be one of: brand-assets | generated-assets | competitor-assets
 //
-// Response: { path, url }
+// Response: { path, bucket, publicUrl }
 // ---------------------------------------------------------------------------
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -121,6 +121,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: 'Upload failed' }, { status: 500 })
   }
 
-  // Return path (signed URL generated on demand via /api/media/signed-url)
-  return NextResponse.json({ path: storagePath, bucket }, { status: 201 })
+  const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(storagePath)
+
+  return NextResponse.json(
+    { path: storagePath, bucket, publicUrl: urlData?.publicUrl ?? null },
+    { status: 201 },
+  )
 }
