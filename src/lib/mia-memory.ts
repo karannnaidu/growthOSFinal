@@ -106,11 +106,16 @@ export async function extractMemories(args: {
   const admin = createServiceClient()
 
   // Dedupe: skip inserting if same (kind, content) already exists for this brand
-  const { data: existing } = await admin
+  const { data: existing, error: existingErr } = await admin
     .from('knowledge_nodes')
     .select('name, properties')
     .eq('brand_id', brandId)
     .eq('node_type', 'mia_memory')
+
+  if (existingErr) {
+    console.warn('[mia-memory] dedupe select failed:', existingErr)
+    return { created: 0 }
+  }
 
   const existingSet = new Set(
     ((existing ?? []) as Array<{ name: string; properties: { kind?: string; content?: string } | null }>)
@@ -137,12 +142,17 @@ export async function extractMemories(args: {
   }
 
   // Enforce the 50-memory cap: delete oldest overflow
-  const { data: all } = await admin
+  const { data: all, error: allErr } = await admin
     .from('knowledge_nodes')
     .select('id, created_at, properties')
     .eq('brand_id', brandId)
     .eq('node_type', 'mia_memory')
     .order('created_at', { ascending: false })
+
+  if (allErr) {
+    console.warn('[mia-memory] cap-enforcement select failed:', allErr)
+    return { created }
+  }
 
   if (all && all.length > MAX_MEMORIES_PER_BRAND) {
     const overflow = all.slice(MAX_MEMORIES_PER_BRAND)
