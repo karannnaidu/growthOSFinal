@@ -128,7 +128,9 @@ export function MissionControl({ brandId, isRunning, onRunComplete }: MissionCon
                 }
               } else if (eventType === 'result') {
                 const agentId = data.agent || ''
-                addEvent({ agent: agentId, message: `✓ ${data.skill || 'Skill'} ${data.status}`, timestamp: ts, type: 'result', skill: data.skill })
+                const didFail = data.status === 'failed' || data.status === 'blocked'
+                const icon = didFail ? '✗' : '✓'
+                addEvent({ agent: agentId, message: `${icon} ${data.skill || 'Skill'} ${data.status}`, timestamp: ts, type: didFail ? 'error' : 'result', skill: data.skill })
                 if (agentId) {
                   updateAgentStatus(agentId, { state: 'done', progress: 100 })
                 }

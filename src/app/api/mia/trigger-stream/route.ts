@@ -132,14 +132,18 @@ export async function POST(request: NextRequest): Promise<Response> {
         for (const skillId of filtered) {
           send('status', { agent: 'mia', message: `Dispatching ${skillId}...`, phase: 'dispatch' })
 
+          let lastAgent = 'mia'
           try {
             const result = await runSkill(
               { brandId, skillId, triggeredBy: 'mia', additionalContext: { source: 'mia_cycle', health_check_output: healthOutput } },
-              (event) => send('progress', event as unknown as Record<string, unknown>),
+              (event) => {
+                if (event.agent) lastAgent = event.agent
+                send('progress', event as unknown as Record<string, unknown>)
+              },
             )
-            send('result', { agent: result.modelUsed, skill: skillId, status: result.status })
+            send('result', { agent: lastAgent, skill: skillId, status: result.status })
           } catch (err) {
-            send('error', { skill: skillId, message: err instanceof Error ? err.message : 'Failed' })
+            send('error', { agent: lastAgent, skill: skillId, message: err instanceof Error ? err.message : 'Failed' })
           }
         }
 
@@ -151,7 +155,7 @@ export async function POST(request: NextRequest): Promise<Response> {
           })
         }
 
-        send('complete', { totalSkills: filtered.length, message: messageToUser })
+        send('complete', { totalSkills: filtered.length })
       } catch (err) {
         send('error', { message: err instanceof Error ? err.message : 'Mia trigger failed' })
       } finally {
