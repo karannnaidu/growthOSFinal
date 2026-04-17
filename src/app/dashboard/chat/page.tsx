@@ -64,6 +64,7 @@ export default function ChatPage() {
   const [executingMessageId, setExecutingMessageId] = useState<string | null>(null)
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const didRestoreRef = useRef(false)
   const supabase = createClient()
 
   // Auto-scroll when messages change
@@ -153,16 +154,19 @@ export default function ChatPage() {
 
   // Restore last active conversation after brandId resolves
   useEffect(() => {
-    if (!brandId) return
+    if (!brandId || didRestoreRef.current) return
+    didRestoreRef.current = true
     let stored: string | null = null
     try { stored = localStorage.getItem(storageKeyForActiveConv(brandId)) } catch { /* noop */ }
     if (stored) {
       loadConversation(stored).catch(() => {
-        // If load fails (conversation deleted server-side), drop the stale key
         try { localStorage.removeItem(storageKeyForActiveConv(brandId)) } catch { /* noop */ }
       })
     }
   }, [brandId, loadConversation])
+
+  // Reset restore guard when brandId changes so brand switches trigger a fresh restore
+  useEffect(() => { didRestoreRef.current = false }, [brandId])
 
   // Start a new conversation (clear state)
   const startNewConversation = useCallback(() => {
