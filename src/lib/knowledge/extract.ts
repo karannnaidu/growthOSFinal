@@ -58,6 +58,8 @@ const VALID_NODE_TYPES = new Set([
   'competitor_creative', 'ad_creative', 'video_asset',
   'landing_page', 'review_theme', 'price_point',
   'brand_guidelines', 'brand_asset', 'top_content',
+  // Nova AI visibility:
+  'brand_dna', 'ai_query', 'ai_probe_result', 'ai_artifact',
 ]);
 
 const VALID_EDGE_TYPES = new Set([
