@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { callModel } from '@/lib/model-client'
 import { buildSkillsCatalog } from '@/lib/mia-actions'
+import { extractMemories, getRelevantMemories, type MiaMemory } from '@/lib/mia-memory'
 import agentsJson from '../../../../../skills/agents.json'
 
 // ---------------------------------------------------------------------------
@@ -55,6 +56,10 @@ Rules when a platform is NOT CONNECTED:
 
 {agentDigest}
 
+## What you remember about this brand
+
+{memories}
+
 ## When to suggest a skill (trigger-based, not menu-based)
 
 Default to leading with results, decisions, or creative output. Suggest a diagnostic/audit only when:
@@ -89,6 +94,7 @@ function buildSystemPrompt(
   connectedPlatforms: string,
   recentSkillRunsSummary: string,
   agentDigest: string,
+  memories: string,
   skillsCatalog: string,
 ): string {
   return MIA_CHAT_SYSTEM_PROMPT
@@ -99,6 +105,7 @@ function buildSystemPrompt(
     .replace(/{connectedPlatforms}/g, connectedPlatforms)
     .replace(/{recentSkillRunsSummary}/g, recentSkillRunsSummary)
     .replace(/{agentDigest}/g, agentDigest)
+    .replace(/{memories}/g, memories)
     .replace(/{skillsCatalog}/g, skillsCatalog)
 }
 
@@ -332,6 +339,14 @@ export async function POST(request: NextRequest): Promise<Response> {
 
   const agentDigestBlock = agentDigest || 'No agent activity in the last 30 days.'
 
+  // 7c. Retrieve durable memories for prompt injection
+  let memories: MiaMemory[] = []
+  try { memories = await getRelevantMemories(brandId, 20) } catch { memories = [] }
+
+  const memoriesBlock = memories.length > 0
+    ? memories.map((m) => `- [${m.kind}] ${m.content}`).join('\n')
+    : 'No durable memories yet — anything the user tells you about their preferences, decisions, or context will be remembered across sessions.'
+
   // 8. Build system prompt with brand context
   const skillsCatalog = buildSkillsCatalog(
     (agentsJson as Array<{ id: string; name: string; skills: string[] }>),
@@ -347,6 +362,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     connectedPlatformsBlock,
     recentSkillRunsSummary,
     agentDigestBlock,
+    memoriesBlock,
     skillsCatalog,
   )
 
@@ -403,6 +419,14 @@ export async function POST(request: NextRequest): Promise<Response> {
 
         // Send done event
         controller.enqueue(sseEvent({ type: 'done' }))
+
+        // Fire-and-forget memory extraction — do NOT await. If it fails, we log.
+        void extractMemories({
+          brandId,
+          userMessage: message.trim(),
+          assistantMessage: result.content,
+          sourceMessageId: null,
+        }).catch((err) => console.warn('[mia-chat] memory extraction failed:', err))
       } catch (err) {
         controller.enqueue(
           sseEvent({
