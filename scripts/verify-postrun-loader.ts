@@ -32,6 +32,18 @@ async function main() {
   if (typeof ib !== 'function') { console.error('FAIL: image-brief postRun not found'); process.exit(1); }
   console.log('image-brief -> function OK');
 
+  const bde = await loadPostRun('brand-dna-extractor');
+  if (typeof bde !== 'function') { console.error('FAIL: brand-dna-extractor postRun not found'); process.exit(1); }
+  console.log('brand-dna-extractor -> function OK');
+
+  const avp = await loadPostRun('ai-visibility-probe');
+  if (typeof avp !== 'function') { console.error('FAIL: ai-visibility-probe postRun not found'); process.exit(1); }
+  console.log('ai-visibility-probe -> function OK');
+
+  const avo = await loadPostRun('ai-visibility-optimize');
+  if (typeof avo !== 'function') { console.error('FAIL: ai-visibility-optimize postRun not found'); process.exit(1); }
+  console.log('ai-visibility-optimize -> function OK');
+
   console.log('OK');
 }
 
