@@ -52,6 +52,7 @@ interface BrandDna {
     primary_colors: string[]
     secondary_colors: string[]
     font_families: string[]
+    custom_fonts?: CustomFont[]
     logo_url: string | null
     logo_variants?: LogoVariant[]
     aesthetic: string
@@ -67,6 +68,30 @@ export type LogoVariantKind = 'primary' | 'mono-dark' | 'mono-light'
 export interface LogoVariant {
   url: string
   variant: LogoVariantKind
+}
+
+export interface CustomFont {
+  name: string
+  url: string
+  /** Deduced from filename extension; used by the @font-face format() hint. */
+  format?: 'woff2' | 'woff' | 'truetype' | 'opentype'
+}
+
+const FONT_ACCEPT = '.woff2,.woff,.ttf,.otf,font/woff,font/woff2,font/ttf,font/otf'
+
+function fontFormatFromFilename(name: string): CustomFont['format'] {
+  const lower = name.toLowerCase()
+  if (lower.endsWith('.woff2')) return 'woff2'
+  if (lower.endsWith('.woff')) return 'woff'
+  if (lower.endsWith('.ttf')) return 'truetype'
+  if (lower.endsWith('.otf')) return 'opentype'
+  return undefined
+}
+
+function displayNameFromFilename(name: string): string {
+  // Strip extension, replace separators with spaces, collapse whitespace.
+  const stem = name.replace(/\.[^.]+$/, '')
+  return stem.replace(/[_\-]+/g, ' ').replace(/\s+/g, ' ').trim()
 }
 
 const LOGO_VARIANT_LABELS: Record<LogoVariantKind, { label: string; hint: string; swatch: string }> = {
@@ -254,22 +279,31 @@ function EditablePills({
 
 function FontPicker({
   items,
+  customFonts,
+  brandId,
   onUpdate,
+  onCustomFontsChange,
 }: {
   items: string[]
+  customFonts: CustomFont[]
+  brandId: string | null
   onUpdate: (items: string[]) => void
+  onCustomFontsChange: (next: CustomFont[]) => void
 }) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
-  const [category, setCategory] = useState<'all' | FontCategory>('all')
+  const [category, setCategory] = useState<'all' | FontCategory | 'custom'>('all')
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
 
-  // Inject a preview stylesheet covering selected + filtered candidates so
+  // Inject a preview stylesheet covering selected + filtered Google Fonts so
   // each option renders in its own typeface. Cap at 40 families to keep the
-  // network hit small; names beyond that still show in system font.
+  // network hit small; custom fonts get their own @font-face rules below.
   useEffect(() => {
-    const selected = items
+    const customNameSet = new Set(customFonts.map((f) => f.name))
+    const selected = items.filter((n) => !customNameSet.has(n))
     const candidates = BRAND_FONTS
-      .filter((f) => category === 'all' || f.category === category)
+      .filter((f) => category === 'all' || category === 'custom' || f.category === category)
       .filter((f) => !query.trim() || f.name.toLowerCase().includes(query.trim().toLowerCase()))
       .slice(0, 40)
       .map((f) => f.name)
@@ -285,15 +319,86 @@ function FontPicker({
       document.head.appendChild(link)
     }
     if (link.href !== href) link.href = href
-  }, [items, query, category, open])
+  }, [items, query, category, open, customFonts])
 
-  const filtered = BRAND_FONTS
-    .filter((f) => category === 'all' || f.category === category)
+  // Inject @font-face rules for brand-uploaded custom fonts so they preview
+  // in the list and in the selected chips. One <style> element, rewritten on
+  // change — the set of custom fonts is small (a handful per brand).
+  useEffect(() => {
+    const id = 'brand-custom-font-face'
+    let styleEl = document.getElementById(id) as HTMLStyleElement | null
+    if (!styleEl) {
+      styleEl = document.createElement('style')
+      styleEl.id = id
+      document.head.appendChild(styleEl)
+    }
+    const css = customFonts
+      .map((f) => {
+        const fmt = f.format ? ` format('${f.format}')` : ''
+        return `@font-face{font-family:'${f.name.replace(/'/g, "\\'")}';src:url('${f.url}')${fmt};font-display:swap;}`
+      })
+      .join('\n')
+    if (styleEl.textContent !== css) styleEl.textContent = css
+  }, [customFonts])
+
+  const filteredGoogle = BRAND_FONTS
+    .filter((f) => category === 'all' || (category !== 'custom' && f.category === category))
+    .filter((f) => !query.trim() || f.name.toLowerCase().includes(query.trim().toLowerCase()))
+
+  const filteredCustom = customFonts
+    .filter(() => category === 'all' || category === 'custom')
     .filter((f) => !query.trim() || f.name.toLowerCase().includes(query.trim().toLowerCase()))
 
   function toggle(name: string) {
     if (items.includes(name)) onUpdate(items.filter((i) => i !== name))
     else onUpdate([...items, name])
+  }
+
+  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    if (!brandId) { setUploadError('Brand not loaded yet'); return }
+    const format = fontFormatFromFilename(file.name)
+    if (!format) { setUploadError('Unsupported font format. Use .woff2, .woff, .ttf, or .otf'); return }
+    setUploading(true)
+    setUploadError(null)
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      fd.append('brandId', brandId)
+      fd.append('bucket', 'brand-assets')
+      const res = await fetch('/api/media/upload', { method: 'POST', body: fd })
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({})) as { error?: string }
+        setUploadError(j.error || 'Upload failed')
+        return
+      }
+      const data = await res.json() as { publicUrl: string | null }
+      if (!data.publicUrl) { setUploadError('Upload returned no URL'); return }
+      const fontName = displayNameFromFilename(file.name) || 'Custom Font'
+      // Avoid collisions with Google Fonts or existing custom fonts — append
+      // a numeric suffix until unique.
+      const existingNames = new Set([...customFonts.map((f) => f.name), ...BRAND_FONTS.map((b) => b.name)])
+      let uniqueName = fontName
+      let i = 2
+      while (existingNames.has(uniqueName)) {
+        uniqueName = `${fontName} ${i}`
+        i += 1
+      }
+      const next = [...customFonts, { name: uniqueName, url: data.publicUrl, format }]
+      onCustomFontsChange(next)
+      if (!items.includes(uniqueName)) onUpdate([...items, uniqueName])
+    } catch {
+      setUploadError('Upload failed')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  function removeCustomFont(name: string) {
+    onCustomFontsChange(customFonts.filter((f) => f.name !== name))
+    if (items.includes(name)) onUpdate(items.filter((i) => i !== name))
   }
 
   return (
@@ -345,48 +450,105 @@ function FontPicker({
               Done
             </button>
           </div>
-          <div className="flex flex-wrap gap-1">
-            {(['all', 'sans', 'serif', 'display', 'handwriting', 'mono'] as const).map((c) => (
-              <button
-                key={c}
-                onClick={() => setCategory(c)}
-                className={`rounded-full px-2 py-0.5 text-[10px] transition-colors ${
-                  category === c
-                    ? 'bg-[#f97316] text-white'
-                    : 'bg-white/5 text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                {c === 'all' ? 'All' : FONT_CATEGORY_LABELS[c]}
-              </button>
-            ))}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex flex-wrap gap-1">
+              {(['all', 'sans', 'serif', 'display', 'handwriting', 'mono', 'custom'] as const).map((c) => (
+                <button
+                  key={c}
+                  onClick={() => setCategory(c)}
+                  className={`rounded-full px-2 py-0.5 text-[10px] transition-colors ${
+                    category === c
+                      ? 'bg-[#f97316] text-white'
+                      : 'bg-white/5 text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  {c === 'all' ? 'All' : c === 'custom' ? `Custom${customFonts.length > 0 ? ` (${customFonts.length})` : ''}` : FONT_CATEGORY_LABELS[c]}
+                </button>
+              ))}
+            </div>
+            <label className={`shrink-0 inline-flex items-center gap-1 rounded-full border border-dashed border-white/20 px-2 py-0.5 text-[10px] cursor-pointer transition-colors ${uploading ? 'opacity-50 cursor-wait' : 'text-muted-foreground hover:text-foreground hover:border-[#f97316]/50'}`}>
+              {uploading ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}
+              {uploading ? 'Uploading…' : 'Upload'}
+              <input
+                type="file"
+                accept={FONT_ACCEPT}
+                className="hidden"
+                onChange={handleUpload}
+                disabled={uploading}
+              />
+            </label>
           </div>
+          {uploadError && (
+            <div className="text-[10px] text-[#ef4444]">{uploadError}</div>
+          )}
           <div className="max-h-48 overflow-y-auto space-y-0.5 pr-1">
-            {filtered.length === 0 ? (
-              <p className="text-[10px] text-muted-foreground/50 text-center py-3">No matches.</p>
-            ) : (
-              filtered.map((f) => {
-                const selected = items.includes(f.name)
-                return (
-                  <button
-                    key={f.name}
-                    onClick={() => toggle(f.name)}
-                    className={`w-full flex items-center justify-between rounded px-2 py-1 text-left transition-colors ${
-                      selected ? 'bg-[#f97316]/20' : 'hover:bg-white/5'
-                    }`}
-                  >
-                    <span
-                      className="text-sm text-foreground"
-                      style={{ fontFamily: `'${f.name}', system-ui` }}
-                    >
-                      {f.name}
-                    </span>
-                    <span className="text-[9px] uppercase tracking-widest text-muted-foreground/50">
-                      {selected ? '✓' : FONT_CATEGORY_LABELS[f.category]}
-                    </span>
-                  </button>
-                )
-              })
+            {filteredCustom.length > 0 && (
+              <>
+                {filteredCustom.map((f) => {
+                  const selected = items.includes(f.name)
+                  return (
+                    <div key={`custom-${f.name}`} className="flex items-center gap-1 group">
+                      <button
+                        onClick={() => toggle(f.name)}
+                        className={`flex-1 flex items-center justify-between rounded px-2 py-1 text-left transition-colors ${
+                          selected ? 'bg-[#f97316]/20' : 'hover:bg-white/5'
+                        }`}
+                      >
+                        <span
+                          className="text-sm text-foreground"
+                          style={{ fontFamily: `'${f.name}', system-ui` }}
+                        >
+                          {f.name}
+                        </span>
+                        <span className="text-[9px] uppercase tracking-widest text-[#f97316]/80">
+                          {selected ? '✓' : 'Custom'}
+                        </span>
+                      </button>
+                      <button
+                        onClick={() => removeCustomFont(f.name)}
+                        title="Remove custom font"
+                        className="shrink-0 w-5 h-5 rounded flex items-center justify-center text-muted-foreground/50 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  )
+                })}
+                {category !== 'custom' && filteredGoogle.length > 0 && (
+                  <div className="my-1 border-t border-border/40" />
+                )}
+              </>
             )}
+            {category === 'custom' && filteredCustom.length === 0 ? (
+              <p className="text-[10px] text-muted-foreground/50 text-center py-3">
+                No custom fonts yet. Use Upload above to add .woff2 / .woff / .ttf / .otf files.
+              </p>
+            ) : null}
+            {category !== 'custom' && filteredGoogle.length === 0 && filteredCustom.length === 0 ? (
+              <p className="text-[10px] text-muted-foreground/50 text-center py-3">No matches.</p>
+            ) : null}
+            {category !== 'custom' && filteredGoogle.map((f) => {
+              const selected = items.includes(f.name)
+              return (
+                <button
+                  key={f.name}
+                  onClick={() => toggle(f.name)}
+                  className={`w-full flex items-center justify-between rounded px-2 py-1 text-left transition-colors ${
+                    selected ? 'bg-[#f97316]/20' : 'hover:bg-white/5'
+                  }`}
+                >
+                  <span
+                    className="text-sm text-foreground"
+                    style={{ fontFamily: `'${f.name}', system-ui` }}
+                  >
+                    {f.name}
+                  </span>
+                  <span className="text-[9px] uppercase tracking-widest text-muted-foreground/50">
+                    {selected ? '✓' : FONT_CATEGORY_LABELS[f.category]}
+                  </span>
+                </button>
+              )
+            })}
           </div>
         </div>
       )}
@@ -963,7 +1125,10 @@ export default function BrandDnaPage() {
               <span className="block text-[10px] uppercase tracking-widest text-muted-foreground mb-2">Fonts</span>
               <FontPicker
                 items={dna.visual_identity?.font_families ?? []}
+                customFonts={dna.visual_identity?.custom_fonts ?? []}
+                brandId={brandId}
                 onUpdate={(items) => update((d) => ({ ...d, visual_identity: { ...d.visual_identity, font_families: items } }))}
+                onCustomFontsChange={(next) => update((d) => ({ ...d, visual_identity: { ...d.visual_identity, custom_fonts: next } }))}
               />
             </div>
             <div className="mb-3">

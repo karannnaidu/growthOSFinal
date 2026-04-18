@@ -27,7 +27,18 @@ const ALLOWED_MIME_TYPES = [
   'text/plain',
   'text/csv',
   'application/json',
+  // Font files (brand custom fonts)
+  'font/woff',
+  'font/woff2',
+  'font/ttf',
+  'font/otf',
+  'application/font-woff',
+  'application/font-woff2',
+  'application/x-font-ttf',
+  'application/x-font-otf',
 ]
+
+const FONT_EXTENSIONS = ['.woff2', '.woff', '.ttf', '.otf']
 
 const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024 // 50 MB
 
@@ -64,8 +75,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     )
   }
 
-  // Validate file type
-  if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+  // Validate file type. Browsers sometimes send `application/octet-stream`
+  // for font files — accept that only when the filename ends in a known font
+  // extension, so we don't silently allow arbitrary binaries.
+  const hasFontExtension = FONT_EXTENSIONS.some((ext) => file.name.toLowerCase().endsWith(ext))
+  const isAllowedMime = ALLOWED_MIME_TYPES.includes(file.type)
+  const isOctetFontFallback = file.type === 'application/octet-stream' && hasFontExtension
+  if (!isAllowedMime && !isOctetFontFallback) {
     return NextResponse.json({ error: 'File type not allowed' }, { status: 400 })
   }
 
