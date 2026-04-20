@@ -7,6 +7,7 @@ Last updated: 2026-04-20
 
 ## Week of 2026-04-20
 
+- **3adaa473** — feat(mia): phase 15 — real-dispatch smoke + fix silent blocked-row drop *(karan, 2026-04-21)*
 - **c26ae41b** — feat(landing): link Changelog from public footer *(karan, 2026-04-21)*
 - **d69cea51** — feat(changelog): add public /changelog page *(karan, 2026-04-21)*
 - **a2fdd323** — feat(mia): phase 14 — delete legacy hardcoded schedules *(karan, 2026-04-21)*
