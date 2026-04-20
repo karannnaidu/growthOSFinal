@@ -98,7 +98,7 @@ export function PricingTable() {
                     ))}
                   </ul>
                   <Link
-                    href="/signup"
+                    href={`/signup?plan=${tier.id}`}
                     className={`mt-8 block text-center py-3 rounded-xl font-bold transition-all hover:-translate-y-[2px] active:scale-95 ${
                       tier.popular
                         ? 'bg-[#6b38d4] text-white hover:shadow-xl'

@@ -1,12 +1,25 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { Suspense, useMemo, useState } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 
-export default function SignupPage() {
+// Where to land after auth completes. Carries ?store=&plan=&next= through so
+// the onboarding shell can auto-create the brand and skip step 1.
+function buildPostAuthNext(searchParams: URLSearchParams): string {
+  const store = searchParams.get('store')
+  const plan = searchParams.get('plan')
+  const target = new URL('/onboarding', 'http://placeholder')
+  if (store) target.searchParams.set('store', store)
+  if (plan) target.searchParams.set('plan', plan)
+  return target.pathname + (target.search || '')
+}
+
+function SignupForm() {
+  const searchParams = useSearchParams()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -16,6 +29,10 @@ export default function SignupPage() {
   const [success, setSuccess] = useState(false)
 
   const supabase = useMemo(() => createClient(), [])
+  const nextPath = useMemo(
+    () => buildPostAuthNext(new URLSearchParams(searchParams?.toString() ?? '')),
+    [searchParams],
+  )
 
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault()
@@ -32,11 +49,14 @@ export default function SignupPage() {
 
     setLoading(true)
 
+    const emailRedirect = new URL('/auth/callback', window.location.origin)
+    emailRedirect.searchParams.set('next', nextPath)
+
     const { error: authError } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: emailRedirect.toString(),
       },
     })
 
@@ -55,7 +75,7 @@ export default function SignupPage() {
     setGoogleLoading(true)
 
     const callbackUrl = new URL('/auth/callback', window.location.origin)
-    callbackUrl.searchParams.set('next', '/dashboard')
+    callbackUrl.searchParams.set('next', nextPath)
 
     const { error: authError } = await supabase.auth.signInWithOAuth({
       provider: 'google',
@@ -228,5 +248,30 @@ export default function SignupPage() {
         </Link>
       </p>
     </div>
+  )
+}
+
+function SignupSkeleton() {
+  return (
+    <div className="glass-panel glass-glow rounded-2xl p-8 space-y-6 animate-pulse">
+      <div className="space-y-1 text-center">
+        <div className="mx-auto h-7 w-28 rounded bg-muted" />
+        <div className="mx-auto h-4 w-40 rounded bg-muted" />
+      </div>
+      <div className="space-y-4">
+        <div className="h-10 rounded bg-muted" />
+        <div className="h-10 rounded bg-muted" />
+        <div className="h-10 rounded bg-muted" />
+        <div className="h-10 rounded bg-muted" />
+      </div>
+    </div>
+  )
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense fallback={<SignupSkeleton />}>
+      <SignupForm />
+    </Suspense>
   )
 }
