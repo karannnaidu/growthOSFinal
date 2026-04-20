@@ -1,0 +1,356 @@
+# DEVLOG
+
+Auto-generated from git history on every push to `main`. Do not edit by hand —
+changes will be overwritten. For the user-facing changelog, see /changelog.
+
+Last updated: 2026-04-20
+
+## Week of 2026-04-20
+
+- **9dad372a** — docs(devlog,changelog): design + implementation plan for DEVLOG and public changelog *(karan, 2026-04-21)*
+- **c70ca1fa** — feat(mia): schema verification script for 014 migration *(karan, 2026-04-21)*
+- **59562bc1** — feat(mia): add schema for watches, requests, decisions, digests, events *(karan, 2026-04-21)*
+- **0192441e** — docs(plan): Mia-first orchestration implementation plan *(karan, 2026-04-21)*
+- **efa6fbbf** — docs(spec): Mia-first orchestration design *(karan, 2026-04-21)*
+- **1c95af06** — fix(settings): always-visible delete button on Brand DNA product cards *(karan, 2026-04-21)*
+- **67af6163** — feat(onboarding): carry store + plan intent from landing to onboarding *(karan, 2026-04-21)*
+- **51fdc78e** — fix(market): stop GA4 pill from overlapping Mia in fragmentation diagram *(karan, 2026-04-21)*
+- **0f6fbb1c** — fix(landing): sticky-mobile CTA label + founder-note image fallback *(karan, 2026-04-20)*
+- **d7c8e1c3** — fix(landing): accept bare domains in the hero URL input *(karan, 2026-04-20)*
+- **be91f0d9** — about: counter-up stats + hover lift + FounderNote reuse *(karan, 2026-04-20)*
+- **29cb6c65** — agency: orbit hero + features grid *(karan, 2026-04-20)*
+- **a3a78e4e** — security: breathing lock hero + badge stagger + data-lane diagram *(karan, 2026-04-20)*
+- **3b6ac84d** — pricing: 3-tier table with Monthly/Annual toggle + price morph + FAQ *(karan, 2026-04-20)*
+- **dfeab406** — agents: 12-agent grid replaces 4-slide layout *(karan, 2026-04-20)*
+- **9ff8e277** — market: animated glass cards, stat counter-up, fragmentation gap signature *(karan, 2026-04-20)*
+- **7be5a619** — docs(plans): public pages polish implementation plan *(karan, 2026-04-20)*
+- **4bc100e1** — landing: name agents + fix final CTA contrast *(karan, 2026-04-20)*
+- **0684a0d0** — landing(hero): real ad images via fal.ai + clean vertical stack *(karan, 2026-04-20)*
+- **cd103a47** — landing: flatten _new/ into landing/ now that redesign is live *(karan, 2026-04-20)*
+- **1c1d8672** — landing: swap in new URL-first autopilot landing page *(karan, 2026-04-20)*
+- **bbb36c89** — landing(new): sticky mobile CTA bar with expandable URL drawer *(karan, 2026-04-20)*
+- **6e22d696** — landing(new): mid-page and final CTA sections *(karan, 2026-04-20)*
+- **af03a66d** — landing(new): FAQ accordion with single-open + chevron rotate *(karan, 2026-04-20)*
+- **d29e911e** — landing(new): trust badges with staggered pop-in + link underline grow *(karan, 2026-04-20)*
+- **34b9ebf9** — landing(new): founder note with animated signature draw-in *(karan, 2026-04-20)*
+- **587cbf30** — landing(new): results strip with 3D tile flip + stagger entrance *(karan, 2026-04-20)*
+- **fe85cf8c** — landing(new): one-crew-block composing the 3 cards *(karan, 2026-04-20)*
+- **947ccc16** — landing(new): optimize card with metric ticker + skill-saved toast *(karan, 2026-04-20)*
+- **9d730469** — landing(new): create card with tab rotation + skeleton reveal *(karan, 2026-04-20)*
+- **33517927** — landing(new): research card with counter-up + scanning sweep *(karan, 2026-04-20)*
+- **73d07fbd** — landing(new): integrations marquee with hover pause + greyscale→color *(karan, 2026-04-20)*
+- **49fd3fbd** — landing(new): hero with Mia anchor + 5-surface rotating canvas *(karan, 2026-04-20)*
+- **a06eb551** — landing(new): 5 hero canvas surfaces with per-surface micro-interactions *(karan, 2026-04-20)*
+- **9c9001a9** — landing(new): reusable URL-input CTA with typewriter placeholder + shine *(karan, 2026-04-20)*
+- **799be72b** — landing(new): add placeholder platform + brand logos *(karan, 2026-04-20)*
+- **5c6b1923** — landing(new): add animation utility hooks *(karan, 2026-04-20)*
+- **c2c1ea27** — landing(new): scaffold content module with all copy *(karan, 2026-04-20)*
+- **6f63c6d4** — docs: landing page redesign implementation plan *(karan, 2026-04-20)*
+- **0b65dd7d** — docs: landing page redesign design spec *(karan, 2026-04-20)*
+
+## Week of 2026-04-13
+
+- **ad92dba4** — feat(brand-dna): Comfortaa + 15 more Google Fonts, plus custom font upload *(karan, 2026-04-18)*
+- **d9634ee6** — chore(nova): extend verify scripts to cover Nova skills + geo-visibility alias *(karan, 2026-04-18)*
+- **6f6ba7c7** — docs(ops): API key rotation SOP for Nova AI engines *(karan, 2026-04-18)*
+- **05f98aac** — feat(nova): artifact review UI with copy and approve actions *(karan, 2026-04-18)*
+- **b2898486** — feat(nova): add ai-visibility-optimize skill (draft artifacts) *(karan, 2026-04-18)*
+- **21a7a90f** — feat(nova): add ai-visibility-probe skill with per-engine coverage *(karan, 2026-04-18)*
+- **4d17604f** — feat(nova): add OpenAI/Perplexity/Gemini AI-visibility probe clients *(karan, 2026-04-18)*
+- **ef7fc093** — feat(nova): add brand-dna-extractor skill *(karan, 2026-04-18)*
+- **32b981cb** — refactor(nova): rename geo-visibility to geographic-markets, move to Atlas *(karan, 2026-04-18)*
+- **24ac39a6** — fix(brand-dna): save button never appeared — React 19 dropped nested setState *(karan, 2026-04-18)*
+- **e2657829** — feat(nova): register ai-visibility node types *(karan, 2026-04-18)*
+- **a4d268b0** — fix(kg): harden LLM extraction JSON parse against truncation *(karan, 2026-04-18)*
+- **86f958e7** — feat(mia-chat): wire Quick Access + real Active Context sidebar *(karan, 2026-04-18)*
+- **cca7c75e** — feat(mia): enrich skills catalog + surface real failure reasons *(karan, 2026-04-18)*
+- **0ad3f2f7** — fix(storage): make brand-assets bucket public so product image uploads render *(karan, 2026-04-18)*
+- **35df764d** — fix(resolvers): read brand products from product_context (column was renamed from nonexistent brand_data) *(karan, 2026-04-18)*
+- **c6ba1c28** — fix(migrations): make 005 skill_runs dedupe index IMMUTABLE *(karan, 2026-04-18)*
+- **0446c6fa** — fix(mia-memory): surface DELETE failures + aria-label trash buttons *(karan, 2026-04-18)*
+- **5aeba888** — feat(mia-memory): settings panel to view + delete remembered facts *(karan, 2026-04-18)*
+- **acab9888** — feat(mia-memory): GET/DELETE endpoint for the memory settings UI *(karan, 2026-04-18)*
+- **e0e2078f** — fix(mia-chat): use after() for memory extraction to survive serverless freeze *(karan, 2026-04-18)*
+- **f28e8f4e** — feat(mia-chat): wire memory retrieval + async extraction *(karan, 2026-04-18)*
+- **8eb8a995** — fix(mia-memory): surface dedupe/cap-select errors instead of swallowing *(karan, 2026-04-18)*
+- **19016e87** — feat(mia-memory): extractor + retrieval + list + delete helpers *(karan, 2026-04-18)*
+- **13e00f23** — fix(kg): use pathToFileURL for Windows ESM import + expand postRun loader checks *(karan, 2026-04-18)*
+- **b2d83ebd** — feat(db): allow 'mia_memory' node_type in knowledge_nodes *(karan, 2026-04-18)*
+- **67edb912** — fix(mia): use error_message (real column) in 30d digest query *(karan, 2026-04-18)*
+- **10a82c44** — refactor(kg): move competitor-creative writes into postRun hook *(karan, 2026-04-18)*
+- **1b089a60** — feat(mia): 30-day agent digest + cool-down rules in prompt *(karan, 2026-04-18)*
+- **9cf60542** — refactor(kg): move image-brief hardcoded writes into postRun hook *(karan, 2026-04-18)*
+- **ae77158e** — feat(mia): wire Quick Generate CTA + harden auto-campaign errors *(karan, 2026-04-18)*
+- **30c99b30** — fix(mia-chat): guard conversation restore against strict-mode double-run *(karan, 2026-04-18)*
+- **291f8c52** — feat(kg): show degraded-enrichment banner on skill-run cards *(karan, 2026-04-18)*
+- **3f64dd37** — feat(mia-chat): persist active conversation across window shifts *(karan, 2026-04-18)*
+- **03626688** — feat(kg): persist rag/extract/postRun diagnostics on skill_runs *(karan, 2026-04-18)*
+- **3e0b46ac** — refactor(mia): route uses dynamic import via mia-intelligence *(karan, 2026-04-18)*
+- **2431e222** — feat(mia): inject platform connection status into chat prompt *(karan, 2026-04-18)*
+- **38e755e3** — feat(kg): add loadPostRun loader and PostRunContext type *(karan, 2026-04-18)*
+- **73c015b1** — refactor(kg): remove fire-and-forget extractEntities (moving pre-insert in next commit) *(karan, 2026-04-18)*
+- **a950055b** — feat(kg): enforce produces allow-list in extractEntities *(karan, 2026-04-18)*
+- **fdb75d6b** — docs(plans): mia trust & continuity implementation plan *(karan, 2026-04-17)*
+- **f178dfb9** — fix(migrations): make 007 CSV import policies idempotent *(karan, 2026-04-17)*
+- **ef6340dd** — feat(kg): record rag diagnostics in runSkill *(karan, 2026-04-17)*
+- **44cebba9** — docs(specs): Mia trust & continuity design — platform awareness, chat persistence, agent digest, KG memory *(karan, 2026-04-17)*
+- **ef3739e3** — feat(kg): add SkillRunDiagnostics type *(karan, 2026-04-17)*
+- **fe56d7ee** — fix(rls): break brands ↔ brand_members policy recursion *(karan, 2026-04-17)*
+- **33685543** — feat(brand-dna): font picker, logo variants, and logo in creative gen *(karan, 2026-04-17)*
+- **26574e60** — feat(kg): add diagnostics column to skill_runs *(karan, 2026-04-17)*
+- **faddc76c** — docs: add implementation plans for KG reliability + Nova AI visibility *(karan, 2026-04-17)*
+- **3915bb2d** — docs: add KG reliability + Nova AI visibility design specs *(karan, 2026-04-17)*
+- **c0f9de08** — fix(imagen): retry reference-image fetch on expired TLS cert *(karan, 2026-04-17)*
+- **80f266ae** — fix(dashboard): persist Mia decision + hydrate agent dots across navigation *(karan, 2026-04-17)*
+- **9902a3f1** — fix(creative): Gemini jsonMode + bump maxTokens so brief stops truncating *(karan, 2026-04-17)*
+- **d29b7fd0** — fix(mission-control): correct agent tag, status icon, and duplicate completion message *(karan, 2026-04-17)*
+- **53aa0ace** — fix(creative): tolerate markdown fences and prose in LLM JSON parser *(karan, 2026-04-17)*
+- **727784ad** — fix(next16): wrap useSearchParams pages in Suspense for static prerender *(karan, 2026-04-17)*
+- **9006f1fb** — fix(creative): disambiguate media node names per run *(karan, 2026-04-17)*
+- **72199e4b** — refactor(mcp): swap raw fetchers for SDKs across Shopify/Ahrefs/Meta/Google [Tasks 11-17] *(karan, 2026-04-17)*
+- **62074e3c** — fix(brand-dna): allow image upload when adding a product *(karan, 2026-04-17)*
+- **713e8227** — feat(platforms): Snapchat OAuth + ChatGPT Ads manual-key skeletons [Tasks 8-10] *(karan, 2026-04-17)*
+- **1b437e07** — feat(csv-import): offline brand ingestion via orders/customers/products CSVs [Tasks 3-7] *(karan, 2026-04-17)*
+- **3b426149** — docs(plans): deferred-work implementation plan (4 phases, 18 tasks) *(karan, 2026-04-17)*
+- **177d8bec** — docs(verification): post-fix re-verification across 10 agents *(karan, 2026-04-17)*
+- **ff9fa5c0** — fix(phase3): address all 6 Phase 2 audit findings *(karan, 2026-04-17)*
+- **5f662261** — docs(verification): Phase 2 per-agent structural audits [Tasks 16-28] *(karan, 2026-04-17)*
+- **9dc28abb** — fix(scripts): verify-readiness points at inner skills/ + recognizes brand.* resolvers [Task 15] *(karan, 2026-04-17)*
+- **0cf56779** — feat(ui): blocked-run cards with connect CTAs on agent + briefing views [Task 14] *(karan, 2026-04-17)*
+- **7cbf14e2** — chore(ui): hide stub connectors behind coming_soon flag [Task 13] *(karan, 2026-04-17)*
+- **a359bac6** — feat(onboarding): show ad-account picker when Meta OAuth returns 2+ accounts [Task 12] *(karan, 2026-04-17)*
+- **6d5932df** — feat(onboarding): auto-discover GA4 properties + Ads customers after OAuth [Task 11] *(karan, 2026-04-17)*
+- **e923c753** — feat(ui): SetupHint component + content for GA4/Meta/Klaviyo/Shopify/Google Ads [Task 10] *(karan, 2026-04-17)*
+- **6560b2d7** — fix(cron): dedupe daily scout runs per brand+skill+UTC day [Task 9] *(karan, 2026-04-17)*
+- **8f92f033** — refactor(skills): migrate Bucket A to brand.* resolvers (12 skills) [Task 8] *(karan, 2026-04-17)*
+- **a26bddf6** — refactor(skills): migrate Bucket B to brand.products.list (20 skills) [Task 7] *(karan, 2026-04-17)*
+- **28791c83** — feat(engine): hard-block runSkill when tool has no source; inject data caveats [Task 6] *(karan, 2026-04-17)*
+- **076b043b** — feat(resolvers): brand.customers.list and brand.orders.list with fallback chain [Task 5] *(karan, 2026-04-17)*
+- **82e4db65** — feat(resolvers): brand.products.list with shopify→brand_data→csv precedence [Task 4] *(karan, 2026-04-17)*
+- **0aaf6695** — feat(billing): return total + free + paid breakdown from /api/billing/balance [Task 3] *(karan, 2026-04-17)*
+- **13962b4b** — fix(billing): deduct free_credits before balance; record split in transaction metadata [Task 2] *(karan, 2026-04-17)*
+- **bd72c501** — feat(db): add blocked status tracking + cron dedupe index to skill_runs [Task 1] *(karan, 2026-04-17)*
+- **374f0e61** — fix: creative pipeline now uses full brand context instead of hardcoded D2C/wellness *(karan, 2026-04-14)*
+- **23cad97c** — fix: resolve 8 skill input/integration bugs across the platform *(karan, 2026-04-14)*
+- **fa813483** — fix: syncPlatformStatus recognizes google_analytics credentials for GA4/GSC *(karan, 2026-04-14)*
+- **9815f3da** — fix: add guard clauses to all agent output renderers *(karan, 2026-04-14)*
+- **6275a93e** — fix: dashboard crash — remove function prop from server→client boundary *(karan, 2026-04-14)*
+- **37e12611** — fix: Aria agent output falls through to DefaultOutput for non-creative skills *(karan, 2026-04-14)*
+- **4267b41e** — feat: live agent activity UX — SSE-streamed mission control replaces spinners *(karan, 2026-04-14)*
+- **39068d7d** — feat: SkillOutput — universal pattern-detecting skill output renderer *(karan, 2026-04-14)*
+- **acdf0942** — feat: add onProgress callback to runSkill for SSE streaming *(karan, 2026-04-14)*
+- **5a9a31b9** — docs: live agent activity implementation plan (7 tasks, SSE streaming) *(karan, 2026-04-14)*
+- **fac02d25** — docs: skill output renderer implementation plan — 5 tasks *(karan, 2026-04-14)*
+- **926f9c46** — docs: smart skill output renderer design spec *(karan, 2026-04-14)*
+- **a20f8138** — docs: live agent activity UX spec — SSE streaming, mission control, Jarvis experience *(karan, 2026-04-14)*
+- **fb3e57ec** — feat: ad-performance-analyzer post-execution — benchmarks to brand_metrics_history *(karan, 2026-04-14)*
+- **b76b44a9** — feat: morning brief shows ad performance benchmarks from Max *(karan, 2026-04-14)*
+- **783d78d4** — feat: add ad-performance-analyzer to Mia's daily trigger fallback *(karan, 2026-04-14)*
+- **3dfb1fc8** — feat: campaign-optimizer reads account maturity for safe ramp limits *(karan, 2026-04-14)*
+- **a0255df9** — feat: ad-performance-analyzer skill definition — Max's Meta ad reporting *(karan, 2026-04-14)*
+- **beece479** — docs: ad performance analyzer implementation plan — 6 tasks *(karan, 2026-04-14)*
+- **3e4e8091** — docs: ad performance analyzer design spec *(karan, 2026-04-14)*
+- **3f63a339** — fix: video ads play inline, download + store video URLs in scan pipeline *(karan, 2026-04-14)*
+- **2100cd40** — feat(mia): wire chat page — action cards, SSE execution, data collection *(karan, 2026-04-14)*
+- **8b322bfd** — feat(mia): ChatMessage strips action blocks, notifies parent of parsed actions *(karan, 2026-04-14)*
+- **56f43fb6** — feat(mia): CollectCard component — inline data collection with fallback *(karan, 2026-04-14)*
+- **69242969** — feat(mia): ActionCard component — skill confirmation/progress/result card *(karan, 2026-04-14)*
+- **44409d34** — feat(mia): enhanced system prompt with dynamic skills catalog *(karan, 2026-04-14)*
+- **f0452236** — feat(mia): data collection endpoint — store user input in brand context *(karan, 2026-04-14)*
+- **40640c5f** — feat: agent setup auto-resolves from Brand DNA before asking user *(karan, 2026-04-14)*
+- **69c72a85** — fix: exports page uses API route to bypass RLS circular dependency *(karan, 2026-04-14)*
+- **82c21a9e** — feat(mia): action parser — types, validation, topological sort, skills catalog builder *(karan, 2026-04-14)*
+- **fc5937cc** — fix: knowledge browser uses API route to bypass RLS circular dependency *(karan, 2026-04-14)*
+- **7bb1c5f5** — fix: admin page + metrics API use service client to bypass RLS *(karan, 2026-04-14)*
+- **16e01b27** — docs: Mia agent delegation implementation plan — 10 tasks *(karan, 2026-04-14)*
+- **21817ac1** — fix: wrong competitor matched + blank images in Echo scans *(karan, 2026-04-14)*
+- **ddb670a8** — fix: remove redundant setup for Sage and Atlas — Brand DNA already has their data *(karan, 2026-04-14)*
+- **dd81e1c9** — docs: Mia agent delegation design spec *(karan, 2026-04-14)*
+- **51729c4f** — fix: campaigns list uses API route to bypass RLS circular dependency *(karan, 2026-04-14)*
+- **3434ab48** — fix: add user_id + agent columns to conversations table (migration 004) *(karan, 2026-04-14)*
+- **7cac1e56** — fix: replace all upserts with select+insert/update (no unique index needed) *(karan, 2026-04-14)*
+- **328e2880** — fix: blank competitor images, add lightbox, scan all competitors *(karan, 2026-04-14)*
+- **f4955a6a** — fix: Mia chat — remove non-existent columns (user_id, agent) from conversations insert/query *(karan, 2026-04-14)*
+- **8eab6181** — feat: health-check can chain to campaign-optimizer for ad performance issues *(karan, 2026-04-14)*
+- **9367c2fc** — feat: Mia auto-campaign API + campaign shortcuts on dashboard *(karan, 2026-04-14)*
+- **3f4784a6** — feat: campaign detail page with live performance and controls *(karan, 2026-04-14)*
+- **8d9c4a9b** — feat: campaign list reads from campaigns table with status badges and actions *(karan, 2026-04-14)*
+- **7a9707af** — feat: campaign-optimizer cron route — every 2 days at 6am *(karan, 2026-04-14)*
+- **60b7d8e4** — feat: proper skill output rendering — Scout scores, structured data, readable format *(karan, 2026-04-14)*
+- **64fdb4eb** — fix: billing system audit — 9 bugs across credits pipeline *(karan, 2026-04-14)*
+- **dc786632** — feat: wire campaign wizard Launch + Save as Draft buttons *(karan, 2026-04-14)*
+- **daa8b277** — feat: campaign pause/resume/performance API routes *(karan, 2026-04-14)*
+- **7920fb69** — feat: POST /api/campaigns/launch — triggers campaign-launcher skill *(karan, 2026-04-14)*
+- **9f8bd255** — feat: campaign-launcher post-execution hook — creates Meta campaign structure *(karan, 2026-04-14)*
+- **def1c97a** — feat: campaign-launcher and campaign-optimizer skill definitions *(karan, 2026-04-14)*
+- **a534ce84** — feat: add Google Analytics MCP connector — separate GA4 platform integration *(karan, 2026-04-14)*
+- **6b63ce01** — feat: Meta Marketing API write module — campaign/adset/ad CRUD + performance *(karan, 2026-04-14)*
+- **6b483c3a** — fix: skill runs not showing — RLS blocking reads + missing refetch after run *(karan, 2026-04-14)*
+- **4d87e5f6** — feat: campaigns table migration — Meta ad campaign tracking *(karan, 2026-04-14)*
+- **e41e3e28** — fix: Mia chat uses service client for conversations (RLS was blocking) *(karan, 2026-04-14)*
+- **7752b754** — docs: campaign launcher implementation plan — 13 tasks *(karan, 2026-04-14)*
+- **2e94e952** — feat: Echo auto-downloads competitor ad media to Supabase Storage *(karan, 2026-04-14)*
+- **b38b2dcc** — docs: campaign launcher & auto-optimizer design spec *(karan, 2026-04-14)*
+- **34c79201** — feat: competitor insights shows actual videos + permanent Supabase storage *(karan, 2026-04-14)*
+- **6d38bfb3** — fix: remove unnecessary shopify.products.list from 15 skills that work with Brand DNA *(karan, 2026-04-13)*
+- **4f9583fd** — refactor: skill-level requires field — agents self-declare prerequisites *(karan, 2026-04-13)*
+- **fd16ad3c** — feat: per-skill required_tools — only block when truly required data is missing *(karan, 2026-04-13)*
+- **57237389** — fix: never block skills for missing platforms — all skills run with partial data *(karan, 2026-04-13)*
+- **09126669** — feat: Mia's LLM-driven team management skill *(karan, 2026-04-13)*
+- **4ed58411** — feat: Mia orchestration playbook — team knowledge, decision framework, platform awareness *(karan, 2026-04-13)*
+- **8784e060** — fix: pre-flight only blocks when no Brand DNA exists — skills run with available data *(karan, 2026-04-13)*
+- **2b4bcb1c** — fix: persist competitor ad thumbnails directly from API, bypass LLM *(karan, 2026-04-13)*
+- **5cf9a70f** — feat: competitor creatives show thumbnails, video indicators, and Meta links *(karan, 2026-04-13)*
+- **3e5f2006** — fix: competitor ads include ad_snapshot_url for viewing creatives on Meta *(karan, 2026-04-13)*
+- **2e2b00a9** — fix: agent pages — correct column names (agent_id, skill_id, error_message) *(karan, 2026-04-13)*
+- **1da605dc** — feat: ScrapeCreators integration for Meta Ad Library competitor ads *(karan, 2026-04-13)*
+- **a6091fa5** — fix: Mia dispatches full daily cycle, not just health-check *(karan, 2026-04-13)*
+- **08dee843** — fix: gallery auto-refreshes when switching tabs *(karan, 2026-04-13)*
+- **6a0318cf** — fix: dashboard uses service client to bypass RLS circular dependency *(karan, 2026-04-13)*
+- **65972ba8** — fix: Mia speaks — parse JSON output for morning brief, fix Meta act_ prefix *(karan, 2026-04-13)*
+- **9917c288** — feat: Creative Studio — competitor insights tab, two-step generate with copy editing *(karan, 2026-04-13)*
+- **4f424a4e** — feat: replace fal.ai with Nano Banana 2/Imagen 4.0, add two-step generate flow *(karan, 2026-04-13)*
+- **e7c57a1c** — feat: creative brief with campaign types, editable copy, competitor inspiration *(karan, 2026-04-13)*
+- **f82f4d14** — feat: competitor insights API — browse competitor creatives, mark as inspiration *(karan, 2026-04-13)*
+- **fff82d75** — feat: Gemini Vision analysis for competitor ad creatives *(karan, 2026-04-13)*
+- **a07d4993** — feat: Nano Banana 2 + Imagen 4.0 client for product-faithful ad generation *(karan, 2026-04-13)*
+- **a6408b9b** — docs: creative generation v2 implementation plan (7 tasks) *(karan, 2026-04-13)*
+- **1e580121** — fix: revive Mia — broken queries, missing node types, Meta act_ prefix *(karan, 2026-04-13)*
+- **54adc953** — docs: update spec — Nano Banana handles text overlays, no sharp dependency *(karan, 2026-04-13)*
+- **5e01b1e5** — docs: creative generation v2 design — competitor-informed, Imagen 4.0, text overlays *(karan, 2026-04-13)*
+- **79294af5** — fix: creative generation — scene-based prompts, preserve product labels *(karan, 2026-04-13)*
+- **9aedf51f** — fix: add verbose logging to createMediaNode for debugging gallery *(karan, 2026-04-13)*
+- **06d615d5** — fix: resolve TS error in generateVideo (non-null assertion) *(karan, 2026-04-13)*
+- **df074fdc** — feat: creative generation prefers transparent product images when available *(karan, 2026-04-13)*
+- **04b99ada** — feat: product background removal UI — remove bg button, approval preview *(karan, 2026-04-13)*
+- **ecc650c4** — feat: remove-bg and approve-bg API endpoints for product images *(karan, 2026-04-13)*
+- **3aafe4b6** — feat: add removeBackground function, disable video generation (coming soon) *(karan, 2026-04-13)*
+- **42716338** — docs: product bg removal implementation plan (4 tasks) *(karan, 2026-04-13)*
+- **871e10bb** — docs: product background removal design spec *(karan, 2026-04-13)*
+- **0e11364f** — fix: allow Supabase storage and fal.ai image domains in Next.js Image *(karan, 2026-04-13)*
+
+## Week of 2026-04-06
+
+- **2039e4d4** — feat: creative generation uses product images as reference (img2img) *(karan, 2026-04-13)*
+- **35247a02** — fix: createMediaNode — validate UUID for source_run_id, don't throw on failure *(karan, 2026-04-13)*
+- **3768f0ba** — fix: creative brief JSON parsing — handle Gemini markdown fence variants *(karan, 2026-04-13)*
+- **b7ccb6b5** — feat: faster creative generation (Gemini Flash), competitors in Brand DNA *(karan, 2026-04-13)*
+- **155521e9** — fix: creative studio — add step logging, fix client-side Supabase query *(karan, 2026-04-13)*
+- **6ede1de6** — feat: Vercel Pro — 300s timeout, 4 images, scoring, 5-min chain processor *(karan, 2026-04-13)*
+- **ac287262** — fix: entity extraction uses gemini-2.5-flash-lite (2.0 deprecated) *(karan, 2026-04-13)*
+- **47b45ad9** — fix: billing transactions query uses correct column names (amount, stripe_payment_id) *(karan, 2026-04-13)*
+- **d26fcf43** — perf: skip vision description during generation, backfill via cron *(karan, 2026-04-13)*
+- **beea6e5b** — fix: notifications endpoint uses admin client for data queries (RLS recursion) *(karan, 2026-04-13)*
+- **84c643cf** — feat: vision-powered creative descriptions for RAG *(karan, 2026-04-13)*
+- **36f54169** — fix: replace user-scoped client with service client in all src/lib/ files (RLS bypass) *(karan, 2026-04-13)*
+- **4eb7f25e** — fix: creative studio — resilient RAG queries + service client for brand_guidelines *(karan, 2026-04-13)*
+- **6fb6d98f** — feat: three-state agent detail page — inactive, setup, active with Mia context *(karan, 2026-04-12)*
+- **2d5cdfd4** — feat: dashboard UX — activity feed with Mia decisions, agent status bar *(karan, 2026-04-12)*
+- **1017b20d** — feat: sync platform_status knowledge node after OAuth callbacks *(karan, 2026-04-12)*
+- **1f53ccfe** — feat: knowledge graph retention — monthly digests and platform status sync *(karan, 2026-04-12)*
+- **373cd673** — feat: unified dashboard context API — parallel queries with 30s cache *(karan, 2026-04-12)*
+- **e3d3548c** — feat: chain processor cron — executes pending skill chains from Mia decisions *(karan, 2026-04-12)*
+- **181e88c4** — feat: real instruction system — Mia reads user instructions before skill runs *(karan, 2026-04-12)*
+- **69151999** — feat: agent setup system — requirements checking and manual data collection *(karan, 2026-04-12)*
+- **fdbba7a3** — feat: Mia intelligence layer — pre-flight checks and post-flight decisions *(karan, 2026-04-12)*
+- **570ba78c** — feat: intelligence knowledge node helpers for Mia decision system *(karan, 2026-04-12)*
+- **52913834** — docs: agent intelligence implementation plan (10 tasks) *(karan, 2026-04-12)*
+- **c80712ed** — docs: agent intelligence & interactive system design spec *(karan, 2026-04-12)*
+- **26d5217b** — fix: gallery API uses service client to bypass RLS circular dependency *(karan, 2026-04-12)*
+- **f39e9b20** — fix: MCP credential loader uses service client (RLS was blocking Meta data) *(karan, 2026-04-12)*
+- **e3f72c7e** — fix: await runSkill in Mia trigger (Vercel kills fire-and-forget async) *(karan, 2026-04-12)*
+- **e25dbbdc** — fix: strip markdown code fences from LLM output before JSON parsing *(karan, 2026-04-12)*
+- **409f6c89** — feat: trigger Mia from dashboard + auto-run health-check after onboarding *(karan, 2026-04-12)*
+- **f7856a70** — fix: reveal all 12 agents immediately, use service client for brand_agents *(karan, 2026-04-12)*
+- **aa6f1ace** — feat: extract fonts and colors from external CSS files during brand analysis *(karan, 2026-04-12)*
+- **d9a2362f** — fix: Meta OAuth returns to correct page (onboarding vs settings) *(karan, 2026-04-12)*
+- **2e799cf2** — fix: Meta OAuth callback uses service client to store credentials *(karan, 2026-04-12)*
+- **41325599** — fix: command palette close (escape + click outside), fix stale brand ID cache *(karan, 2026-04-12)*
+- **8a966bc2** — fix: use service client for brand access checks across all 37 API routes *(karan, 2026-04-12)*
+- **bf7ea70c** — fix: command palette Escape key and overlay click to close *(karan, 2026-04-12)*
+- **1665e06b** — fix: agents and chat page brand resolution via API *(karan, 2026-04-12)*
+- **6b67b4d1** — fix: billing page brand resolution via API *(karan, 2026-04-12)*
+- **3ff0527c** — fix: Meta Ads showing 'Coming soon' instead of Connect button *(karan, 2026-04-12)*
+- **c95ce09e** — fix: replace direct RLS brand queries with /api/brands/me across all dashboard pages *(karan, 2026-04-12)*
+- **24966cd1** — fix: resolve brand ID via API to bypass RLS on settings page *(karan, 2026-04-12)*
+- **cc71666e** — fix: change backfill-embeddings cron to daily (Vercel Hobby plan limit) *(karan, 2026-04-12)*
+- **89a481da** — docs: web extraction PRD and implementation plans (phases 1-4) *(karan, 2026-04-12)*
+- **23aee75c** — feat: dashboard, landing pages, agent avatars, and utility scripts *(karan, 2026-04-12)*
+- **dac660e1** — feat: brand extraction pipeline (Firecrawl + Jina fallback) *(karan, 2026-04-12)*
+- **309d3445** — feat: Brand DNA settings page with full inline editing *(karan, 2026-04-12)*
+- **be409143** — fix: model router smart fallback, async diagnosis, Gemini 2.5 upgrade *(karan, 2026-04-12)*
+- **1df2d0b8** — feat: register new Echo skills in agents.json *(karan, 2026-04-11)*
+- **e28aa057** — feat: add competitor-status-monitor daily skill for Echo *(karan, 2026-04-11)*
+- **ee18db5f** — feat: add competitor-traffic-report skill for Echo *(karan, 2026-04-11)*
+- **8fdfa920** — feat: update competitor-creative-library skill with ads MCP tool *(karan, 2026-04-11)*
+- **20729510** — feat: update competitor-scan skill with new MCP tool references *(karan, 2026-04-11)*
+- **7f451bac** — fix: allow credential-less competitor tools in fetchSkillData and merge results into context *(karan, 2026-04-11)*
+- **0455d014** — feat: add competitor intelligence client with all data source integrations *(karan, 2026-04-11)*
+- **171e1c7f** — fix: add /onboarding redirect page and update proxy public paths *(karan, 2026-04-09)*
+- **9534c164** — docs: mark Plan 3 (Creative Intelligence Engine) as complete *(karan, 2026-04-09)*
+- **8bce631f** — feat: add video generation support, creative feedback loop, and sidebar nav *(karan, 2026-04-09)*
+- **37401a85** — feat: add Creative Studio page with gallery, generation, and performance tabs *(karan, 2026-04-09)*
+- **a42cb095** — feat: add creative generation, gallery, score, and feedback API endpoints *(karan, 2026-04-09)*
+- **c8b93461** — fix: address code review issues in creative-intelligence.ts *(karan, 2026-04-09)*
+- **550f7b27** — feat: add creative intelligence engine with knowledge-informed generation *(karan, 2026-04-09)*
+- **fe19b025** — docs: mark Plan 1 and Plan 2 as complete in execution plans *(karan, 2026-04-09)*
+- **9fcc681a** — feat: add production pages, legal/support, error handling, and polish onboarding (T13-T16) *(karan, 2026-04-09)*
+- **f3ddca6a** — feat: add pitch deck pages with 9 investor-ready slides *(karan, 2026-04-09)*
+- **eb8679a2** — feat: add deploy custom agent page and campaign creation flow *(karan, 2026-04-09)*
+- **9492d2df** — feat: rebuild agent directory, agent detail pages, and add skills browser *(karan, 2026-04-09)*
+- **7ce81ec4** — feat: rebuild dashboard with morning brief, metrics, agent chains and 3-panel chat *(karan, 2026-04-09)*
+- **b8d64cf1** — feat: rebuild sidebar and top bar to match designs *(karan, 2026-04-09)*
+- **06278b72** — feat: add agent image downloads and upgrade AgentAvatar to use real portraits *(karan, 2026-04-09)*
+- **cac17089** — feat: add shared brand context helper and agent data module *(karan, 2026-04-09)*
+- **d2d72e5f** — feat: add embedding backfill script and hourly cron route *(karan, 2026-04-09)*
+- **37589205** — feat: add fal.ai hook, brand guidelines pipeline, product image + top content bridges *(karan, 2026-04-09)*
+- **2eb39e1d** — feat: add fal.ai client with image/video generation, storage persistence, and knowledge nodes *(karan, 2026-04-09)*
+- **256e3e30** — feat: wire RAG knowledge graph context into skills engine prompt builder *(karan, 2026-04-09)*
+- **7f78ca4f** — feat: generate embeddings inline during entity extraction *(karan, 2026-04-09)*
+- **ff373499** — fix: expand knowledge graph schema constraints and extraction type sets *(karan, 2026-04-09)*
+- **25ea8b1d** — fix: resolve 6 high-severity synchronization issues across plan docs *(karan, 2026-04-09)*
+- **3dde77b5** — docs: add Creative Intelligence Engine PRD as standalone spec *(karan, 2026-04-09)*
+- **62d022a3** — docs: add Master Execution Plan — 3 plans, 31 tasks, full roadmap *(karan, 2026-04-09)*
+- **b11a77a6** — docs: add Creative Pipeline Foundation spec — fix 9 knowledge graph gaps *(karan, 2026-04-09)*
+- **99a45c7a** — docs: add Design Gap implementation plan — 16 tasks across 6 layers *(karan, 2026-04-09)*
+- **efaf7af4** — docs: add Design Gap PRD — rebuild UI to match designs *(karan, 2026-04-09)*
+- **0cf13b75** — feat: add landing page and mobile-responsive polish (Tasks 10.3–10.4) *(karan, 2026-04-09)*
+- **784bec2d** — feat: add error tracking utility, error boundary, and AgentAvatar component (Tasks 10.1–10.2) *(karan, 2026-04-09)*
+- **2a87e007** — feat: implement Phase 9 — Agency, Admin & Media (tasks 9.1–9.3) *(karan, 2026-04-09)*
+- **35ea4405** — feat: implement Phase 7 scheduling, cron jobs, and Shopify webhook *(karan, 2026-04-09)*
+- **f5d8c995** — feat: implement Billing Dashboard UI (6.2) and Settings Pages (6.3) *(karan, 2026-04-09)*
+- **71838101** — feat: add Stripe billing integration (Task 6.1) *(karan, 2026-04-09)*
+- **f182090b** — feat: add Cmd+K command palette and notification system (Tasks 5.5 & 5.6) *(karan, 2026-04-09)*
+- **dfb64fef** — feat: implement Agent Directory and Agent Detail pages (Tasks 5.3 & 5.4) *(karan, 2026-04-09)*
+- **f42ee4de** — feat: implement Chat with Mia interface (Task 5.2) *(karan, 2026-04-09)*
+- **6c94659f** — feat: implement Mia Intelligence Engine dashboard (Task 5.1) *(karan, 2026-04-09)*
+- **ecea7f00** — feat: Task 4.3 — progressive agent reveal *(karan, 2026-04-09)*
+- **36d6613d** — feat: add 4-step onboarding flow with API routes (Tasks 4.1 + 4.2) *(karan, 2026-04-09)*
+- **cec9e64b** — feat: implement sub-agent spawning (3.3) and RAG + entity extraction (3.4) *(karan, 2026-04-09)*
+- **4c7d4940** — feat: add Mia API routes (orchestrate, briefing, chat) *(karan, 2026-04-09)*
+- **58d7669f** — feat: add Mia Orchestration Engine (Task 3.1) *(karan, 2026-04-09)*
+- **ad37e5e9** — feat(task-2.5): add MCP client data fetching layer and wire into skills engine *(karan, 2026-04-09)*
+- **df1b1b88** — feat: add Meta, Google, Klaviyo OAuth and platform status API routes *(karan, 2026-04-09)*
+- **fb652ad1** — feat: add Shopify OAuth integration with product sync *(karan, 2026-04-09)*
+- **cd6e1b95** — feat: add Skills API routes (run, skill definition, runs list) *(karan, 2026-04-09)*
+- **786cfebe** — feat: add multi-model AI router with 4 providers and quality check *(karan, 2026-04-08)*
+- **80be968a** — feat: add skills engine core with skill loader and execution pipeline *(karan, 2026-04-08)*
+- **ef2f96d9** — feat: add all 50 skill markdown files and agents.json *(karan, 2026-04-08)*
+- **1740a76e** — feat: add _foundation skill files (product-context + brand-kit) *(karan, 2026-04-08)*
+- **1501b1e4** — feat: add knowledge graph schema (Task 1.2) *(karan, 2026-04-08)*
+- **f04a39bc** — feat: add core Supabase schema with 22 tables, RLS, and skill_metrics view *(karan, 2026-04-08)*
+- **e81de3db** — fix: force dynamic rendering for auth pages *(karan, 2026-04-08)*
+- **72585481** — fix: prevent env var check from crashing static page generation *(karan, 2026-04-08)*
+- **cd42d6a0** — docs: update implementation plan — Phase 0 complete *(karan, 2026-04-08)*
+- **8ff93be7** — chore: clean up boilerplate and finalize git setup *(karan, 2026-04-08)*
+- **8a583ee0** — fix: add router.refresh() on sign out to invalidate server cache *(karan, 2026-04-08)*
+- **f129cde6** — feat: add dashboard shell with sidebar, top bar, and mobile bottom nav *(karan, 2026-04-08)*
+- **acfcd68d** — fix: prevent open redirect and reflected content injection in auth pages *(karan, 2026-04-08)*
+- **2c63758c** — feat: add auth pages with email/Google login, signup, and OAuth callback *(karan, 2026-04-08)*
+- **0c72a65f** — fix: add env var runtime guards and service role key warning *(karan, 2026-04-08)*
+- **fcd90cdd** — feat: add Supabase auth setup with browser/server clients and proxy *(karan, 2026-04-08)*
+- **5c1b3ec8** — fix: add color-mix fallbacks for glass panels and merge utility blocks *(karan, 2026-04-08)*
+- **08d53981** — feat: configure Tailwind design system with agent colors, fonts, and animations *(karan, 2026-04-08)*
+- **7cb7c0c9** — feat: add shadcn components and move shadcn to devDependencies *(karan, 2026-04-08)*
+- **2f5b81ee** — feat: initial commit *(karan, 2026-04-08)*
+- **7a3b4f9b** — Initial commit from Create Next App *(karan, 2026-04-08)*
