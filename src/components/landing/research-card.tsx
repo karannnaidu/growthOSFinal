@@ -5,14 +5,15 @@ import { useInViewport } from './use-in-viewport'
 import { useReducedMotion } from './use-reduced-motion'
 import { useCountUp } from './use-count-up'
 
-function AgentDot({ name, live }: { name: string; live?: boolean }) {
+function AgentPill({ name, live }: { name: string; live?: boolean }) {
   return (
-    <div className="flex items-center gap-1.5">
-      <div className="w-7 h-7 rounded-full bg-[#0D9488]/15 flex items-center justify-center text-[10px] font-bold text-[#0D9488]">
-        {name[0]}
-      </div>
-      {live && <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />}
-    </div>
+    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#0D9488]/10 text-[#0D9488] text-[11px] font-semibold tracking-wide">
+      {live && <span className="relative flex w-1.5 h-1.5">
+        <span className="absolute inset-0 rounded-full bg-green-500 animate-ping opacity-75" />
+        <span className="relative block w-1.5 h-1.5 rounded-full bg-green-500" />
+      </span>}
+      {name}
+    </span>
   )
 }
 
@@ -46,10 +47,10 @@ export function ResearchCard() {
         <span className="inline-block px-2.5 py-1 rounded-full bg-[#0D9488]/10 text-[#0D9488] text-[11px] font-bold uppercase tracking-wider">
           Research
         </span>
-        <div className="flex gap-2">
-          <AgentDot name="Scout" live />
-          <AgentDot name="Echo" />
-          <AgentDot name="Atlas" />
+        <div className="flex flex-wrap gap-1.5">
+          <AgentPill name="Scout" live />
+          <AgentPill name="Echo" />
+          <AgentPill name="Atlas" />
         </div>
       </header>
 

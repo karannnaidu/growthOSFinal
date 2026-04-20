@@ -38,7 +38,15 @@ function normalizeUrl(raw: string): string | null {
   }
 }
 
-export function UrlInputCta({ size = 'default', label }: { size?: Size; label: string }) {
+export function UrlInputCta({
+  size = 'default',
+  label,
+  tone = 'light',
+}: {
+  size?: Size
+  label: string
+  tone?: 'light' | 'dark'
+}) {
   const router = useRouter()
   const reduced = useReducedMotion()
   const [value, setValue] = useState('')
@@ -81,6 +89,14 @@ export function UrlInputCta({ size = 'default', label }: { size?: Size; label: s
 
   const classes = SIZE_CLASSES[size]
   const buttonPulseClass = focused && !reduced ? 'animate-[pulse_1s_ease-in-out_infinite]' : ''
+  const dark = tone === 'dark'
+
+  const buttonClass = dark
+    ? 'bg-white text-[#6b38d4] hover:bg-[#f8f9ff]'
+    : 'bg-[#0b1c30] text-white'
+  const shineTint = dark ? 'via-[#6b38d4]/20' : 'via-white/20'
+  const microcopyClass = dark ? 'text-white/80' : 'text-[#45464d]/70'
+  const errorClass = dark ? 'text-red-200' : 'text-red-600'
 
   return (
     <form onSubmit={onSubmit} className="space-y-2 w-full">
@@ -99,20 +115,20 @@ export function UrlInputCta({ size = 'default', label }: { size?: Size; label: s
           onBlur={() => setFocused(false)}
           placeholder={reduced ? HERO_CONTENT.urlPlaceholders[0] : placeholderText}
           aria-label="Your store URL"
-          className={`flex-1 rounded-xl border border-[#c6c6cd] bg-white focus:border-[#6b38d4] focus:ring-2 focus:ring-[#6b38d4]/30 outline-none transition-all ${classes.input}`}
+          className={`flex-1 rounded-xl border border-[#c6c6cd] bg-white text-[#0b1c30] placeholder:text-[#45464d]/60 focus:border-[#6b38d4] focus:ring-2 focus:ring-[#6b38d4]/30 outline-none transition-all ${classes.input}`}
         />
         <button
           type="submit"
-          className={`relative overflow-hidden rounded-xl bg-[#0b1c30] text-white font-bold hover:-translate-y-[2px] hover:shadow-xl active:scale-95 transition-all ${classes.button} ${buttonPulseClass}`}
+          className={`relative overflow-hidden rounded-xl font-bold hover:-translate-y-[2px] hover:shadow-xl active:scale-95 transition-all ${buttonClass} ${classes.button} ${buttonPulseClass}`}
         >
           <span className="relative z-10">{label}</span>
           {!reduced && (
-            <span className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent animate-[shine_6s_linear_infinite]" />
+            <span className={`pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent ${shineTint} to-transparent animate-[shine_6s_linear_infinite]`} />
           )}
         </button>
       </div>
-      {error && <p className="text-sm text-red-600">{error}</p>}
-      <p className="text-xs text-[#45464d]/70">{HERO_CONTENT.ctaMicrocopy}</p>
+      {error && <p className={`text-sm ${errorClass}`}>{error}</p>}
+      <p className={`text-xs ${microcopyClass}`}>{HERO_CONTENT.ctaMicrocopy}</p>
     </form>
   )
 }
