@@ -5,11 +5,19 @@ agent: sage
 category: optimization
 complexity: mid
 credits: 2
-mcp_tools: [brand.orders.list, brand.products.list]
-chains_to: [ab-test-design]
+mcp_tools:
+  - brand.orders.list
+  - brand.products.list
+chains_to:
+  - ab-test-design
 knowledge:
-  needs: [product, competitor, metric, persona, insight]
-  semantic_query: "pricing strategy elasticity margin optimization bundle discount"
+  needs:
+    - product
+    - competitor
+    - metric
+    - persona
+    - insight
+  semantic_query: pricing strategy elasticity margin optimization bundle discount
   traverse_depth: 2
   include_agency_patterns: true
 produces:
@@ -19,6 +27,13 @@ produces:
   - node_type: recommendation
     edge_to: product
     edge_type: optimizes
+side_effect: external_write
+reversible: true
+requires_human_approval: false
+description_for_mia: >-
+  Input: price + margin + conversion curve + competitors. Output: recommended
+  price points per SKU. Use when: margin pressure or quarterly pricing review.
+description_for_user: Recommends price changes that can lift margin without killing demand.
 ---
 
 Use `brand.products` as your product catalog. If `source !== 'shopify'`, caveat any quantitative claims — say "based on your product catalog" rather than "based on your store data".

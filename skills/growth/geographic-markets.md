@@ -5,12 +5,21 @@ agent: atlas
 category: growth
 complexity: cheap
 credits: 1
-mcp_tools: [brand.orders.list, ga4.report.run]
-chains_to: [ad-copy, audience-targeting]
-schedule: "0 9 * * 1"
+mcp_tools:
+  - brand.orders.list
+  - ga4.report.run
+chains_to:
+  - ad-copy
+  - audience-targeting
+schedule: 0 9 * * 1
 knowledge:
-  needs: [audience, metric, campaign, keyword, insight]
-  semantic_query: "geographic market expansion regional performance location targeting"
+  needs:
+    - audience
+    - metric
+    - campaign
+    - keyword
+    - insight
+  semantic_query: geographic market expansion regional performance location targeting
   traverse_depth: 1
   include_agency_patterns: true
 produces:
@@ -20,6 +29,13 @@ produces:
   - node_type: metric
     edge_to: audience
     edge_type: measures
+side_effect: none
+reversible: true
+requires_human_approval: false
+description_for_mia: >-
+  Input: order history + traffic sources. Output: ranked geo opportunities with
+  sizing. Use when: expansion planning or regional ad allocation.
+description_for_user: Tells you which regions or countries to grow into next.
 ---
 
 Use `brand.products` as your product catalog. If `source !== 'shopify'`, caveat any quantitative claims — say "based on your product catalog" rather than "based on your store data".

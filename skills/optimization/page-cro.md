@@ -5,11 +5,19 @@ agent: sage
 category: optimization
 complexity: mid
 credits: 2
-mcp_tools: [ga4.report.run, brand.products.list]
-chains_to: [ab-test-design]
+mcp_tools:
+  - ga4.report.run
+  - brand.products.list
+chains_to:
+  - ab-test-design
 knowledge:
-  needs: [product, metric, persona, insight, competitor]
-  semantic_query: "conversion rate optimization product page landing page UX friction"
+  needs:
+    - product
+    - metric
+    - persona
+    - insight
+    - competitor
+  semantic_query: conversion rate optimization product page landing page UX friction
   traverse_depth: 2
   include_agency_patterns: true
 produces:
@@ -19,6 +27,13 @@ produces:
   - node_type: recommendation
     edge_to: insight
     edge_type: based_on
+side_effect: external_write
+reversible: true
+requires_human_approval: false
+description_for_mia: >-
+  Input: page URL + traffic data. Output: prioritized CRO recommendations (copy,
+  layout, UX). Use when: weak CVR on key pages.
+description_for_user: Finds ways to make your landing pages convert more visitors.
 ---
 
 Use `brand.products` as your product catalog. If `source !== 'shopify'`, caveat any quantitative claims — say "based on your product catalog" rather than "based on your store data".

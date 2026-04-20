@@ -7,14 +7,27 @@ complexity: cheap
 credits: 1
 mcp_tools: []
 chains_to: []
-schedule: "0 8 * * 1"
+schedule: 0 8 * * 1
 knowledge:
-  needs: [metric, campaign, insight, creative, experiment, persona]
-  semantic_query: "weekly performance summary revenue growth key wins issues"
+  needs:
+    - metric
+    - campaign
+    - insight
+    - creative
+    - experiment
+    - persona
+  semantic_query: weekly performance summary revenue growth key wins issues
   traverse_depth: 2
   include_agency_patterns: false
 produces:
   - node_type: insight
+side_effect: external_write
+reversible: true
+requires_human_approval: false
+description_for_mia: >-
+  Input: last 7 days of metrics + skill runs. Output: weekly narrative report
+  with wins/losses/next. Use when: Monday morning or explicit request.
+description_for_user: Writes your weekly performance report.
 ---
 
 ## System Prompt

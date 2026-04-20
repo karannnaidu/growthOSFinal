@@ -8,13 +8,25 @@ credits: 3
 mcp_tools: []
 chains_to: []
 knowledge:
-  needs: [brand_dna, ai_probe_result, product, brand_guidelines]
-  semantic_query: "ai visibility optimization schema llms faq json-ld"
+  needs:
+    - brand_dna
+    - ai_probe_result
+    - product
+    - brand_guidelines
+  semantic_query: ai visibility optimization schema llms faq json-ld
   traverse_depth: 2
 produces:
   - node_type: ai_artifact
     edge_to: brand_dna
     edge_type: part_of
+side_effect: external_write
+reversible: true
+requires_human_approval: false
+description_for_mia: >-
+  Input: current AI-visibility probe. Output: on-site recommendations (schema,
+  content, citations) to raise LLM-answer presence. Use when: probe score is low
+  or new LLM surfaces appear.
+description_for_user: 'Makes your brand show up more often in AI answers (ChatGPT, Perplexity, etc).'
 ---
 
 ## System Prompt

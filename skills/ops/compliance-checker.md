@@ -7,16 +7,26 @@ complexity: free
 credits: 0
 mcp_tools: []
 chains_to: []
-schedule: "0 8 1 * *"
+schedule: 0 8 1 * *
 knowledge:
-  needs: [product, creative, brand_guidelines]
-  semantic_query: "compliance privacy policy cookie consent ADA platform policies claims"
+  needs:
+    - product
+    - creative
+    - brand_guidelines
+  semantic_query: compliance privacy policy cookie consent ADA platform policies claims
   traverse_depth: 1
   include_agency_patterns: true
 produces:
   - node_type: insight
     edge_to: product
     edge_type: derived_from
+side_effect: none
+reversible: true
+requires_human_approval: false
+description_for_mia: >-
+  Input: ad creative + landing page. Output: policy-risk flags (Meta, Google,
+  legal categories). Use when: pre-launch QA on new creatives.
+description_for_user: Checks your ads and landing pages for policy issues before launch.
 ---
 
 Use `brand.products` as your product catalog. If `source !== 'shopify'`, caveat any quantitative claims — say "based on your product catalog" rather than "based on your store data".

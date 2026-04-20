@@ -6,14 +6,29 @@ category: creative
 complexity: premium
 credits: 3
 mcp_tools: []
-chains_to: [ad-copy, email-copy, social-content-calendar]
+chains_to:
+  - ad-copy
+  - email-copy
+  - social-content-calendar
 knowledge:
-  needs: [product, brand_guidelines, top_content, review_theme]
-  semantic_query: "brand voice tone personality messaging guidelines style"
+  needs:
+    - product
+    - brand_guidelines
+    - top_content
+    - review_theme
+  semantic_query: brand voice tone personality messaging guidelines style
   traverse_depth: 2
   include_agency_patterns: true
 produces:
   - node_type: brand_guidelines
+side_effect: external_write
+reversible: true
+requires_human_approval: false
+description_for_mia: >-
+  Input: existing copy samples. Output: brand voice profile (tone, vocab,
+  do/dont examples). Use when: onboarding a new brand or voice drifts across
+  channels.
+description_for_user: Captures your brand voice so every piece of copy sounds like you.
 ---
 
 Use `brand.products` as your product catalog. If `source !== 'shopify'`, caveat any quantitative claims — say "based on your product catalog" rather than "based on your store data".

@@ -5,12 +5,17 @@ agent: navi
 category: ops
 complexity: free
 credits: 0
-mcp_tools: [brand.products.list]
-chains_to: [reorder-calculator]
-schedule: "0 7 * * *"
+mcp_tools:
+  - brand.products.list
+chains_to:
+  - reorder-calculator
+schedule: 0 7 * * *
 knowledge:
-  needs: [product, metric, campaign]
-  semantic_query: "inventory stock levels reorder threshold velocity stockout"
+  needs:
+    - product
+    - metric
+    - campaign
+  semantic_query: inventory stock levels reorder threshold velocity stockout
   traverse_depth: 1
   include_agency_patterns: false
 produces:
@@ -18,6 +23,13 @@ produces:
     edge_to: product
     edge_type: derived_from
   - node_type: metric
+side_effect: none
+reversible: true
+requires_human_approval: false
+description_for_mia: >-
+  Input: SKU stock + sell-through. Output: stockout risk list with
+  days-of-cover. Use when: daily sweep or before ad scale-up.
+description_for_user: Warns you when a SKU is about to run out.
 ---
 
 Use `brand.products` as your product catalog. If `source !== 'shopify'`, caveat any quantitative claims — say "based on your product catalog" rather than "based on your store data".

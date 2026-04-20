@@ -5,11 +5,22 @@ agent: max
 category: optimization
 complexity: mid
 credits: 2
-mcp_tools: [brand.orders.list, brand.products.list, ga4.report.run]
-chains_to: [budget-allocation, audience-targeting]
+mcp_tools:
+  - brand.orders.list
+  - brand.products.list
+  - ga4.report.run
+chains_to:
+  - budget-allocation
+  - audience-targeting
 knowledge:
-  needs: [channel, metric, competitor, product, audience, persona]
-  semantic_query: "channel expansion marketplace Amazon TikTok Shop wholesale new channels"
+  needs:
+    - channel
+    - metric
+    - competitor
+    - product
+    - audience
+    - persona
+  semantic_query: channel expansion marketplace Amazon TikTok Shop wholesale new channels
   traverse_depth: 2
   include_agency_patterns: true
 produces:
@@ -19,6 +30,13 @@ produces:
   - node_type: recommendation
     edge_to: channel
     edge_type: expands_to
+side_effect: none
+reversible: true
+requires_human_approval: false
+description_for_mia: >-
+  Input: current channel mix + unit economics. Output: ranked next-channel
+  recommendations with entry cost. Use when: growth stalls on current channels.
+description_for_user: Tells you which new marketing channel to try next.
 ---
 
 Use `brand.products` as your product catalog. If `source !== 'shopify'`, caveat any quantitative claims — say "based on your product catalog" rather than "based on your store data".

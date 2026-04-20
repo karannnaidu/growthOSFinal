@@ -5,12 +5,19 @@ agent: luna
 category: retention
 complexity: free
 credits: 0
-mcp_tools: [brand.orders.list, brand.products.list]
-chains_to: [email-copy]
-schedule: "0 9 * * 1"
+mcp_tools:
+  - brand.orders.list
+  - brand.products.list
+chains_to:
+  - email-copy
+schedule: 0 9 * * 1
 knowledge:
-  needs: [product, review_theme, metric, persona]
-  semantic_query: "review collection post-purchase timing product reviews social proof"
+  needs:
+    - product
+    - review_theme
+    - metric
+    - persona
+  semantic_query: review collection post-purchase timing product reviews social proof
   traverse_depth: 1
   include_agency_patterns: true
 produces:
@@ -18,6 +25,13 @@ produces:
     edge_to: product
     edge_type: derived_from
   - node_type: metric
+side_effect: send
+reversible: false
+requires_human_approval: true
+description_for_mia: >-
+  Input: recent orders past delivery window. Output: review-request emails/SMS
+  sent. Use when: user has opted in and volume threshold met.
+description_for_user: Asks recent buyers for reviews at the right moment.
 ---
 
 Use `brand.orders` / `brand.customers` / `brand.products` as your data sources. If any has `source !== 'shopify'`, caveat quantitative claims — say "based on available data" rather than "based on X months of orders".

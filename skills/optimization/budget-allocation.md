@@ -5,13 +5,24 @@ agent: max
 category: optimization
 complexity: mid
 credits: 2
-mcp_tools: [meta_ads.campaigns.insights, ga4.report.run]
-requires: [meta]
-chains_to: [ad-scaling]
-schedule: "0 9 * * *"
+mcp_tools:
+  - meta_ads.campaigns.insights
+  - ga4.report.run
+requires:
+  - meta
+chains_to:
+  - ad-scaling
+schedule: 0 9 * * *
 knowledge:
-  needs: [campaign, channel, metric, audience, creative, competitor, insight]
-  semantic_query: "ad spend ROAS CPA budget allocation channel performance"
+  needs:
+    - campaign
+    - channel
+    - metric
+    - audience
+    - creative
+    - competitor
+    - insight
+  semantic_query: ad spend ROAS CPA budget allocation channel performance
   traverse_depth: 2
   include_agency_patterns: true
 produces:
@@ -21,6 +32,13 @@ produces:
   - node_type: metric
     edge_to: channel
     edge_type: performs_on
+side_effect: none
+reversible: true
+requires_human_approval: false
+description_for_mia: >-
+  Input: channel performance + total budget. Output: reallocation scenarios
+  (A/B/C) with projected impact. Use when: monthly plan or ROAS drift.
+description_for_user: Shows you how to reshuffle your budget across channels for better returns.
 ---
 
 ## System Prompt

@@ -6,16 +6,30 @@ category: creative
 complexity: cheap
 credits: 1
 mcp_tools: []
-chains_to: [image-brief]
+chains_to:
+  - image-brief
 knowledge:
-  needs: [product, persona, top_content, brand_guidelines, campaign]
-  semantic_query: "social media content calendar posting schedule engagement"
+  needs:
+    - product
+    - persona
+    - top_content
+    - brand_guidelines
+    - campaign
+  semantic_query: social media content calendar posting schedule engagement
   traverse_depth: 1
   include_agency_patterns: true
 produces:
   - node_type: content_plan
     edge_to: product
     edge_type: promotes
+side_effect: external_write
+reversible: true
+requires_human_approval: false
+description_for_mia: >-
+  Input: brand + seasonal context + persona. Output: 2-4 week post calendar
+  (drafts, unpublished). Use when: organic cadence is stale or planning a
+  launch.
+description_for_user: Plans your upcoming social posts as a calendar.
 ---
 
 Use `brand.products` as your product catalog. If `source !== 'shopify'`, caveat any quantitative claims — say "based on your product catalog" rather than "based on your store data".

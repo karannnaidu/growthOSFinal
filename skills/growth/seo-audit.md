@@ -5,12 +5,19 @@ agent: hugo
 category: growth
 complexity: cheap
 credits: 1
-mcp_tools: [brand.products.list]
-chains_to: [keyword-strategy]
-schedule: "0 8 * * 2"
+mcp_tools:
+  - brand.products.list
+chains_to:
+  - keyword-strategy
+schedule: 0 8 * * 2
 knowledge:
-  needs: [keyword, product, competitor, insight, metric]
-  semantic_query: "SEO rankings organic traffic meta descriptions keyword performance"
+  needs:
+    - keyword
+    - product
+    - competitor
+    - insight
+    - metric
+  semantic_query: SEO rankings organic traffic meta descriptions keyword performance
   traverse_depth: 1
   include_agency_patterns: true
 produces:
@@ -19,6 +26,13 @@ produces:
     edge_to: keyword
     edge_type: derived_from
   - node_type: metric
+side_effect: none
+reversible: true
+requires_human_approval: false
+description_for_mia: >-
+  Input: site URL. Output: crawl + audit report with prioritized issues. Use
+  when: SEO baseline, after site changes, or monthly review.
+description_for_user: Audits your site for SEO issues and prioritizes fixes.
 ---
 
 Use `brand.products` as your product catalog. If `source !== 'shopify'`, caveat any quantitative claims — say "based on your product catalog" rather than "based on your store data".

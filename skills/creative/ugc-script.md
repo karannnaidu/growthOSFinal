@@ -6,10 +6,17 @@ category: creative
 complexity: premium
 credits: 3
 mcp_tools: []
-chains_to: [persona-creative-review, ugc-scout]
+chains_to:
+  - persona-creative-review
+  - ugc-scout
 knowledge:
-  needs: [product, persona, top_content, competitor_creative, brand_guidelines]
-  semantic_query: "UGC video script hook storytelling testimonial format"
+  needs:
+    - product
+    - persona
+    - top_content
+    - competitor_creative
+    - brand_guidelines
+  semantic_query: UGC video script hook storytelling testimonial format
   traverse_depth: 2
   include_agency_patterns: true
 produces:
@@ -19,6 +26,14 @@ produces:
   - node_type: creative
     edge_to: persona
     edge_type: targets
+side_effect: external_write
+reversible: true
+requires_human_approval: false
+description_for_mia: >-
+  Input: product + angle + persona. Output: short UGC-style scripts with
+  hook/problem/reveal beats. Use when: sourcing creator briefs or generating
+  persona-feedback videos.
+description_for_user: Writes short creator-style scripts for UGC ads.
 ---
 
 Use `brand.products` as your product catalog. If `source !== 'shopify'`, caveat any quantitative claims — say "based on your product catalog" rather than "based on your store data".

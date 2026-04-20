@@ -6,10 +6,19 @@ category: creative
 complexity: premium
 credits: 3
 mcp_tools: []
-chains_to: [persona-creative-review, image-brief, ab-test-design]
+chains_to:
+  - persona-creative-review
+  - image-brief
+  - ab-test-design
 knowledge:
-  needs: [product, audience, competitor, top_content, insight, persona]
-  semantic_query: "high-performing ad creatives target audience brand voice"
+  needs:
+    - product
+    - audience
+    - competitor
+    - top_content
+    - insight
+    - persona
+  semantic_query: high-performing ad creatives target audience brand voice
   traverse_from: products
   traverse_depth: 2
   include_agency_patterns: true
@@ -20,6 +29,14 @@ produces:
   - node_type: creative
     edge_to: audience
     edge_type: targets
+side_effect: external_write
+reversible: true
+requires_human_approval: false
+description_for_mia: >-
+  Input: product + persona + angle. Output: ad headlines and body variants
+  (draft creatives). Use when: new campaigns, creative fatigue detected, or
+  angle refresh needed.
+description_for_user: Writes ad copy variants for your campaigns.
 ---
 
 Use `brand.products` as your product catalog. If `source !== 'shopify'`, caveat any quantitative claims — say "based on your product catalog" rather than "based on your store data".

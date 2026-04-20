@@ -6,11 +6,17 @@ category: acquisition
 complexity: free
 credits: 0
 mcp_tools: []
-requires: [meta]
-chains_to: [campaign-optimizer]
+requires:
+  - meta
+chains_to:
+  - campaign-optimizer
 knowledge:
-  needs: [audience, creative, campaign, insight]
-  semantic_query: "campaign launch audience targeting creative performance"
+  needs:
+    - audience
+    - creative
+    - campaign
+    - insight
+  semantic_query: campaign launch audience targeting creative performance
   traverse_depth: 1
 produces:
   - node_type: campaign
@@ -19,6 +25,16 @@ produces:
   - node_type: campaign
     edge_to: creative
     edge_type: uses_creative
+side_effect: spend
+reversible: true
+requires_human_approval: true
+description_for_mia: >-
+  Input: audience + creative + budget. Output: live Meta/Google campaign. Use
+  when: user has approved a plan and is ready to spend. Blocked if Meta not
+  connected.
+description_for_user: >-
+  Launches a campaign on Meta/Google with the creative and audience you
+  approved.
 ---
 
 ## System Prompt

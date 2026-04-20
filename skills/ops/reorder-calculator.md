@@ -5,18 +5,32 @@ agent: navi
 category: ops
 complexity: free
 credits: 0
-mcp_tools: [brand.products.list, brand.orders.list]
-requires: [shopify]
-chains_to: [cash-flow-forecast]
+mcp_tools:
+  - brand.products.list
+  - brand.orders.list
+requires:
+  - shopify
+chains_to:
+  - cash-flow-forecast
 knowledge:
-  needs: [product, metric]
-  semantic_query: "reorder point safety stock lead time velocity EOQ"
+  needs:
+    - product
+    - metric
+  semantic_query: reorder point safety stock lead time velocity EOQ
   traverse_depth: 1
   include_agency_patterns: false
 produces:
   - node_type: metric
     edge_to: product
     edge_type: measures
+side_effect: external_write
+reversible: true
+requires_human_approval: false
+description_for_mia: >-
+  Input: sell-through + lead time + cash. Output: reorder quantity
+  recommendation per SKU (persisted). Use when: stock dips or quarterly
+  planning.
+description_for_user: Tells you how much to reorder for each SKU and when.
 ---
 
 Use `brand.orders` / `brand.customers` / `brand.products` as your data sources. If any has `source !== 'shopify'`, caveat quantitative claims — say "based on available data" rather than "based on X months of orders".

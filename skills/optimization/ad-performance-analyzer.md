@@ -5,13 +5,24 @@ agent: max
 category: optimization
 complexity: cheap
 credits: 1
-mcp_tools: [meta_ads.campaigns.insights, meta_ads.adsets.list]
-requires: [meta]
-chains_to: [budget-allocation, ad-scaling, creative-fatigue-detector]
-schedule: "0 9 * * *"
+mcp_tools:
+  - meta_ads.campaigns.insights
+  - meta_ads.adsets.list
+requires:
+  - meta
+chains_to:
+  - budget-allocation
+  - ad-scaling
+  - creative-fatigue-detector
+schedule: 0 9 * * *
 knowledge:
-  needs: [campaign, metric, insight, audience, creative]
-  semantic_query: "ad performance ROAS CAC CTR spend campaign metrics trends"
+  needs:
+    - campaign
+    - metric
+    - insight
+    - audience
+    - creative
+  semantic_query: ad performance ROAS CAC CTR spend campaign metrics trends
   traverse_depth: 1
 produces:
   - node_type: metric
@@ -20,6 +31,13 @@ produces:
   - node_type: insight
     edge_to: campaign
     edge_type: derived_from
+side_effect: none
+reversible: true
+requires_human_approval: false
+description_for_mia: >-
+  Input: campaign metrics time series. Output: winners/losers, cohort
+  breakdowns, diagnosis. Use when: weekly review or after budget changes.
+description_for_user: Analyses your ad performance and explains what is driving results.
 ---
 
 ## System Prompt

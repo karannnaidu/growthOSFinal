@@ -5,12 +5,18 @@ agent: penny
 category: finance
 complexity: mid
 credits: 2
-mcp_tools: [brand.orders.list]
-chains_to: [budget-allocation]
-schedule: "0 8 * * 1"
+mcp_tools:
+  - brand.orders.list
+chains_to:
+  - budget-allocation
+schedule: 0 8 * * 1
 knowledge:
-  needs: [metric, product, campaign, channel]
-  semantic_query: "cash flow forecast revenue projection inventory ad spend runway"
+  needs:
+    - metric
+    - product
+    - campaign
+    - channel
+  semantic_query: cash flow forecast revenue projection inventory ad spend runway
   traverse_depth: 1
   include_agency_patterns: true
 produces:
@@ -18,6 +24,14 @@ produces:
     edge_to: metric
     edge_type: derived_from
   - node_type: insight
+side_effect: none
+reversible: true
+requires_human_approval: false
+description_for_mia: >-
+  Input: revenue run-rate + spend + inventory commitments. Output: 8-12 week
+  cash forecast with risk bands. Use when: budget decisions, reorder planning,
+  or user asks for runway.
+description_for_user: Projects your cash position over the next couple of months.
 ---
 
 Use `brand.orders` / `brand.customers` / `brand.products` as your data sources. If any has `source !== 'shopify'`, caveat quantitative claims — say "based on available data" rather than "based on X months of orders".

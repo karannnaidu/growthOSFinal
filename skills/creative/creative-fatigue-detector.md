@@ -5,19 +5,36 @@ agent: aria
 category: creative
 complexity: free
 credits: 0
-mcp_tools: [meta_ads.campaigns.insights]
-requires: [meta]
-chains_to: [ad-copy, ugc-script, image-brief]
-schedule: "0 7 * * *"
+mcp_tools:
+  - meta_ads.campaigns.insights
+requires:
+  - meta
+chains_to:
+  - ad-copy
+  - ugc-script
+  - image-brief
+schedule: 0 7 * * *
 knowledge:
-  needs: [campaign, creative, metric, top_content]
-  semantic_query: "ad creative fatigue CTR decline frequency performance degradation"
+  needs:
+    - campaign
+    - creative
+    - metric
+    - top_content
+  semantic_query: ad creative fatigue CTR decline frequency performance degradation
   traverse_depth: 1
   include_agency_patterns: true
 produces:
   - node_type: insight
     edge_to: creative
     edge_type: derived_from
+side_effect: none
+reversible: true
+requires_human_approval: false
+description_for_mia: >-
+  Input: ad performance time series. Output: flags per creative
+  (fresh/fading/fatigued) + suggested refresh cadence. Use when: CTR drops or
+  CPA rises on running campaigns.
+description_for_user: Spots which ads are burning out so you know what to refresh.
 ---
 
 ## System Prompt

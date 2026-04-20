@@ -5,17 +5,32 @@ agent: sage
 category: optimization
 complexity: mid
 credits: 2
-mcp_tools: [ga4.report.run]
-chains_to: [persona-ab-predictor]
+mcp_tools:
+  - ga4.report.run
+chains_to:
+  - persona-ab-predictor
 knowledge:
-  needs: [experiment, metric, insight, persona, creative]
-  semantic_query: "AB test experiment design statistical significance sample size"
+  needs:
+    - experiment
+    - metric
+    - insight
+    - persona
+    - creative
+  semantic_query: AB test experiment design statistical significance sample size
   traverse_depth: 1
   include_agency_patterns: true
 produces:
   - node_type: experiment
     edge_to: insight
     edge_type: tests
+side_effect: external_write
+reversible: true
+requires_human_approval: false
+description_for_mia: >-
+  Input: hypothesis + traffic + conversion baseline. Output: A/B test plan
+  (variants, sample size, duration). Use when: user wants to validate before
+  rolling out.
+description_for_user: Designs an A/B test with the right sample size and duration.
 ---
 
 ## System Prompt

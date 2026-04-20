@@ -6,10 +6,18 @@ category: customer-intel
 complexity: premium
 credits: 3
 mcp_tools: []
-chains_to: [ad-copy, page-cro]
+chains_to:
+  - ad-copy
+  - page-cro
 knowledge:
-  needs: [persona, creative, product, brand_guidelines, top_content, competitor_creative]
-  semantic_query: "persona video feedback product reaction customer journey simulation"
+  needs:
+    - persona
+    - creative
+    - product
+    - brand_guidelines
+    - top_content
+    - competitor_creative
+  semantic_query: persona video feedback product reaction customer journey simulation
   traverse_depth: 2
   include_agency_patterns: true
 produces:
@@ -19,6 +27,14 @@ produces:
   - node_type: insight
     edge_to: product
     edge_type: reviews
+side_effect: external_write
+reversible: true
+requires_human_approval: false
+description_for_mia: >-
+  Input: persona + creative. Output: short generated feedback video (avatar +
+  voice) for qualitative review. Use when: user wants visceral read on a
+  creative.
+description_for_user: Generates a short video of a persona reacting to your creative.
 ---
 
 ## System Prompt

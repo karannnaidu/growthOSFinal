@@ -5,11 +5,18 @@ agent: hugo
 category: growth
 complexity: premium
 credits: 3
-mcp_tools: [brand.products.list]
-chains_to: [seo-audit]
+mcp_tools:
+  - brand.products.list
+chains_to:
+  - seo-audit
 knowledge:
-  needs: [keyword, product, competitor, persona, content_plan]
-  semantic_query: "programmatic SEO template pages scaled content generation"
+  needs:
+    - keyword
+    - product
+    - competitor
+    - persona
+    - content_plan
+  semantic_query: programmatic SEO template pages scaled content generation
   traverse_depth: 2
   include_agency_patterns: true
 produces:
@@ -19,6 +26,13 @@ produces:
   - node_type: page_content
     edge_to: product
     edge_type: promotes
+side_effect: external_write
+reversible: true
+requires_human_approval: true
+description_for_mia: >-
+  Input: keyword map + product catalog. Output: drafted programmatic pages (not
+  published). Use when: scaling organic reach and user explicitly opts in.
+description_for_user: Drafts a large set of SEO landing pages you can review before publishing.
 ---
 
 Use `brand.products` as your product catalog. If `source !== 'shopify'`, caveat any quantitative claims — say "based on your product catalog" rather than "based on your store data".

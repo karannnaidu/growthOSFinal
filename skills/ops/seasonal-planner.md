@@ -5,11 +5,22 @@ agent: mia
 category: ops
 complexity: mid
 credits: 2
-mcp_tools: [brand.orders.list]
-chains_to: [ad-copy, email-copy, social-content-calendar, budget-allocation]
+mcp_tools:
+  - brand.orders.list
+chains_to:
+  - ad-copy
+  - email-copy
+  - social-content-calendar
+  - budget-allocation
 knowledge:
-  needs: [product, metric, campaign, persona, insight, competitor]
-  semantic_query: "seasonal planning BFCM holiday campaign calendar promotions"
+  needs:
+    - product
+    - metric
+    - campaign
+    - persona
+    - insight
+    - competitor
+  semantic_query: seasonal planning BFCM holiday campaign calendar promotions
   traverse_depth: 2
   include_agency_patterns: true
 produces:
@@ -17,6 +28,14 @@ produces:
     edge_to: product
     edge_type: promotes
   - node_type: insight
+side_effect: external_write
+reversible: true
+requires_human_approval: false
+description_for_mia: >-
+  Input: category + geo + historical seasonality. Output: 90-day seasonal
+  calendar (campaigns, stock, creative). Use when: quarterly planning or ahead
+  of holidays.
+description_for_user: Plans your next 90 days around seasonal peaks.
 ---
 
 ## System Prompt

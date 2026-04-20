@@ -5,11 +5,24 @@ agent: mia
 category: ops
 complexity: premium
 credits: 3
-mcp_tools: [brand.products.list]
-chains_to: [ad-copy, email-copy, social-content-calendar, audience-targeting, keyword-strategy, page-cro]
+mcp_tools:
+  - brand.products.list
+chains_to:
+  - ad-copy
+  - email-copy
+  - social-content-calendar
+  - audience-targeting
+  - keyword-strategy
+  - page-cro
 knowledge:
-  needs: [product, persona, competitor, brand_guidelines, metric, campaign]
-  semantic_query: "product launch strategy go-to-market campaign coordination"
+  needs:
+    - product
+    - persona
+    - competitor
+    - brand_guidelines
+    - metric
+    - campaign
+  semantic_query: product launch strategy go-to-market campaign coordination
   traverse_depth: 2
   include_agency_patterns: true
 produces:
@@ -17,6 +30,13 @@ produces:
     edge_to: product
     edge_type: launches
   - node_type: insight
+side_effect: external_write
+reversible: true
+requires_human_approval: false
+description_for_mia: >-
+  Input: new product context. Output: end-to-end launch playbook (creative,
+  channels, timing, metrics). Use when: user announces a launch.
+description_for_user: Writes a full launch plan for a new product.
 ---
 
 Use `brand.products` as your product catalog. If `source !== 'shopify'`, caveat any quantitative claims — say "based on your product catalog" rather than "based on your store data".

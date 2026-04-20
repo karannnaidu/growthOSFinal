@@ -5,12 +5,25 @@ agent: scout
 category: diagnosis
 complexity: free
 credits: 0
-mcp_tools: [brand.products.list, brand.orders.list, meta_ads.campaigns.insights, ga4.report.run]
-chains_to: [seo-audit, email-flow-audit, ad-copy, budget-allocation, campaign-optimizer]
-schedule: "0 6 * * *"
+mcp_tools:
+  - brand.products.list
+  - brand.orders.list
+  - meta_ads.campaigns.insights
+  - ga4.report.run
+chains_to:
+  - seo-audit
+  - email-flow-audit
+  - ad-copy
+  - budget-allocation
+  - campaign-optimizer
+schedule: 0 6 * * *
 knowledge:
-  needs: [product, campaign, metric, insight]
-  semantic_query: "brand health metrics revenue traffic conversion anomalies"
+  needs:
+    - product
+    - campaign
+    - metric
+    - insight
+  semantic_query: brand health metrics revenue traffic conversion anomalies
   traverse_depth: 1
   include_agency_patterns: true
 produces:
@@ -18,6 +31,16 @@ produces:
     edge_to: metric
     edge_type: derived_from
   - node_type: metric
+side_effect: none
+reversible: true
+requires_human_approval: false
+description_for_mia: >-
+  Input: brand orders/products/campaigns. Output: health insights + flagged
+  anomalies + suggested next skills. Use when: first wake of the day or after
+  major data sync.
+description_for_user: >-
+  Reads your whole business and tells you what is working and what needs
+  attention.
 ---
 
 Use `brand.orders` / `brand.customers` / `brand.products` as your data sources. If any has `source !== 'shopify'`, caveat quantitative claims — say "based on available data" rather than "based on X months of orders".

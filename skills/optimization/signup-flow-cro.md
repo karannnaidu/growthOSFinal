@@ -5,11 +5,18 @@ agent: sage
 category: optimization
 complexity: premium
 credits: 3
-mcp_tools: [shopify.orders.list, ga4.report.run]
-chains_to: [ab-test-design]
+mcp_tools:
+  - shopify.orders.list
+  - ga4.report.run
+chains_to:
+  - ab-test-design
 knowledge:
-  needs: [metric, persona, insight, experiment]
-  semantic_query: "checkout flow signup conversion funnel friction cart abandonment"
+  needs:
+    - metric
+    - persona
+    - insight
+    - experiment
+  semantic_query: checkout flow signup conversion funnel friction cart abandonment
   traverse_depth: 2
   include_agency_patterns: true
 produces:
@@ -19,6 +26,13 @@ produces:
   - node_type: recommendation
     edge_to: insight
     edge_type: based_on
+side_effect: external_write
+reversible: true
+requires_human_approval: false
+description_for_mia: >-
+  Input: signup funnel analytics. Output: step-level fixes to raise completion.
+  Use when: signup drop-off is high.
+description_for_user: Fixes the drop-offs in your signup flow.
 ---
 
 ## System Prompt

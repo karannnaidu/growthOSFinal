@@ -5,12 +5,18 @@ agent: echo
 category: diagnosis
 complexity: mid
 credits: 2
-mcp_tools: [competitor.traffic, competitor.seo]
-chains_to: [keyword-strategy]
-schedule: "0 8 1 * *"
+mcp_tools:
+  - competitor.traffic
+  - competitor.seo
+chains_to:
+  - keyword-strategy
+schedule: 0 8 1 * *
 knowledge:
-  needs: [competitor, keyword, insight]
-  semantic_query: "competitor traffic SEO rankings keywords organic growth"
+  needs:
+    - competitor
+    - keyword
+    - insight
+  semantic_query: competitor traffic SEO rankings keywords organic growth
   traverse_depth: 1
   include_agency_patterns: true
 produces:
@@ -20,6 +26,13 @@ produces:
   - node_type: keyword
     edge_to: competitor
     edge_type: belongs_to
+side_effect: none
+reversible: true
+requires_human_approval: false
+description_for_mia: >-
+  Input: competitor domains. Output: estimated traffic, channel mix, trend. Use
+  when: benchmarking share of voice or budget justifications.
+description_for_user: Estimates how much traffic competitors get and where from.
 ---
 
 ## System Prompt

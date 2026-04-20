@@ -5,12 +5,20 @@ agent: scout
 category: customer-intel
 complexity: free
 credits: 0
-mcp_tools: [brand.orders.list, brand.products.list]
-chains_to: [page-cro, email-copy]
-schedule: "0 8 * * 3"
+mcp_tools:
+  - brand.orders.list
+  - brand.products.list
+chains_to:
+  - page-cro
+  - email-copy
+schedule: 0 8 * * 3
 knowledge:
-  needs: [product, metric, review_theme, insight]
-  semantic_query: "returns refunds product issues customer complaints quality"
+  needs:
+    - product
+    - metric
+    - review_theme
+    - insight
+  semantic_query: returns refunds product issues customer complaints quality
   traverse_depth: 1
   include_agency_patterns: true
 produces:
@@ -18,6 +26,13 @@ produces:
     edge_to: product
     edge_type: derived_from
   - node_type: metric
+side_effect: none
+reversible: true
+requires_human_approval: false
+description_for_mia: >-
+  Input: returns + reviews. Output: return-reason clustering with
+  revenue-at-risk. Use when: return rate ticks up or unit economics degrade.
+description_for_user: Explains why people return products and what it is costing you.
 ---
 
 Use `brand.orders` / `brand.customers` / `brand.products` as your data sources. If any has `source !== 'shopify'`, caveat quantitative claims — say "based on available data" rather than "based on X months of orders".

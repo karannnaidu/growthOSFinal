@@ -5,12 +5,23 @@ agent: max
 category: optimization
 complexity: premium
 credits: 3
-mcp_tools: [meta_ads.campaigns.insights, ga4.report.run]
-requires: [meta]
-chains_to: [budget-allocation, creative-fatigue-detector]
+mcp_tools:
+  - meta_ads.campaigns.insights
+  - ga4.report.run
+requires:
+  - meta
+chains_to:
+  - budget-allocation
+  - creative-fatigue-detector
 knowledge:
-  needs: [campaign, metric, channel, audience, creative, insight]
-  semantic_query: "ad scaling strategy ROAS threshold budget increase diminishing returns"
+  needs:
+    - campaign
+    - metric
+    - channel
+    - audience
+    - creative
+    - insight
+  semantic_query: ad scaling strategy ROAS threshold budget increase diminishing returns
   traverse_depth: 2
   include_agency_patterns: true
 produces:
@@ -20,6 +31,13 @@ produces:
   - node_type: recommendation
     edge_to: campaign
     edge_type: optimizes
+side_effect: spend
+reversible: true
+requires_human_approval: true
+description_for_mia: >-
+  Input: winning campaign + headroom + budget cap. Output: scaled budget applied
+  on Meta/Google. Use when: winner identified and user has pre-approved scaling.
+description_for_user: 'Scales up budget on winning campaigns, within the limits you set.'
 ---
 
 ## System Prompt

@@ -5,11 +5,19 @@ agent: luna
 category: retention
 complexity: cheap
 credits: 1
-mcp_tools: [brand.orders.list]
-chains_to: [email-copy]
+mcp_tools:
+  - brand.orders.list
+chains_to:
+  - email-copy
 knowledge:
-  needs: [product, audience, metric, email_flow, persona, insight]
-  semantic_query: "cart abandonment recovery email sequence timing objection handling"
+  needs:
+    - product
+    - audience
+    - metric
+    - email_flow
+    - persona
+    - insight
+  semantic_query: cart abandonment recovery email sequence timing objection handling
   traverse_depth: 1
   include_agency_patterns: true
 produces:
@@ -19,6 +27,13 @@ produces:
   - node_type: insight
     edge_to: metric
     edge_type: derived_from
+side_effect: send
+reversible: false
+requires_human_approval: true
+description_for_mia: >-
+  Input: abandoned-cart list + copy. Output: recovery emails/SMS sent. Use when:
+  flow is connected and user opted in to automatic recovery.
+description_for_user: Sends recovery messages to shoppers who abandoned their cart.
 ---
 
 Use `brand.orders` / `brand.customers` / `brand.products` as your data sources. If any has `source !== 'shopify'`, caveat quantitative claims — say "based on available data" rather than "based on X months of orders".

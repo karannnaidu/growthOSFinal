@@ -5,11 +5,19 @@ agent: luna
 category: creative
 complexity: premium
 credits: 3
-mcp_tools: [brand.orders.list]
-chains_to: [persona-creative-review]
+mcp_tools:
+  - brand.orders.list
+chains_to:
+  - persona-creative-review
 knowledge:
-  needs: [email_flow, persona, product, brand_guidelines, top_content, insight]
-  semantic_query: "email copy subject lines conversion open rates retention nurture"
+  needs:
+    - email_flow
+    - persona
+    - product
+    - brand_guidelines
+    - top_content
+    - insight
+  semantic_query: email copy subject lines conversion open rates retention nurture
   traverse_depth: 2
   include_agency_patterns: true
 produces:
@@ -19,6 +27,14 @@ produces:
   - node_type: email_content
     edge_to: persona
     edge_type: targets
+side_effect: external_write
+reversible: true
+requires_human_approval: false
+description_for_mia: >-
+  Input: campaign purpose + audience segment. Output: subject lines + email body
+  variants (drafts, not sent). Use when: new flow, seasonal push, or low open
+  rate rescue.
+description_for_user: Drafts email copy for flows and campaigns.
 ---
 
 Use `brand.products` as your product catalog. If `source !== 'shopify'`, caveat any quantitative claims — say "based on your product catalog" rather than "based on your store data".

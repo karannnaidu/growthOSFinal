@@ -5,12 +5,20 @@ agent: penny
 category: finance
 complexity: cheap
 credits: 1
-mcp_tools: [brand.orders.list, brand.products.list]
-chains_to: [cash-flow-forecast, pricing-optimizer]
-schedule: "0 8 * * 1"
+mcp_tools:
+  - brand.orders.list
+  - brand.products.list
+chains_to:
+  - cash-flow-forecast
+  - pricing-optimizer
+schedule: 0 8 * * 1
 knowledge:
-  needs: [product, metric, campaign, channel]
-  semantic_query: "CAC LTV contribution margin unit economics cohort payback"
+  needs:
+    - product
+    - metric
+    - campaign
+    - channel
+  semantic_query: CAC LTV contribution margin unit economics cohort payback
   traverse_depth: 2
   include_agency_patterns: true
 produces:
@@ -20,6 +28,13 @@ produces:
   - node_type: insight
     edge_to: metric
     edge_type: derived_from
+side_effect: none
+reversible: true
+requires_human_approval: false
+description_for_mia: >-
+  Input: orders + ad spend + COGS. Output: CAC, AOV, contribution margin, LTV.
+  Use when: onboarding, quarterly check, or before scale decisions.
+description_for_user: Calculates the real unit economics of your business.
 ---
 
 Use `brand.orders` / `brand.customers` / `brand.products` as your data sources. If any has `source !== 'shopify'`, caveat quantitative claims — say "based on available data" rather than "based on X months of orders".

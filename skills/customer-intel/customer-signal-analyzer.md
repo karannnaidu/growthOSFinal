@@ -5,12 +5,21 @@ agent: scout
 category: customer-intel
 complexity: cheap
 credits: 1
-mcp_tools: [brand.orders.list, brand.customers.list]
-chains_to: [persona-builder, churn-prevention]
-schedule: "0 7 * * 1"
+mcp_tools:
+  - brand.orders.list
+  - brand.customers.list
+chains_to:
+  - persona-builder
+  - churn-prevention
+schedule: 0 7 * * 1
 knowledge:
-  needs: [audience, persona, metric, review_theme, product]
-  semantic_query: "customer behavior signals purchase patterns churn risk engagement"
+  needs:
+    - audience
+    - persona
+    - metric
+    - review_theme
+    - product
+  semantic_query: customer behavior signals purchase patterns churn risk engagement
   traverse_depth: 2
   include_agency_patterns: true
 produces:
@@ -20,6 +29,14 @@ produces:
   - node_type: signal
     edge_to: persona
     edge_type: affects
+side_effect: none
+reversible: true
+requires_human_approval: false
+description_for_mia: >-
+  Input: reviews, support tickets, returns notes. Output: themed signals
+  (objections, delights, gaps). Use when: pre-persona, pre-creative-angle, or
+  after returns spike.
+description_for_user: Reads what your customers are saying and surfaces the themes.
 ---
 
 Use `brand.orders` / `brand.customers` / `brand.products` as your data sources. If any has `source !== 'shopify'`, caveat quantitative claims — say "based on available data" rather than "based on X months of orders".

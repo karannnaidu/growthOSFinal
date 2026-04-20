@@ -5,11 +5,19 @@ agent: luna
 category: retention
 complexity: cheap
 credits: 1
-mcp_tools: [brand.orders.list]
-chains_to: [email-copy, abandoned-cart-recovery]
+mcp_tools:
+  - brand.orders.list
+chains_to:
+  - email-copy
+  - abandoned-cart-recovery
 knowledge:
-  needs: [email_flow, audience, metric, insight, persona]
-  semantic_query: "email automation welcome series cart recovery open rate retention"
+  needs:
+    - email_flow
+    - audience
+    - metric
+    - insight
+    - persona
+  semantic_query: email automation welcome series cart recovery open rate retention
   traverse_depth: 1
   include_agency_patterns: true
 produces:
@@ -17,6 +25,13 @@ produces:
   - node_type: insight
     edge_to: email_flow
     edge_type: derived_from
+side_effect: none
+reversible: true
+requires_human_approval: false
+description_for_mia: >-
+  Input: ESP flow configs + performance. Output: gap list and fix priorities.
+  Use when: onboarding ESP or quarterly retention review.
+description_for_user: Audits your email automations and flags what is missing.
 ---
 
 ## System Prompt

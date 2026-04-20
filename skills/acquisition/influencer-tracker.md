@@ -5,12 +5,18 @@ agent: atlas
 category: acquisition
 complexity: cheap
 credits: 1
-mcp_tools: [brand.orders.list]
-chains_to: [influencer-finder]
-schedule: "0 9 * * 1"
+mcp_tools:
+  - brand.orders.list
+chains_to:
+  - influencer-finder
+schedule: 0 9 * * 1
 knowledge:
-  needs: [influencer, campaign, metric, product]
-  semantic_query: "influencer performance tracking ROI attribution content quality"
+  needs:
+    - influencer
+    - campaign
+    - metric
+    - product
+  semantic_query: influencer performance tracking ROI attribution content quality
   traverse_depth: 1
   include_agency_patterns: true
 produces:
@@ -20,6 +26,14 @@ produces:
   - node_type: insight
     edge_to: influencer
     edge_type: derived_from
+side_effect: none
+reversible: true
+requires_human_approval: false
+description_for_mia: >-
+  Input: active creator campaigns. Output: performance report per creator
+  (reach, CPA, attributed revenue). Use when: checking ROI of ongoing creator
+  relationships.
+description_for_user: Tracks how your creator partnerships are performing.
 ---
 
 Use `brand.products` as your product catalog. If `source !== 'shopify'`, caveat any quantitative claims — say "based on your product catalog" rather than "based on your store data".

@@ -5,11 +5,22 @@ agent: atlas
 category: acquisition
 complexity: premium
 credits: 3
-mcp_tools: [meta_ads.campaigns.insights, ga4.report.run, brand.orders.list]
-chains_to: [ad-copy, email-copy]
+mcp_tools:
+  - meta_ads.campaigns.insights
+  - ga4.report.run
+  - brand.orders.list
+chains_to:
+  - ad-copy
+  - email-copy
 knowledge:
-  needs: [persona, audience, campaign, metric, creative, product]
-  semantic_query: "retargeting remarketing dynamic ads audience segmentation funnel"
+  needs:
+    - persona
+    - audience
+    - campaign
+    - metric
+    - creative
+    - product
+  semantic_query: retargeting remarketing dynamic ads audience segmentation funnel
   traverse_depth: 2
   include_agency_patterns: true
 produces:
@@ -19,6 +30,14 @@ produces:
   - node_type: campaign
     edge_to: audience
     edge_type: targets
+side_effect: external_write
+reversible: true
+requires_human_approval: false
+description_for_mia: >-
+  Input: site traffic + abandoned cart data. Output: retargeting funnel spec
+  (segments, creatives, frequency caps). Use when: ROAS drops or new
+  abandoned-cart volume appears.
+description_for_user: Designs a retargeting funnel to win back visitors who did not convert.
 ---
 
 Use `brand.products` as your product catalog. If `source !== 'shopify'`, caveat any quantitative claims — say "based on your product catalog" rather than "based on your store data".

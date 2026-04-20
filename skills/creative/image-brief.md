@@ -6,10 +6,16 @@ category: creative
 complexity: mid
 credits: 2
 mcp_tools: []
-chains_to: [persona-creative-review]
+chains_to:
+  - persona-creative-review
 knowledge:
-  needs: [product, product_image, creative, competitor_creative, persona]
-  semantic_query: "visual ad creative style imagery brand aesthetic"
+  needs:
+    - product
+    - product_image
+    - creative
+    - competitor_creative
+    - persona
+  semantic_query: visual ad creative style imagery brand aesthetic
   traverse_depth: 1
   include_agency_patterns: true
 produces:
@@ -19,6 +25,14 @@ produces:
   - node_type: ad_creative
     edge_to: product
     edge_type: belongs_to
+side_effect: external_write
+reversible: true
+requires_human_approval: false
+description_for_mia: >-
+  Input: ad angle + brand kit. Output: image generation brief (composition,
+  style, props) ready for Creative Studio. Use when: new visual creatives
+  needed.
+description_for_user: Writes the brief that drives image generation for your ads.
 ---
 
 Use `brand.products` as your product catalog. If `source !== 'shopify'`, caveat any quantitative claims — say "based on your product catalog" rather than "based on your store data".

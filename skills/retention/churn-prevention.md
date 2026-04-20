@@ -5,11 +5,21 @@ agent: luna
 category: retention
 complexity: mid
 credits: 2
-mcp_tools: [brand.orders.list, brand.customers.list]
-chains_to: [email-copy, loyalty-program-designer]
+mcp_tools:
+  - brand.orders.list
+  - brand.customers.list
+chains_to:
+  - email-copy
+  - loyalty-program-designer
 knowledge:
-  needs: [audience, metric, product, email_flow, review_theme, persona]
-  semantic_query: "customer churn prevention win-back retention signals RFM"
+  needs:
+    - audience
+    - metric
+    - product
+    - email_flow
+    - review_theme
+    - persona
+  semantic_query: customer churn prevention win-back retention signals RFM
   traverse_depth: 2
   include_agency_patterns: true
 produces:
@@ -19,6 +29,13 @@ produces:
   - node_type: email_flow
     edge_to: audience
     edge_type: sends_to
+side_effect: none
+reversible: true
+requires_human_approval: false
+description_for_mia: >-
+  Input: subscriber cohort behaviour. Output: at-risk customers + suggested
+  intervention. Use when: churn trends upward or before quarterly reviews.
+description_for_user: Spots customers likely to churn and suggests how to save them.
 ---
 
 Use `brand.orders` / `brand.customers` / `brand.products` as your data sources. If any has `source !== 'shopify'`, caveat quantitative claims — say "based on available data" rather than "based on X months of orders".

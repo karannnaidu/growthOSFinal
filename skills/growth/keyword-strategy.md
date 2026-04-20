@@ -5,11 +5,19 @@ agent: hugo
 category: growth
 complexity: cheap
 credits: 1
-mcp_tools: [brand.products.list]
-chains_to: [programmatic-seo, ad-copy]
+mcp_tools:
+  - brand.products.list
+chains_to:
+  - programmatic-seo
+  - ad-copy
 knowledge:
-  needs: [keyword, product, competitor, insight, persona]
-  semantic_query: "keyword strategy search volume intent mapping content opportunities"
+  needs:
+    - keyword
+    - product
+    - competitor
+    - insight
+    - persona
+  semantic_query: keyword strategy search volume intent mapping content opportunities
   traverse_depth: 2
   include_agency_patterns: true
 produces:
@@ -19,6 +27,13 @@ produces:
   - node_type: content_plan
     edge_to: keyword
     edge_type: targets
+side_effect: external_write
+reversible: true
+requires_human_approval: false
+description_for_mia: >-
+  Input: product pages + competitor SERPs. Output: keyword map grouped by intent
+  + priority. Use when: SEO kickoff, new product line, or content planning.
+description_for_user: Builds a keyword map for your SEO and content.
 ---
 
 Use `brand.products` as your product catalog. If `source !== 'shopify'`, caveat any quantitative claims — say "based on your product catalog" rather than "based on your store data".

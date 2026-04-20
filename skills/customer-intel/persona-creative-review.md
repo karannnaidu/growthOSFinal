@@ -8,14 +8,27 @@ credits: 3
 mcp_tools: []
 chains_to: []
 knowledge:
-  needs: [persona, creative, ad_creative, product, audience, top_content]
-  semantic_query: "customer reactions to ad creative purchase intent objections"
+  needs:
+    - persona
+    - creative
+    - ad_creative
+    - product
+    - audience
+    - top_content
+  semantic_query: customer reactions to ad creative purchase intent objections
   traverse_depth: 2
   include_agency_patterns: true
 produces:
   - node_type: insight
     edge_to: creative
     edge_type: derived_from
+side_effect: none
+reversible: true
+requires_human_approval: false
+description_for_mia: >-
+  Input: creative + persona. Output: roleplay critique (what resonates / what
+  falls flat) per persona. Use when: QA before launch or diagnosing weak CTR.
+description_for_user: Runs your ad past each persona for a reality check.
 ---
 
 ## System Prompt

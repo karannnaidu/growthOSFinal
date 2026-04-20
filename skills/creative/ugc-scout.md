@@ -6,16 +6,28 @@ category: creative
 complexity: cheap
 credits: 1
 mcp_tools: []
-chains_to: [ugc-script]
+chains_to:
+  - ugc-script
 knowledge:
-  needs: [persona, brand_guidelines, top_content, competitor_creative]
-  semantic_query: "UGC creators influencers micro content creators authentic"
+  needs:
+    - persona
+    - brand_guidelines
+    - top_content
+    - competitor_creative
+  semantic_query: UGC creators influencers micro content creators authentic
   traverse_depth: 1
   include_agency_patterns: true
 produces:
   - node_type: creator_profile
     edge_to: persona
     edge_type: matches
+side_effect: none
+reversible: true
+requires_human_approval: false
+description_for_mia: >-
+  Input: brand + product tags. Output: list of existing UGC mentions with
+  usage-rights signal. Use when: looking for authentic creative to license.
+description_for_user: Finds real UGC of your product already on the internet.
 ---
 
 ## System Prompt

@@ -5,11 +5,17 @@ agent: nova
 category: growth
 complexity: standard
 credits: 2
-mcp_tools: [brand.products.list]
-chains_to: [ai-visibility-probe]
+mcp_tools:
+  - brand.products.list
+chains_to:
+  - ai-visibility-probe
 knowledge:
-  needs: [product, brand_guidelines, review_theme, insight]
-  semantic_query: "brand positioning category differentiation target customer problem solved"
+  needs:
+    - product
+    - brand_guidelines
+    - review_theme
+    - insight
+  semantic_query: brand positioning category differentiation target customer problem solved
   traverse_depth: 2
 produces:
   - node_type: brand_dna
@@ -18,6 +24,13 @@ produces:
   - node_type: ai_query
     edge_to: brand_dna
     edge_type: derived_from
+side_effect: external_write
+reversible: true
+requires_human_approval: false
+description_for_mia: >-
+  Input: website + product pages + existing copy. Output: brand DNA (values,
+  promise, positioning, pillars) persisted. Use when: onboarding or a rebrand.
+description_for_user: 'Captures what makes your brand distinctive, from your own content.'
 ---
 
 ## System Prompt

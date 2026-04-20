@@ -5,18 +5,27 @@ agent: echo
 category: diagnosis
 complexity: cheap
 credits: 0.5
-mcp_tools: [competitor.status]
+mcp_tools:
+  - competitor.status
 chains_to: []
-schedule: "0 7 * * *"
+schedule: 0 7 * * *
 knowledge:
-  needs: [competitor]
-  semantic_query: "competitor status active shutdown acquired closing"
+  needs:
+    - competitor
+  semantic_query: competitor status active shutdown acquired closing
   traverse_depth: 0
   include_agency_patterns: false
 produces:
   - node_type: insight
     edge_to: competitor
     edge_type: derived_from
+side_effect: none
+reversible: true
+requires_human_approval: false
+description_for_mia: >-
+  Input: tracked competitor set. Output: diff since last scan (new products,
+  price moves, copy changes). Use when: any meaningful change triggers alerting.
+description_for_user: Watches your competitors and tells you when they change something important.
 ---
 
 ## System Prompt

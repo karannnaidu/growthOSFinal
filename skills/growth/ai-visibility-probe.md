@@ -6,15 +6,26 @@ category: growth
 complexity: premium
 credits: 5
 mcp_tools: []
-chains_to: [ai-visibility-optimize]
+chains_to:
+  - ai-visibility-optimize
 knowledge:
-  needs: [brand_dna, ai_query]
-  semantic_query: "ai search visibility citation coverage chatgpt perplexity gemini"
+  needs:
+    - brand_dna
+    - ai_query
+  semantic_query: ai search visibility citation coverage chatgpt perplexity gemini
   traverse_depth: 1
 produces:
   - node_type: ai_probe_result
     edge_to: ai_query
     edge_type: measures
+side_effect: none
+reversible: true
+requires_human_approval: false
+description_for_mia: >-
+  Input: brand + category queries. Output: frequency/position your brand appears
+  in LLM answers. Use when: baselining AI visibility or measuring optimizer
+  impact.
+description_for_user: Tests how often your brand shows up in AI search answers.
 ---
 
 ## System Prompt

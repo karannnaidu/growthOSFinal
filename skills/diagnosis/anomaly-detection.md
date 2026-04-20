@@ -5,12 +5,19 @@ agent: scout
 category: diagnosis
 complexity: free
 credits: 0
-mcp_tools: [brand.orders.list, meta_ads.campaigns.insights, ga4.report.run]
-chains_to: [health-check]
-schedule: "*/30 * * * *"
+mcp_tools:
+  - brand.orders.list
+  - meta_ads.campaigns.insights
+  - ga4.report.run
+chains_to:
+  - health-check
+schedule: '*/30 * * * *'
 knowledge:
-  needs: [metric, campaign, insight]
-  semantic_query: "anomaly spike drop unusual metric deviation alert"
+  needs:
+    - metric
+    - campaign
+    - insight
+  semantic_query: anomaly spike drop unusual metric deviation alert
   traverse_depth: 1
   include_agency_patterns: false
 produces:
@@ -20,6 +27,14 @@ produces:
   - node_type: insight
     edge_to: anomaly
     edge_type: explains
+side_effect: none
+reversible: true
+requires_human_approval: false
+description_for_mia: >-
+  Input: metric time series (revenue, CPA, traffic). Output: flagged anomalies
+  with severity. Use when: heartbeat wake, after platform sync, or before daily
+  digest.
+description_for_user: Flags sudden changes in your numbers before they become problems.
 ---
 
 Use `brand.orders` / `brand.customers` / `brand.products` as your data sources. If any has `source !== 'shopify'`, caveat quantitative claims — say "based on available data" rather than "based on X months of orders".

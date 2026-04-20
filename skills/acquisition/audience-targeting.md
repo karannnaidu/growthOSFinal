@@ -5,11 +5,22 @@ agent: atlas
 category: acquisition
 complexity: mid
 credits: 2
-mcp_tools: [brand.customers.list, brand.orders.list, meta_ads.campaigns.insights]
-chains_to: [retargeting-strategy, ad-copy]
+mcp_tools:
+  - brand.customers.list
+  - brand.orders.list
+  - meta_ads.campaigns.insights
+chains_to:
+  - retargeting-strategy
+  - ad-copy
 knowledge:
-  needs: [persona, audience, campaign, metric, competitor, product]
-  semantic_query: "audience targeting lookalike interest-based custom audience segmentation"
+  needs:
+    - persona
+    - audience
+    - campaign
+    - metric
+    - competitor
+    - product
+  semantic_query: audience targeting lookalike interest-based custom audience segmentation
   traverse_depth: 2
   include_agency_patterns: true
 produces:
@@ -19,6 +30,16 @@ produces:
   - node_type: audience
     edge_to: campaign
     edge_type: targets
+side_effect: external_write
+reversible: true
+requires_human_approval: false
+description_for_mia: >-
+  Input: brand + product context, existing customer signals. Output: targeting
+  spec (interests, lookalikes, exclusions) persisted as audience node. Use when:
+  launching new campaigns, expanding audiences, or after persona changes.
+description_for_user: >-
+  Builds a targeting blueprint (interests, lookalikes, exclusions) for your ad
+  campaigns.
 ---
 
 Use `brand.products` as your product catalog. If `source !== 'shopify'`, caveat any quantitative claims — say "based on your product catalog" rather than "based on your store data".

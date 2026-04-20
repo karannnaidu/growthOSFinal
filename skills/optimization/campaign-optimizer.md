@@ -5,13 +5,25 @@ agent: max
 category: optimization
 complexity: mid
 credits: 1
-mcp_tools: [meta_ads.campaigns.insights]
-requires: [meta]
-chains_to: [ad-copy, image-brief, creative-fatigue-detector]
-schedule: "0 6 */2 * *"
+mcp_tools:
+  - meta_ads.campaigns.insights
+requires:
+  - meta
+chains_to:
+  - ad-copy
+  - image-brief
+  - creative-fatigue-detector
+schedule: 0 6 */2 * *
 knowledge:
-  needs: [campaign, metric, insight, audience, creative]
-  semantic_query: "campaign performance ROAS budget scaling creative fatigue audience demographics account maturity ramp"
+  needs:
+    - campaign
+    - metric
+    - insight
+    - audience
+    - creative
+  semantic_query: >-
+    campaign performance ROAS budget scaling creative fatigue audience
+    demographics account maturity ramp
   traverse_depth: 2
   include_agency_patterns: true
 produces:
@@ -24,6 +36,14 @@ produces:
   - node_type: metric
     edge_to: campaign
     edge_type: performs_on
+side_effect: spend
+reversible: true
+requires_human_approval: true
+description_for_mia: >-
+  Input: running campaign diagnostics. Output: applied optimizations (pause,
+  bid, audience, creative swap). Use when: clear signal exists and user
+  pre-approved ops.
+description_for_user: Tunes your live campaigns to improve ROAS.
 ---
 
 ## System Prompt

@@ -7,14 +7,26 @@ complexity: free
 credits: 0
 mcp_tools: []
 chains_to: []
-schedule: "0 7 * * *"
+schedule: 0 7 * * *
 knowledge:
-  needs: [metric, insight, anomaly, campaign]
-  semantic_query: "daily briefing summary key metrics alerts"
+  needs:
+    - metric
+    - insight
+    - anomaly
+    - campaign
+  semantic_query: daily briefing summary key metrics alerts
   traverse_depth: 1
   include_agency_patterns: false
 produces:
   - node_type: insight
+side_effect: send
+reversible: false
+requires_human_approval: true
+description_for_mia: >-
+  Input: brand + digest content + recipient. Output: WhatsApp message sent to
+  user. Use when: user has opted in to WhatsApp briefings and it is the
+  scheduled time.
+description_for_user: Sends you a WhatsApp briefing with the day's highlights.
 ---
 
 ## System Prompt

@@ -5,11 +5,19 @@ agent: luna
 category: retention
 complexity: mid
 credits: 2
-mcp_tools: [brand.orders.list, brand.customers.list]
-chains_to: [email-copy]
+mcp_tools:
+  - brand.orders.list
+  - brand.customers.list
+chains_to:
+  - email-copy
 knowledge:
-  needs: [product, audience, metric, competitor, persona]
-  semantic_query: "loyalty program points referral subscription VIP retention"
+  needs:
+    - product
+    - audience
+    - metric
+    - competitor
+    - persona
+  semantic_query: loyalty program points referral subscription VIP retention
   traverse_depth: 2
   include_agency_patterns: true
 produces:
@@ -17,6 +25,13 @@ produces:
     edge_to: audience
     edge_type: derived_from
   - node_type: recommendation
+side_effect: external_write
+reversible: true
+requires_human_approval: false
+description_for_mia: >-
+  Input: AOV, repeat rate, margin. Output: loyalty program spec (tiers, rewards,
+  economics). Use when: repeat rate plateaus or user asks for loyalty plan.
+description_for_user: Designs a loyalty program tailored to your margins and customers.
 ---
 
 Use `brand.orders` / `brand.customers` / `brand.products` as your data sources. If any has `source !== 'shopify'`, caveat quantitative claims — say "based on available data" rather than "based on X months of orders".

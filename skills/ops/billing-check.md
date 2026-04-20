@@ -5,12 +5,15 @@ agent: penny
 category: ops
 complexity: free
 credits: 0
-mcp_tools: [gos.wallet.summary]
-chains_to: [unit-economics]
-schedule: "0 8 * * 1"
+mcp_tools:
+  - gos.wallet.summary
+chains_to:
+  - unit-economics
+schedule: 0 8 * * 1
 knowledge:
-  needs: [metric]
-  semantic_query: "Growth OS wallet credits usage subscription AI cost"
+  needs:
+    - metric
+  semantic_query: Growth OS wallet credits usage subscription AI cost
   traverse_depth: 1
   include_agency_patterns: false
 produces:
@@ -18,6 +21,13 @@ produces:
   - node_type: insight
     edge_to: metric
     edge_type: derived_from
+side_effect: none
+reversible: true
+requires_human_approval: false
+description_for_mia: >-
+  Input: subscription + usage. Output: billing summary, upcoming charges, cost
+  anomalies. Use when: user asks about billing or monthly rollup.
+description_for_user: Summarises your subscription and upcoming charges.
 ---
 
 ## System Prompt

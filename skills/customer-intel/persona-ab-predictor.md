@@ -6,10 +6,16 @@ category: customer-intel
 complexity: mid
 credits: 2
 mcp_tools: []
-chains_to: [ab-test-design]
+chains_to:
+  - ab-test-design
 knowledge:
-  needs: [persona, creative, experiment, top_content, insight]
-  semantic_query: "persona prediction AB test variant performance audience response"
+  needs:
+    - persona
+    - creative
+    - experiment
+    - top_content
+    - insight
+  semantic_query: persona prediction AB test variant performance audience response
   traverse_depth: 2
   include_agency_patterns: true
 produces:
@@ -19,6 +25,14 @@ produces:
   - node_type: insight
     edge_to: persona
     edge_type: derived_from
+side_effect: none
+reversible: true
+requires_human_approval: false
+description_for_mia: >-
+  Input: creative variants + persona set. Output: predicted CTR/CVR per
+  persona-variant pair. Use when: deciding which creative to launch without a
+  live test.
+description_for_user: Predicts which creative will win with which audience before you spend.
 ---
 
 ## System Prompt

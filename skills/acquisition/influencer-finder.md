@@ -6,10 +6,16 @@ category: acquisition
 complexity: mid
 credits: 2
 mcp_tools: []
-chains_to: [influencer-tracker, ugc-script]
+chains_to:
+  - influencer-tracker
+  - ugc-script
 knowledge:
-  needs: [persona, brand_guidelines, competitor, product]
-  semantic_query: "influencer marketing discovery partnerships micro macro creators"
+  needs:
+    - persona
+    - brand_guidelines
+    - competitor
+    - product
+  semantic_query: influencer marketing discovery partnerships micro macro creators
   traverse_depth: 1
   include_agency_patterns: true
 produces:
@@ -17,6 +23,13 @@ produces:
     edge_to: persona
     edge_type: reaches
   - node_type: insight
+side_effect: none
+reversible: true
+requires_human_approval: false
+description_for_mia: >-
+  Input: brand niche + target persona. Output: ranked list of candidate creators
+  with fit scores. Use when: exploring creator partnerships or UGC sourcing.
+description_for_user: Finds creators who match your brand and audience.
 ---
 
 ## System Prompt

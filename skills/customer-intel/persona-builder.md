@@ -5,11 +5,18 @@ agent: atlas
 category: customer-intel
 complexity: mid
 credits: 2
-mcp_tools: [brand.customers.list, brand.orders.list]
-chains_to: [persona-creative-review]
+mcp_tools:
+  - brand.customers.list
+  - brand.orders.list
+chains_to:
+  - persona-creative-review
 knowledge:
-  needs: [audience, product, insight, review_theme]
-  semantic_query: "customer demographics purchase behavior preferences segments"
+  needs:
+    - audience
+    - product
+    - insight
+    - review_theme
+  semantic_query: customer demographics purchase behavior preferences segments
   traverse_depth: 2
   include_agency_patterns: true
 produces:
@@ -19,6 +26,14 @@ produces:
   - node_type: persona
     edge_to: product
     edge_type: mentions
+side_effect: external_write
+reversible: true
+requires_human_approval: false
+description_for_mia: >-
+  Input: customer signals + product context. Output: 3-5 named personas with
+  JTBD, objections, triggers (persisted). Use when: onboarding, re-segmentation,
+  or after signal analysis.
+description_for_user: Builds named buyer personas you can target and message directly.
 ---
 
 Use `brand.orders` / `brand.customers` / `brand.products` as your data sources. If any has `source !== 'shopify'`, caveat quantitative claims — say "based on available data" rather than "based on X months of orders".

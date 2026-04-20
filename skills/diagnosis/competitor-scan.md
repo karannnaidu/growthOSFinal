@@ -5,13 +5,23 @@ agent: echo
 category: diagnosis
 complexity: cheap
 credits: 1
-mcp_tools: [competitor.ads, competitor.products, competitor.traffic, competitor.seo, competitor.status]
-chains_to: [competitor-creative-library]
-schedule: "0 8 * * 4"
+mcp_tools:
+  - competitor.ads
+  - competitor.products
+  - competitor.traffic
+  - competitor.seo
+  - competitor.status
+chains_to:
+  - competitor-creative-library
+schedule: 0 8 * * 4
 visual_capture: true
 knowledge:
-  needs: [competitor, product, campaign, competitor_creative]
-  semantic_query: "competitor pricing products ads strategy changes"
+  needs:
+    - competitor
+    - product
+    - campaign
+    - competitor_creative
+  semantic_query: competitor pricing products ads strategy changes
   traverse_depth: 1
   include_agency_patterns: true
 produces:
@@ -22,6 +32,13 @@ produces:
   - node_type: insight
     edge_to: competitor
     edge_type: derived_from
+side_effect: none
+reversible: true
+requires_human_approval: false
+description_for_mia: >-
+  Input: competitor URLs. Output: snapshot of positioning, pricing, on-site
+  offers. Use when: weekly sweep or before strategy changes.
+description_for_user: Checks what your competitors are doing and how they position.
 ---
 
 Use `brand.products` as your product catalog. If `source !== 'shopify'`, caveat any quantitative claims — say "based on your product catalog" rather than "based on your store data".

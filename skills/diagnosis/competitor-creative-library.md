@@ -5,12 +5,19 @@ agent: echo
 category: diagnosis
 complexity: mid
 credits: 2
-mcp_tools: [competitor.ads]
+mcp_tools:
+  - competitor.ads
 visual_capture: true
-chains_to: [ad-copy, ugc-script]
+chains_to:
+  - ad-copy
+  - ugc-script
 knowledge:
-  needs: [competitor, competitor_creative, creative, top_content]
-  semantic_query: "competitor ad creative visual library trends formats messaging"
+  needs:
+    - competitor
+    - competitor_creative
+    - creative
+    - top_content
+  semantic_query: competitor ad creative visual library trends formats messaging
   traverse_depth: 2
   include_agency_patterns: true
 produces:
@@ -20,6 +27,13 @@ produces:
   - node_type: insight
     edge_to: competitor_creative
     edge_type: derived_from
+side_effect: none
+reversible: true
+requires_human_approval: false
+description_for_mia: >-
+  Input: competitor set. Output: scraped ad library snapshots (active creatives,
+  offers, angles). Use when: creative brainstorm or monitoring a rival launch.
+description_for_user: Pulls the ads your competitors are currently running.
 ---
 
 ## System Prompt
