@@ -6,6 +6,8 @@ import matter from 'gray-matter';
 // Types
 // ---------------------------------------------------------------------------
 
+export type SkillSideEffect = 'none' | 'external_write' | 'spend' | 'send';
+
 export interface SkillDefinition {
   id: string;
   name: string;
@@ -18,6 +20,12 @@ export interface SkillDefinition {
   requires: string[];
   chainsTo: string[];
   schedule?: string;
+  /** Phase 2 safety metadata. Optional here so custom_skills without the fields still load. */
+  sideEffect?: SkillSideEffect;
+  reversible?: boolean;
+  requiresHumanApproval?: boolean;
+  descriptionForMia?: string;
+  descriptionForUser?: string;
   knowledge?: {
     needs: string[];
     semanticQuery?: string;
@@ -141,6 +149,14 @@ export function parseSkillMarkdown(raw: string): SkillDefinition {
           includeAgencyPatterns: data.knowledge.include_agency_patterns,
         }
       : undefined,
+    sideEffect: data.side_effect as SkillSideEffect | undefined,
+    reversible: typeof data.reversible === 'boolean' ? data.reversible : undefined,
+    requiresHumanApproval:
+      typeof data.requires_human_approval === 'boolean'
+        ? data.requires_human_approval
+        : undefined,
+    descriptionForMia: data.description_for_mia as string | undefined,
+    descriptionForUser: data.description_for_user as string | undefined,
     produces: Array.isArray(data.produces)
       ? data.produces.map((p: Record<string, unknown>) => ({
           nodeType: (p.node_type as string) ?? '',
