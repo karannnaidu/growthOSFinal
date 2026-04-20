@@ -1,0 +1,8 @@
+{
+  "name": "requests_to_resolve entries with bad status are dropped",
+  "catalogSkillIds": ["health-check"],
+  "raw": "{\"picks\":[],\"new_watches\":[],\"requests_to_resolve\":[{\"request_id\":\"req_ok\",\"status\":\"acted_on\"},{\"request_id\":\"req_bad\",\"status\":\"ignored\"},{\"request_id\":\"req_missing\"}],\"digest_lines\":[],\"instant_messages\":[],\"reasoning\":\"\"}",
+  "expect": {
+    "requestsToResolve": { "length": 1 }
+  }
+}

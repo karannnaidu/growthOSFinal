@@ -100,7 +100,7 @@ export interface InstantMessageDraft {
   inline_watch_ids?: string[]
 }
 
-interface PlannerOutput {
+export interface PlannerOutput {
   picks: Pick[]
   new_watches: NewWatchDraft[]
   requests_to_resolve: RequestResolutionDraft[]
@@ -267,7 +267,7 @@ function buildPlannerPrompt(args: {
 // ---------------------------------------------------------------------------
 // Step 3 — parse + guardrail the planner output
 // ---------------------------------------------------------------------------
-function parsePlannerOutput(raw: string, catalog: MiaCatalog): PlannerOutput {
+export function parsePlannerOutput(raw: string, catalog: MiaCatalog): PlannerOutput {
   let text = raw.trim()
   const fence = text.match(/^```(?:json)?\s*\n?([\s\S]*?)\n?\s*```$/)
   if (fence) text = fence[1]!.trim()

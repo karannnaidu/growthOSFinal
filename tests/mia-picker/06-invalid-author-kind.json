@@ -1,0 +1,8 @@
+{
+  "name": "instant_messages with unknown author_kind are dropped",
+  "catalogSkillIds": ["health-check"],
+  "raw": "{\"picks\":[],\"new_watches\":[],\"requests_to_resolve\":[],\"digest_lines\":[],\"instant_messages\":[{\"author_kind\":\"mia_reactive\",\"text\":\"On it.\"},{\"author_kind\":\"system\",\"text\":\"should drop\"}],\"reasoning\":\"\"}",
+  "expect": {
+    "instantMessages": { "length": 1 }
+  }
+}

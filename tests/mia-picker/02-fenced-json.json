@@ -1,0 +1,12 @@
+{
+  "name": "fenced ```json wrapper is unwrapped",
+  "catalogSkillIds": ["health-check"],
+  "raw": "```json\n{\"picks\":[{\"skill_id\":\"health-check\",\"reason\":\"scheduled sweep\"}],\"new_watches\":[],\"requests_to_resolve\":[],\"digest_lines\":[],\"instant_messages\":[],\"reasoning\":\"\"}\n```",
+  "expect": {
+    "picks": { "length": 1, "ids": ["health-check"] },
+    "newWatches": { "length": 0 },
+    "requestsToResolve": { "length": 0 },
+    "digestLines": { "length": 0 },
+    "instantMessages": { "length": 0 }
+  }
+}

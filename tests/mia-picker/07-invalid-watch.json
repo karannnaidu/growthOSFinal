@@ -1,0 +1,8 @@
+{
+  "name": "watches missing predicate or resume_action are dropped",
+  "catalogSkillIds": ["health-check"],
+  "raw": "{\"picks\":[],\"new_watches\":[{\"trigger_type\":\"time_elapsed\",\"predicate\":{\"after\":\"2026-04-22T00:00:00Z\"},\"resume_action\":\"check inbox\"},{\"trigger_type\":\"time_elapsed\",\"resume_action\":\"no predicate\"}],\"requests_to_resolve\":[],\"digest_lines\":[],\"instant_messages\":[],\"reasoning\":\"\"}",
+  "expect": {
+    "newWatches": { "length": 1 }
+  }
+}

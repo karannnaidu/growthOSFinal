@@ -1,0 +1,13 @@
+{
+  "name": "happy path — one pick + one digest line",
+  "catalogSkillIds": ["health-check", "discover-trends"],
+  "raw": "{\"picks\":[{\"skill_id\":\"health-check\",\"reason\":\"no snapshot in 24h\",\"priority\":\"high\"}],\"new_watches\":[],\"requests_to_resolve\":[],\"digest_lines\":[{\"kind\":\"info\",\"text\":\"Daily health sweep scheduled.\"}],\"instant_messages\":[],\"reasoning\":\"Keeping the pulse on account vitals.\"}",
+  "expect": {
+    "picks": { "length": 1, "ids": ["health-check"], "priorities": ["high"] },
+    "newWatches": { "length": 0 },
+    "requestsToResolve": { "length": 0 },
+    "digestLines": { "length": 1 },
+    "instantMessages": { "length": 0 },
+    "reasoning": { "nonEmpty": true }
+  }
+}

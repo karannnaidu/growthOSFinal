@@ -1,0 +1,10 @@
+{
+  "name": "pick referencing an unknown skill is dropped",
+  "catalogSkillIds": ["health-check"],
+  "raw": "{\"picks\":[{\"skill_id\":\"health-check\",\"reason\":\"sweep\"},{\"skill_id\":\"made-up-skill\",\"reason\":\"hallucinated\"}],\"new_watches\":[],\"requests_to_resolve\":[],\"digest_lines\":[],\"instant_messages\":[],\"reasoning\":\"\"}",
+  "expect": {
+    "picks": { "length": 1, "ids": ["health-check"] },
+    "newWatches": { "length": 0 },
+    "digestLines": { "length": 0 }
+  }
+}

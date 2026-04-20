@@ -1,0 +1,8 @@
+{
+  "name": "picks with reason shorter than 3 chars are dropped",
+  "catalogSkillIds": ["health-check", "discover-trends"],
+  "raw": "{\"picks\":[{\"skill_id\":\"health-check\",\"reason\":\"ok\"},{\"skill_id\":\"discover-trends\",\"reason\":\"weekly scan\"}],\"new_watches\":[],\"requests_to_resolve\":[],\"digest_lines\":[],\"instant_messages\":[],\"reasoning\":\"\"}",
+  "expect": {
+    "picks": { "length": 1, "ids": ["discover-trends"] }
+  }
+}
