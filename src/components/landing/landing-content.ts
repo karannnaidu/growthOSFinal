@@ -336,3 +336,40 @@ export const PRICING_FAQ_ITEMS = [
   { q: 'Do I need my own AI API keys?', a: 'No. We include model inference at every tier. You can BYO keys on Growth+ if you want direct control.' },
   { q: 'Is the free trial full-featured?', a: 'Yes. 14 days, all 12 agents, 1,000 credits included. No card required to start.' },
 ]
+
+// ── Security ────────────────────────────────────────────────────────
+
+export const SECURITY_BADGES = [
+  { id: 'soc2', label: 'SOC 2 Type II', note: 'In progress' },
+  { id: 'gdpr', label: 'GDPR', note: 'Compliant' },
+  { id: 'ccpa', label: 'CCPA', note: 'Compliant' },
+  { id: 'aes', label: 'AES-256', note: 'At rest' },
+  { id: 'tls', label: 'TLS 1.3', note: 'In transit' },
+  { id: 'rls', label: 'Row-level auth', note: 'Supabase RLS' },
+]
+
+export const SECURITY_PILLARS = [
+  { id: 'isolation',  title: 'Your brand, your lane',  body: 'Every brand runs in an isolated data lane. Agents for brand A literally cannot see brand B.' },
+  { id: 'encryption', title: 'Encrypted end to end',    body: 'AES-256 at rest. TLS 1.3 in transit. Nothing unencrypted ever hits disk.' },
+  { id: 'audit',      title: 'Every action is logged',  body: 'Full audit trail: which agent, which skill, which input, which output, at what timestamp.' },
+  { id: 'keys',       title: 'Your keys, optionally',   body: 'Bring your own OpenAI / Anthropic / fal.ai keys on Growth+ — we never touch them in plaintext.' },
+]
+
+// ── Agency ──────────────────────────────────────────────────────────
+
+export const AGENCY_FEATURES = [
+  { id: 'multibrand', title: 'Unlimited brands',      body: 'Manage 10, 50, 500 brands from one dashboard. No per-seat tax, no surprise overages.' },
+  { id: 'whitelabel', title: 'White-label ready',     body: 'Your logo, your domain, your colors. Your clients never see ours.' },
+  { id: 'rbac',       title: 'Granular roles',        body: 'Owner, ops, client — scope access per brand, per skill, per action.' },
+  { id: 'billing',    title: 'One bill, split view',  body: 'Agency master invoice. Per-brand credit usage breakdown for client billing.' },
+  { id: 'reporting',  title: 'Weekly client reports', body: "Mia briefs each client every Monday with what shipped, what moved, what's next." },
+  { id: 'api',        title: 'API + webhooks',        body: 'Push agent events into your existing PM tool (Notion, Asana, Linear).' },
+]
+
+export const AGENCY_ORBIT_BRANDS = [
+  { id: 'a', label: 'Skincare Co' },
+  { id: 'b', label: 'Apparel Brand' },
+  { id: 'c', label: 'Coffee Roasters' },
+  { id: 'd', label: 'Pet Wellness' },
+  { id: 'e', label: 'Home Goods' },
+]

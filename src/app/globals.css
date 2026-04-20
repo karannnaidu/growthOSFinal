@@ -303,3 +303,21 @@
   60% { transform: scale(1.08); }
   100% { opacity: 1; transform: scale(1); }
 }
+
+/* Horizontal lane sweep — used by /security data-lane diagram */
+@keyframes laneSweep {
+  0%   { left: -20%; opacity: 0; }
+  30%  { opacity: 0.7; }
+  70%  { opacity: 0.7; }
+  100% { left: 110%; opacity: 0; }
+}
+
+/* Slow rotation for /agency orbit ring */
+@keyframes orbitSpin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@keyframes orbitSpinReverse {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(-360deg); }
+}
