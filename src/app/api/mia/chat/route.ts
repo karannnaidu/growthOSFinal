@@ -5,6 +5,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { callModel } from '@/lib/model-client'
 import { buildSkillsCatalog, type CatalogSkill } from '@/lib/mia-actions'
 import { extractMemories, getRelevantMemories, type MiaMemory } from '@/lib/mia-memory'
+import { emitMiaEvent } from '@/lib/mia-events'
 import { loadAllSkills } from '@/lib/skill-loader'
 import agentsJson from '../../../../../skills/agents.json'
 
@@ -249,10 +250,30 @@ export async function POST(request: NextRequest): Promise<Response> {
   const conversationHistory = (history ?? []) as Array<{ role: string; content: string }>
 
   // 6. Store user message
-  await admin.from('conversation_messages').insert({
-    conversation_id: conversationId,
-    role: 'user',
-    content: message.trim(),
+  const { data: userMsgRow } = await admin
+    .from('conversation_messages')
+    .insert({
+      conversation_id: conversationId,
+      role: 'user',
+      content: message.trim(),
+      author_kind: 'user',
+    })
+    .select('id')
+    .maybeSingle()
+
+  // 6a. Emit a user_chat event so the Mia orchestrator wakes asynchronously.
+  // The chat reply itself (Sonnet) handles the conversational turn; the wake
+  // cycle handles side effects (new watches, skill dispatch, digest lines).
+  // Non-blocking: emitMiaEvent swallows failures.
+  void emitMiaEvent({
+    brandId,
+    eventType: 'user_chat',
+    payload: {
+      conversation_id: conversationId,
+      user_message_id: userMsgRow?.id ?? null,
+      message: message.trim().slice(0, 4000),
+      user_id: user.id,
+    },
   })
 
   // 6b. Platform connection status (source of truth for "is Meta connected?")
@@ -419,6 +440,7 @@ export async function POST(request: NextRequest): Promise<Response> {
             conversation_id: conversationId,
             role: 'assistant',
             content: result.content,
+            author_kind: 'mia_reactive',
           })
         } catch (dbErr) {
           // Non-fatal — still return the response to the client
