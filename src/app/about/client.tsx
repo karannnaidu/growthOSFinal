@@ -3,6 +3,42 @@
 import Link from 'next/link'
 import { PublicNav } from '@/components/landing/public-nav'
 import { PublicFooter } from '@/components/landing/public-footer'
+import { FounderNote } from '@/components/landing/founder-note'
+import { useInViewport } from '@/components/landing/use-in-viewport'
+import { useCountUp } from '@/components/landing/use-count-up'
+import { useReducedMotion } from '@/components/landing/use-reduced-motion'
+
+function AboutStat({
+  value,
+  suffix = '',
+  label,
+  delay = 0,
+}: {
+  value: number
+  suffix?: string
+  label: string
+  delay?: number
+}) {
+  const { ref, inView } = useInViewport<HTMLDivElement>(0.3)
+  const reduced = useReducedMotion()
+  const n = useCountUp(value, 1200, inView && !reduced)
+  return (
+    <div
+      ref={ref}
+      className="rounded-[40px] border border-white/60 bg-white/80 backdrop-blur-[20px] p-8 text-center hover:-translate-y-1 hover:shadow-xl transition-[transform,box-shadow] duration-300"
+      style={{
+        animation: inView && !reduced ? `fadeSlide 400ms ease-out ${delay}ms both` : 'none',
+        opacity: inView || reduced ? 1 : 0,
+      }}
+    >
+      <p className="font-heading text-4xl font-bold text-[#6b38d4] tabular-nums">
+        {n}
+        {suffix}
+      </p>
+      <p className="mt-2 text-sm text-[#45464d]">{label}</p>
+    </div>
+  )
+}
 
 export default function AboutPageClient() {
   return (
@@ -23,28 +59,21 @@ export default function AboutPageClient() {
           </div>
 
           <div className="mt-16 grid gap-8 md:grid-cols-3">
-            <div className="rounded-[40px] border border-white/60 bg-white/80 backdrop-blur-[20px] p-8 text-center">
-              <p className="font-heading text-4xl font-bold text-[#6b38d4]">12</p>
-              <p className="mt-2 text-sm text-[#45464d]">Specialized AI Agents</p>
-            </div>
-            <div className="rounded-[40px] border border-white/60 bg-white/80 backdrop-blur-[20px] p-8 text-center">
-              <p className="font-heading text-4xl font-bold text-[#6b38d4]">50+</p>
-              <p className="mt-2 text-sm text-[#45464d]">Marketing Skills</p>
-            </div>
-            <div className="rounded-[40px] border border-white/60 bg-white/80 backdrop-blur-[20px] p-8 text-center">
-              <p className="font-heading text-4xl font-bold text-[#6b38d4]">24/7</p>
-              <p className="mt-2 text-sm text-[#45464d]">Autonomous Operation</p>
-            </div>
+            <AboutStat value={12} label="Specialized AI Agents" delay={0} />
+            <AboutStat value={50} suffix="+" label="Marketing Skills" delay={120} />
+            <AboutStat value={24} suffix="/7" label="Autonomous Operation" delay={240} />
           </div>
+        </section>
 
-          <div className="mt-16 text-center">
-            <Link
-              href="/signup"
-              className="inline-flex items-center gap-2 bg-[#0b1c30] text-white px-10 py-5 rounded-xl font-heading font-bold text-lg hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-black/10"
-            >
-              Get Started Free
-            </Link>
-          </div>
+        <FounderNote />
+
+        <section className="mx-auto w-full max-w-7xl px-6 pb-20 text-center">
+          <Link
+            href="/signup"
+            className="inline-flex items-center gap-2 bg-[#0b1c30] text-white px-10 py-5 rounded-xl font-heading font-bold text-lg hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-black/10"
+          >
+            Get Started Free
+          </Link>
         </section>
       </main>
       <PublicFooter />
