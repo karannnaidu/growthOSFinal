@@ -13,7 +13,6 @@ interface ActivityEvent {
   timestamp: string
   type: 'status' | 'progress' | 'result' | 'decision' | 'error' | 'complete'
   skill?: string
-  progress?: number
 }
 
 interface AgentStatus {
@@ -23,7 +22,28 @@ interface AgentStatus {
   state: 'idle' | 'running' | 'queued' | 'done' | 'error'
   currentSkill?: string
   lastMessage?: string
-  progress?: number
+}
+
+interface WakeStatusRun {
+  id: string
+  skill_id: string
+  agent: string | null
+  status: 'running' | 'completed' | 'failed' | 'blocked' | string
+  blocked_reason: string | null
+  created_at: string
+  completed_at: string | null
+}
+
+interface WakeStatusDecision {
+  id: string
+  triggered_at: string
+  reasoning: string | null
+  picks: Array<{ skill_id: string; agent: string | null; priority?: string; reason?: string }>
+}
+
+interface WakeStatusResponse {
+  decision: WakeStatusDecision | null
+  runs: WakeStatusRun[]
 }
 
 const ALL_AGENTS = [
@@ -39,6 +59,8 @@ const ALL_AGENTS = [
   { id: 'navi', name: 'Navi', color: '#0EA5E9' },
   { id: 'penny', name: 'Penny', color: '#059669' },
 ]
+
+const POLL_INTERVAL_MS = 1500
 
 // ---------------------------------------------------------------------------
 // Props
@@ -64,8 +86,6 @@ interface MissionControlProps {
 export function MissionControl({ brandId, isRunning, onRunComplete, initialStatuses }: MissionControlProps) {
   const [events, setEvents] = useState<ActivityEvent[]>([])
   const [agentStatuses, setAgentStatuses] = useState<Record<string, AgentStatus>>(() => {
-    // Hydrate from server-rendered recent skill_runs so the agent dots reflect
-    // the last known state (done/running/error) across page navigations.
     const seed: Record<string, AgentStatus> = {}
     for (const a of ALL_AGENTS) {
       seed[a.id] = { ...a, state: 'idle' }
@@ -77,110 +97,155 @@ export function MissionControl({ brandId, isRunning, onRunComplete, initialStatu
         ...base,
         state: s.state,
         currentSkill: s.currentSkill,
-        progress: s.state === 'done' ? 100 : undefined,
       }
     }
     return seed
   })
+  const [running, setRunning] = useState(false)
+
   const terminalRef = useRef<HTMLDivElement>(null)
-  const eventSourceRef = useRef<EventSource | null>(null)
+  const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  // Tracks which skill_run ids we've already emitted at each status, so we
+  // only push a terminal line on transitions.
+  const seenRunStateRef = useRef<Map<string, string>>(new Map())
+  // The decision id we've already emitted; prevents duplicate decision lines
+  // if the row gets re-polled.
+  const seenDecisionIdRef = useRef<string | null>(null)
 
   const addEvent = useCallback((event: ActivityEvent) => {
-    setEvents(prev => [...prev.slice(-100), event]) // Keep last 100 events
+    setEvents(prev => [...prev.slice(-100), event])
   }, [])
 
   const updateAgentStatus = useCallback((agentId: string, update: Partial<AgentStatus>) => {
-    setAgentStatuses(prev => ({
-      ...prev,
-      [agentId]: { ...prev[agentId]!, ...update },
-    }))
+    setAgentStatuses(prev => {
+      const base = prev[agentId]
+      if (!base) return prev
+      return { ...prev, [agentId]: { ...base, ...update } }
+    })
   }, [])
 
-  // Start SSE stream when Mia's review is triggered
-  const startStream = useCallback(async () => {
-    // Reset states
-    setEvents([])
-    const initialStatuses: Record<string, AgentStatus> = {}
-    for (const a of ALL_AGENTS) {
-      initialStatuses[a.id] = { ...a, state: 'idle' }
-    }
-    setAgentStatuses(initialStatuses)
+  const now = () => new Date().toLocaleTimeString('en-US', { hour12: false })
 
-    // Use fetch for POST SSE (EventSource only supports GET)
-    try {
-      const res = await fetch('/api/mia/trigger-stream', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ brandId }),
-      })
-
-      if (!res.ok || !res.body) return
-
-      const reader = res.body.getReader()
-      const decoder = new TextDecoder()
-      let buffer = ''
-
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-
-        buffer += decoder.decode(value, { stream: true })
-        const lines = buffer.split('\n')
-        buffer = lines.pop() || ''
-
-        let eventType = ''
-        for (const line of lines) {
-          if (line.startsWith('event: ')) {
-            eventType = line.slice(7)
-          } else if (line.startsWith('data: ') && eventType) {
-            try {
-              const data = JSON.parse(line.slice(6))
-              const ts = new Date().toLocaleTimeString('en-US', { hour12: false })
-
-              if (eventType === 'progress' || eventType === 'status') {
-                const agentId = data.agent || ''
-                addEvent({ agent: agentId, message: data.message, timestamp: ts, type: eventType, skill: data.skill, progress: data.progress })
-                if (agentId) {
-                  updateAgentStatus(agentId, { state: 'running', currentSkill: data.skill, lastMessage: data.message, progress: data.progress })
-                }
-              } else if (eventType === 'decision') {
-                addEvent({ agent: 'mia', message: data.message || data.reasoning, timestamp: ts, type: 'decision' })
-                // Mark queued agents
-                for (const skillId of data.skills || []) {
-                  // Map skill to agent (best effort)
-                  const agentForSkill = skillId.includes('seo') ? 'hugo' : skillId.includes('ad-copy') ? 'aria' : skillId.includes('competitor') ? 'echo' : skillId.includes('email') ? 'luna' : 'mia'
-                  updateAgentStatus(agentForSkill, { state: 'queued', currentSkill: skillId })
-                }
-              } else if (eventType === 'result') {
-                const agentId = data.agent || ''
-                const didFail = data.status === 'failed' || data.status === 'blocked'
-                const icon = didFail ? '✗' : '✓'
-                addEvent({ agent: agentId, message: `${icon} ${data.skill || 'Skill'} ${data.status}`, timestamp: ts, type: didFail ? 'error' : 'result', skill: data.skill })
-                if (agentId) {
-                  updateAgentStatus(agentId, { state: 'done', progress: 100 })
-                }
-              } else if (eventType === 'error') {
-                addEvent({ agent: data.agent || 'system', message: `✗ ${data.message}`, timestamp: ts, type: 'error' })
-              } else if (eventType === 'complete') {
-                addEvent({ agent: 'mia', message: data.message || `Done — ${data.totalSkills} skills completed`, timestamp: ts, type: 'complete' })
-                onRunComplete?.()
-              }
-            } catch { /* skip unparseable */ }
-            eventType = ''
-          }
+  const mergeStatus = useCallback((data: WakeStatusResponse) => {
+    // Decision: emit once.
+    if (data.decision && seenDecisionIdRef.current !== data.decision.id) {
+      seenDecisionIdRef.current = data.decision.id
+      const reason = (data.decision.reasoning ?? '').trim() || 'Mia finished planning'
+      addEvent({ agent: 'mia', message: reason, timestamp: now(), type: 'decision' })
+      // Mark picks as queued on their owning agents so the dots light up
+      // before the runs hit the table.
+      for (const p of data.decision.picks) {
+        if (p.agent) {
+          updateAgentStatus(p.agent, { state: 'queued', currentSkill: p.skill_id })
         }
       }
-    } catch (err) {
-      addEvent({ agent: 'system', message: `Connection error: ${err instanceof Error ? err.message : 'unknown'}`, timestamp: new Date().toLocaleTimeString('en-US', { hour12: false }), type: 'error' })
     }
-  }, [brandId, addEvent, updateAgentStatus, onRunComplete])
+
+    // Runs: emit transitions.
+    for (const run of data.runs) {
+      const prevState = seenRunStateRef.current.get(run.id)
+      if (prevState === run.status) continue
+      seenRunStateRef.current.set(run.id, run.status)
+
+      const agent = run.agent ?? 'system'
+
+      if (run.status === 'running' && prevState !== 'running') {
+        addEvent({ agent, message: `Running ${run.skill_id}…`, timestamp: now(), type: 'status', skill: run.skill_id })
+        if (run.agent) updateAgentStatus(run.agent, { state: 'running', currentSkill: run.skill_id })
+      } else if (run.status === 'completed') {
+        addEvent({ agent, message: `✓ ${run.skill_id} completed`, timestamp: now(), type: 'result', skill: run.skill_id })
+        if (run.agent) updateAgentStatus(run.agent, { state: 'done' })
+      } else if (run.status === 'failed') {
+        addEvent({ agent, message: `✗ ${run.skill_id} failed`, timestamp: now(), type: 'error', skill: run.skill_id })
+        if (run.agent) updateAgentStatus(run.agent, { state: 'error' })
+      } else if (run.status === 'blocked') {
+        const why = run.blocked_reason ? ` — ${run.blocked_reason}` : ''
+        addEvent({ agent, message: `⊘ ${run.skill_id} blocked${why}`, timestamp: now(), type: 'error', skill: run.skill_id })
+        if (run.agent) updateAgentStatus(run.agent, { state: 'error' })
+      }
+    }
+  }, [addEvent, updateAgentStatus])
+
+  const pollOnce = useCallback(async (since: string) => {
+    try {
+      const res = await fetch(`/api/mia/wake-status?brandId=${encodeURIComponent(brandId)}&since=${encodeURIComponent(since)}`, {
+        cache: 'no-store',
+      })
+      if (!res.ok) return
+      const data = (await res.json()) as WakeStatusResponse
+      mergeStatus(data)
+    } catch {
+      /* network blip — next tick retries */
+    }
+  }, [brandId, mergeStatus])
+
+  const stopPolling = useCallback(() => {
+    if (pollTimerRef.current) {
+      clearInterval(pollTimerRef.current)
+      pollTimerRef.current = null
+    }
+  }, [])
+
+  const startRun = useCallback(async () => {
+    if (running) return
+    setRunning(true)
+    setEvents([])
+    seenRunStateRef.current.clear()
+    seenDecisionIdRef.current = null
+    const resetStatuses: Record<string, AgentStatus> = {}
+    for (const a of ALL_AGENTS) {
+      resetStatuses[a.id] = { ...a, state: 'idle' }
+    }
+    setAgentStatuses(resetStatuses)
+
+    // Clamp the polling window to one second before wake so the decision row
+    // (triggered_at ≈ server clock, client clock may drift) always falls in.
+    const since = new Date(Date.now() - 1000).toISOString()
+    addEvent({ agent: 'mia', message: 'Waking Mia…', timestamp: now(), type: 'status' })
+
+    // Start polling immediately so we pick up progress while POST is in flight.
+    stopPolling()
+    pollTimerRef.current = setInterval(() => { void pollOnce(since) }, POLL_INTERVAL_MS)
+
+    try {
+      const res = await fetch('/api/mia/wake', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ brandId, source: 'heartbeat', dryRun: false }),
+      })
+      const payload = await res.json().catch(() => ({ error: 'Invalid response' })) as { ok?: boolean; error?: string; result?: { pickCount?: number } }
+      if (!res.ok || !payload.ok) {
+        addEvent({ agent: 'system', message: `✗ Wake failed: ${payload.error ?? res.statusText}`, timestamp: now(), type: 'error' })
+      } else {
+        // One final poll so the last run transition shows before completion.
+        await pollOnce(since)
+        const count = payload.result?.pickCount ?? 0
+        addEvent({
+          agent: 'mia',
+          message: count === 0 ? 'Done — no skills to run this cycle' : `Done — ${count} skill${count === 1 ? '' : 's'} dispatched`,
+          timestamp: now(),
+          type: 'complete',
+        })
+      }
+    } catch (err) {
+      addEvent({ agent: 'system', message: `Connection error: ${err instanceof Error ? err.message : 'unknown'}`, timestamp: now(), type: 'error' })
+    } finally {
+      stopPolling()
+      setRunning(false)
+      onRunComplete?.()
+    }
+  }, [brandId, running, addEvent, pollOnce, stopPolling, onRunComplete])
+
+  // Clean up polling on unmount.
+  useEffect(() => {
+    return () => { stopPolling() }
+  }, [stopPolling])
 
   // Auto-scroll terminal
   useEffect(() => {
     terminalRef.current?.scrollTo({ top: terminalRef.current.scrollHeight, behavior: 'smooth' })
   }, [events])
 
-  // Agent color lookup
   const agentColor = (id: string) => ALL_AGENTS.find(a => a.id === id)?.color || '#6366f1'
 
   return (
@@ -189,8 +254,8 @@ export function MissionControl({ brandId, isRunning, onRunComplete, initialStatu
       <div className="glass-panel rounded-xl p-4">
         <div className="flex items-center justify-between mb-3">
           <p className="text-[10px] uppercase tracking-widest text-muted-foreground/60">Agent Status</p>
-          {!isRunning && events.length === 0 && (
-            <button onClick={startStream} className="text-[10px] bg-[#6366f1] text-white rounded-full px-3 py-1 hover:bg-[#6366f1]/80">
+          {!isRunning && !running && events.length === 0 && (
+            <button onClick={startRun} className="text-[10px] bg-[#6366f1] text-white rounded-full px-3 py-1 hover:bg-[#6366f1]/80">
               Run Mia&apos;s Review
             </button>
           )}
@@ -236,10 +301,12 @@ export function MissionControl({ brandId, isRunning, onRunComplete, initialStatu
                 </span>
               </div>
             ))}
-            <div className="flex gap-2">
-              <span className="text-muted-foreground/40 w-16" />
-              <span className="text-[#6366f1] animate-pulse">█</span>
-            </div>
+            {running && (
+              <div className="flex gap-2">
+                <span className="text-muted-foreground/40 w-16" />
+                <span className="text-[#6366f1] animate-pulse">█</span>
+              </div>
+            )}
           </div>
         </div>
       )}
