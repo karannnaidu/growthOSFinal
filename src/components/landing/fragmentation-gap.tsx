@@ -8,7 +8,7 @@ const TOOLS = [
   { id: 'ahrefs', label: 'Ahrefs', x: 72, y: 15 },
   { id: 'klaviyo', label: 'Klaviyo', x: 82, y: 55 },
   { id: 'finance', label: 'Finance', x: 15, y: 75 },
-  { id: 'ga4', label: 'GA4', x: 45, y: 38 },
+  { id: 'ga4', label: 'GA4', x: 4, y: 46 },
   { id: 'store', label: 'Storefront', x: 55, y: 80 },
 ]
 
