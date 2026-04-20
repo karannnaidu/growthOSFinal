@@ -1268,9 +1268,11 @@ export default function BrandDnaPage() {
                 </div>
                 <button
                   onClick={() => update((d) => ({ ...d, products: d.products.filter((_, i) => i !== idx) }))}
-                  className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-black/60 text-white/70 hover:text-white hover:bg-red-500/80 flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition-opacity"
+                  aria-label={`Remove ${product.name}`}
+                  title="Remove product"
+                  className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/70 text-white/90 hover:text-white hover:bg-red-500 flex items-center justify-center shadow-md transition-colors"
                 >
-                  <X className="w-3 h-3" />
+                  <X className="w-3.5 h-3.5" />
                 </button>
               </div>
               )
