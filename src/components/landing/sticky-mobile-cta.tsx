@@ -38,7 +38,7 @@ export function StickyMobileCta() {
                 ✕
               </button>
             </div>
-            <UrlInputCta label={CTA_LABELS.hero} />
+            <UrlInputCta label={CTA_LABELS.final} />
           </div>
         ) : (
           <div className="flex items-center gap-2 bg-[#0b1c30] text-white px-5 py-3">

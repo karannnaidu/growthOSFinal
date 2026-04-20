@@ -1,6 +1,7 @@
 'use client'
 
 import Image from 'next/image'
+import { useState } from 'react'
 import { FOUNDER_NOTE } from './landing-content'
 import { useInViewport } from './use-in-viewport'
 import { useReducedMotion } from './use-reduced-motion'
@@ -29,6 +30,8 @@ export function FounderNote() {
   const { ref, inView } = useInViewport<HTMLDivElement>(0.2)
   const reduced = useReducedMotion()
   const animate = inView && !reduced
+  const [imgOk, setImgOk] = useState(Boolean(FOUNDER_NOTE.signatureImage))
+  const initial = FOUNDER_NOTE.signatureName.trim().charAt(0).toUpperCase() || 'K'
 
   return (
     <section ref={ref} className="py-20 bg-[#f8f9ff] border-b border-[#c6c6cd]/10">
@@ -39,17 +42,23 @@ export function FounderNote() {
           ))}
         </div>
         <div className="pt-4 flex items-center gap-4">
-          <Image
-            src={FOUNDER_NOTE.signatureImage}
-            alt={FOUNDER_NOTE.signatureName}
-            width={48}
-            height={48}
-            className="rounded-full border-2 border-white shadow"
-            onError={(e) => {
-              // fallback: hide on error, avatar with initial shows below
-              ;(e.target as HTMLImageElement).style.display = 'none'
-            }}
-          />
+          {imgOk ? (
+            <Image
+              src={FOUNDER_NOTE.signatureImage}
+              alt={FOUNDER_NOTE.signatureName}
+              width={48}
+              height={48}
+              className="rounded-full border-2 border-white shadow"
+              onError={() => setImgOk(false)}
+            />
+          ) : (
+            <div
+              aria-hidden="true"
+              className="w-12 h-12 rounded-full border-2 border-white shadow flex items-center justify-center bg-[#6b38d4] text-white font-heading font-bold text-lg"
+            >
+              {initial}
+            </div>
+          )}
           <div>
             <SignatureSvg animate={animate} />
             <div className="text-sm text-[#45464d] mt-1">

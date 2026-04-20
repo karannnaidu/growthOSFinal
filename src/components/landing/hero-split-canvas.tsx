@@ -37,25 +37,29 @@ export function HeroSplitCanvas() {
   const current = HERO_SURFACES[idx]
 
   return (
-    <section className="relative min-h-[90vh] flex items-center overflow-hidden bg-[#f8f9ff] pt-12 pb-24 border-b border-[#c6c6cd]/10">
-      <div className="max-w-7xl mx-auto px-6 grid lg:grid-cols-12 gap-12 items-center">
+    <section className="relative flex items-center overflow-hidden bg-[#f8f9ff] pt-8 pb-14 sm:pt-12 sm:pb-20 lg:min-h-[90vh] lg:pb-24 border-b border-[#c6c6cd]/10">
+      <div className="max-w-7xl mx-auto w-full px-6 grid lg:grid-cols-12 gap-8 lg:gap-12 items-center">
         {/* Left — copy + URL input */}
-        <div className="lg:col-span-5 space-y-7 relative z-10 order-2 lg:order-1">
-          <h1 className="font-heading font-extrabold text-5xl md:text-6xl lg:text-7xl tracking-tighter leading-[1.05] text-[#0b1c30]">
+        <div className="lg:col-span-5 space-y-5 sm:space-y-7 relative z-10 order-2 lg:order-1 text-center lg:text-left">
+          <h1 className="font-heading font-extrabold text-[2.25rem] leading-[1.08] sm:text-5xl md:text-6xl lg:text-7xl tracking-tight sm:tracking-tighter sm:leading-[1.05] text-[#0b1c30]">
             Your <span className="text-[#6b38d4]">AI marketing crew.</span> One URL away.
           </h1>
-          <p className="text-lg text-[#45464d] max-w-xl leading-relaxed">{HERO_CONTENT.subhead}</p>
-          <UrlInputCta size="hero" label={CTA_LABELS.hero} />
+          <p className="text-base sm:text-lg text-[#45464d] max-w-xl mx-auto lg:mx-0 leading-relaxed">
+            {HERO_CONTENT.subhead}
+          </p>
+          <div className="flex justify-center lg:justify-start">
+            <UrlInputCta size="hero" label={CTA_LABELS.hero} />
+          </div>
         </div>
 
         {/* Right — Mia anchor stacked above rotating canvas */}
         <div
-          className="lg:col-span-7 order-1 lg:order-2 flex flex-col items-center gap-5"
+          className="lg:col-span-7 order-1 lg:order-2 flex flex-col items-center gap-4 sm:gap-5 w-full"
           onMouseEnter={() => setPaused(true)}
           onMouseLeave={() => setPaused(false)}
         >
           {/* Mia breathing glow */}
-          <div className="relative">
+          <div className="relative w-44 h-44 sm:w-60 sm:h-60 lg:w-[360px] lg:h-[360px]">
             <div
               className="absolute inset-0 rounded-full blur-3xl"
               style={{
@@ -66,18 +70,20 @@ export function HeroSplitCanvas() {
             <Image
               src="/agents/mia.png"
               alt="Mia, your AI marketing manager"
-              width={360}
-              height={360}
+              fill
+              sizes="(max-width: 640px) 176px, (max-width: 1024px) 240px, 360px"
               priority
-              className="relative z-10 rounded-full"
+              className="relative z-10 rounded-full object-cover"
             />
           </div>
 
           {/* Anchor status line — just below Mia */}
-          <div className="px-4 py-2 rounded-full bg-white/90 backdrop-blur border border-[#c6c6cd]/40 shadow-sm text-sm text-[#0b1c30]">
+          <div className="max-w-full px-3 py-1.5 sm:px-4 sm:py-2 rounded-full bg-white/90 backdrop-blur border border-[#c6c6cd]/40 shadow-sm text-[12px] sm:text-sm text-[#0b1c30]">
             <span className="inline-flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-              Running your store on autopilot. <strong>{agentCount} agents working.</strong>
+              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse flex-shrink-0" />
+              <span>
+                Running your store on autopilot. <strong>{agentCount} agents working.</strong>
+              </span>
             </span>
           </div>
 
@@ -85,7 +91,7 @@ export function HeroSplitCanvas() {
           {current && (
             <div
               key={current.id}
-              className="w-[320px]"
+              className="w-full max-w-[320px]"
               style={{ animation: animating ? 'surfaceIn 400ms cubic-bezier(0.34, 1.56, 0.64, 1)' : 'none' }}
             >
               {renderSurface(current)}

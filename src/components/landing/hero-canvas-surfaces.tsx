@@ -17,7 +17,7 @@ function Pill({ children, color }: { children: React.ReactNode; color: string })
 
 export function SurfaceAria({ s }: { s: HeroSurface }) {
   return (
-    <div className="p-5 rounded-2xl bg-white border border-[#c6c6cd]/40 shadow-lg space-y-3 w-[320px]">
+    <div className="p-5 rounded-2xl bg-white border border-[#c6c6cd]/40 shadow-lg space-y-3 w-full">
       <Pill color={s.accentColor}>{s.caption}</Pill>
       <div className="grid grid-cols-2 gap-2">
         <div className="relative h-20 rounded-lg overflow-hidden border border-[#c6c6cd]/30">
@@ -40,7 +40,7 @@ export function SurfaceMax({ s }: { s: HeroSurface }) {
     { name: "Retarget 30d", roas: '5.2x', status: 'Stable' },
   ]
   return (
-    <div className="p-5 rounded-2xl bg-white border border-[#c6c6cd]/40 shadow-lg space-y-3 w-[320px]">
+    <div className="p-5 rounded-2xl bg-white border border-[#c6c6cd]/40 shadow-lg space-y-3 w-full">
       <Pill color={s.accentColor}>{s.caption}</Pill>
       <div className="text-[12px] divide-y divide-[#c6c6cd]/20">
         {rows.map((r, i) => (
@@ -71,7 +71,7 @@ export function SurfaceMax({ s }: { s: HeroSurface }) {
 
 export function SurfaceScout({ s }: { s: HeroSurface }) {
   return (
-    <div className="p-5 rounded-2xl bg-white border border-[#c6c6cd]/40 shadow-lg space-y-3 w-[320px]">
+    <div className="p-5 rounded-2xl bg-white border border-[#c6c6cd]/40 shadow-lg space-y-3 w-full">
       <Pill color={s.accentColor}>
         <span className="relative">
           <span className="absolute inset-0 rounded-full bg-red-500 animate-ping opacity-75" />
@@ -86,7 +86,7 @@ export function SurfaceScout({ s }: { s: HeroSurface }) {
 
 export function SurfaceEcho({ s }: { s: HeroSurface }) {
   return (
-    <div className="p-5 rounded-2xl bg-white border border-[#c6c6cd]/40 shadow-lg space-y-3 w-[320px]">
+    <div className="p-5 rounded-2xl bg-white border border-[#c6c6cd]/40 shadow-lg space-y-3 w-full">
       <Pill color={s.accentColor}>{s.caption}</Pill>
       <div className="grid grid-cols-3 gap-1.5">
         {[1, 2, 3].map((i) => (
@@ -102,7 +102,7 @@ export function SurfaceEcho({ s }: { s: HeroSurface }) {
 
 export function SurfacePenny({ s }: { s: HeroSurface }) {
   return (
-    <div className="p-5 rounded-2xl bg-white border border-[#c6c6cd]/40 shadow-lg space-y-3 w-[320px]">
+    <div className="p-5 rounded-2xl bg-white border border-[#c6c6cd]/40 shadow-lg space-y-3 w-full">
       <Pill color={s.accentColor}>{s.caption}</Pill>
       <svg viewBox="0 0 200 40" className="w-full h-10">
         <polyline
