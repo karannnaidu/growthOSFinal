@@ -13,7 +13,7 @@ for (const line of readFileSync(envPath, 'utf-8').split('\n')) {
   const m = line.match(/^([A-Z0-9_]+)=(.*)$/)
   if (!m) continue
   const [, k, v] = m
-  if (!process.env[k]) process.env[k] = v.replace(/^['"]|['"]$/g, '')
+  if (!process.env[k!]) process.env[k!] = v!.replace(/^['"]|['"]$/g, '')
 }
 
 import { createServiceClient } from '../src/lib/supabase/service'

@@ -39,7 +39,12 @@ function stubCatalog(skillIds: string[]): MiaCatalog {
   const skills: CatalogSkill[] = skillIds.map(id => ({
     id,
     name: id,
-    agentId: 'test',
+    agent: 'test',
+    agentName: 'Test',
+    category: 'test',
+    complexity: 'cheap',
+    credits: 1,
+    requires: [],
     sideEffect: 'none',
     reversible: true,
     requiresHumanApproval: false,

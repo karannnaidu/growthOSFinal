@@ -22,20 +22,20 @@ import { runMiaWake } from '../src/lib/mia-wake'
 async function main() {
   const client = createServiceClient()
 
-  let brandId = process.argv[2]
+  let brandId: string | undefined = process.argv[2]
   if (!brandId) {
     const { data } = await client.from('brands').select('id, name').limit(1).maybeSingle()
     if (!data?.id) {
       console.error('No brands in DB. Pass a brandId argument.')
       process.exit(1)
     }
-    brandId = data.id
+    brandId = data.id as string
     // eslint-disable-next-line no-console
     console.log(`Using brand ${data.name} (${brandId})`)
   }
 
   const result = await runMiaWake({
-    brandId,
+    brandId: brandId!,
     source: 'heartbeat',
     dryRun: true,
   })
