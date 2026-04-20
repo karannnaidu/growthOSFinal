@@ -167,11 +167,11 @@ git commit -m "feat(devlog): add build-devlog script and initial DEVLOG.md"
 ### Task 2: Add GitHub Action workflow
 
 **Files:**
-- Create: `.github/workflows/devlog.yml` (at **repo root**, not inside `growth-os/`)
+- Create: `growth-os/.github/workflows/devlog.yml` (the GitHub repo root **is** `growth-os/`)
 
 - [ ] **Step 1: Create the workflow file**
 
-Path: `.github/workflows/devlog.yml`
+Path: `growth-os/.github/workflows/devlog.yml`
 
 ```yaml
 name: Update DEVLOG
@@ -201,15 +201,14 @@ jobs:
           node-version: '20'
 
       - name: Regenerate DEVLOG.md
-        working-directory: growth-os
         run: node scripts/build-devlog.mjs
 
       - name: Commit if changed
         run: |
-          if [[ -n "$(git status --porcelain growth-os/DEVLOG.md)" ]]; then
+          if [[ -n "$(git status --porcelain DEVLOG.md)" ]]; then
             git config user.name  "devlog-bot"
             git config user.email "devlog-bot@users.noreply.github.com"
-            git add growth-os/DEVLOG.md
+            git add DEVLOG.md
             git commit -m "chore(devlog): update [skip ci]"
             git push
           else
