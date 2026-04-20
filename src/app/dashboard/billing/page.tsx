@@ -513,7 +513,7 @@ export default function BillingPage() {
                           : 'border-white/[0.08] bg-white/[0.03] text-muted-foreground hover:text-foreground'
                       }`}
                     >
-                      {t.toLocaleString()} cr
+                      {t.toLocaleString()} credits
                     </button>
                   ))}
                 </div>
@@ -533,7 +533,7 @@ export default function BillingPage() {
                           : 'border-white/[0.08] bg-white/[0.03] text-muted-foreground hover:text-foreground'
                       }`}
                     >
-                      {a.toLocaleString()} cr
+                      {a.toLocaleString()} credits
                     </button>
                   ))}
                 </div>

@@ -38,22 +38,22 @@ export default function AgentsPage() {
       setIsLoading(true)
       setError(null)
 
-      // 1. Resolve brand
+      // 1. Resolve brand — server-first so a stale cached id from a previous
+      //    account doesn't 403 against /api/agents.
       let brandId: string | null = null
-      const stored = sessionStorage.getItem('onboarding_brand_id') || localStorage.getItem('growth_os_brand_id')
-      if (stored) {
-        brandId = stored
-      } else {
-        try {
-          const res = await fetch('/api/brands/me')
-          if (res.ok) {
-            const data = await res.json()
-            if (data.brandId) {
-              brandId = data.brandId
-              localStorage.setItem('growth_os_brand_id', data.brandId)
-            }
+      try {
+        const res = await fetch('/api/brands/me')
+        if (res.ok) {
+          const data = await res.json()
+          if (data.brandId) {
+            brandId = data.brandId
+            localStorage.setItem('growth_os_brand_id', data.brandId)
+            sessionStorage.setItem('onboarding_brand_id', data.brandId)
           }
-        } catch { /* ignore */ }
+        }
+      } catch { /* fall through to cache */ }
+      if (!brandId) {
+        brandId = sessionStorage.getItem('onboarding_brand_id') || localStorage.getItem('growth_os_brand_id')
       }
 
       if (!brandId) { setError('No brand found'); setIsLoading(false); return }

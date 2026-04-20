@@ -77,7 +77,6 @@ export default function AIModelSettingsPage() {
   // Resolve brand
   useEffect(() => {
     async function init() {
-      // Always fetch from API to get the canonical brand ID
       try {
         const res = await fetch('/api/brands/me')
         if (res.ok) {
@@ -90,11 +89,10 @@ export default function AIModelSettingsPage() {
           }
         }
       } catch { /* ignore */ }
-      // Fallback to cached (only if API fails)
       const stored = sessionStorage.getItem('onboarding_brand_id') || localStorage.getItem('growth_os_brand_id')
       if (stored) setBrandId(stored)
     }
-    init()
+    init().finally(() => setIsLoading(false))
   }, [])
 
   async function handleSave() {

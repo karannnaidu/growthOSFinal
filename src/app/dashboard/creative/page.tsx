@@ -122,21 +122,22 @@ export default function CreativeStudioPage() {
   // ---------------------------------------------------------------------------
   useEffect(() => {
     async function resolveBrand() {
+      // Server-first so a stale cached id from a previous account doesn't 403
+      // against /api/creative/gallery.
       let bid: string | null = null
-      const stored = sessionStorage.getItem('onboarding_brand_id') || localStorage.getItem('growth_os_brand_id')
-      if (stored) {
-        bid = stored
-      } else {
-        try {
-          const res = await fetch('/api/brands/me')
-          if (res.ok) {
-            const data = await res.json()
-            if (data.brandId) {
-              bid = data.brandId
-              localStorage.setItem('growth_os_brand_id', data.brandId)
-            }
+      try {
+        const res = await fetch('/api/brands/me')
+        if (res.ok) {
+          const data = await res.json()
+          if (data.brandId) {
+            bid = data.brandId
+            localStorage.setItem('growth_os_brand_id', data.brandId)
+            sessionStorage.setItem('onboarding_brand_id', data.brandId)
           }
-        } catch { /* ignore */ }
+        }
+      } catch { /* fall through to cache */ }
+      if (!bid) {
+        bid = sessionStorage.getItem('onboarding_brand_id') || localStorage.getItem('growth_os_brand_id')
       }
 
       if (!bid) { setError('No brand found'); setGalleryLoading(false); return }
