@@ -254,3 +254,8 @@
   80%  { transform: scale(1.08); }
   100% { transform: scale(1); }
 }
+
+@keyframes shine {
+  0% { transform: translateX(-100%); }
+  40%, 100% { transform: translateX(200%); }
+}
