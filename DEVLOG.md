@@ -7,6 +7,26 @@ Last updated: 2026-04-20
 
 ## Week of 2026-04-20
 
+- **c26ae41b** — feat(landing): link Changelog from public footer *(karan, 2026-04-21)*
+- **d69cea51** — feat(changelog): add public /changelog page *(karan, 2026-04-21)*
+- **a2fdd323** — feat(mia): phase 14 — delete legacy hardcoded schedules *(karan, 2026-04-21)*
+- **d9ce4c7f** — feat(changelog): add typed content source for public changelog *(karan, 2026-04-21)*
+- **73a245e5** — docs: add DEVELOPERS.md and trim README to contributor pointer *(karan, 2026-04-21)*
+- **4d5a03b1** — feat(mia): phase 13 — POST /api/mia/wake with default dry-run *(karan, 2026-04-21)*
+- **22fe0c4c** — feat(mia): phase 12 — picker parser fixtures *(karan, 2026-04-21)*
+- **f999f8ec** — feat(mia): phase 11 — onboarding fires a wake, not a hardcoded skill *(karan, 2026-04-21)*
+- **8106662d** — feat(mia): phase 10 — DB triggers emit platform_connect + skill_delta *(karan, 2026-04-21)*
+- **17dfec20** — feat(mia): phase 9 — cron endpoints (heartbeat, digest, events-drain) *(karan, 2026-04-21)*
+- **53cac70d** — feat(mia): phase 8 — daily digest composer *(karan, 2026-04-21)*
+- **e176ff13** — feat(mia): phase 7 — chat emits user_chat event for async orchestration *(karan, 2026-04-21)*
+- **9abed3e1** — feat(mia): phase 6 — wake cycle core orchestrator *(karan, 2026-04-21)*
+- **be7f166c** — feat(mia): phase 5 — requests service with lifecycle + attribution *(karan, 2026-04-21)*
+- **f9677889** — feat(mia): phase 4 — watches service (5 predicate types) *(karan, 2026-04-21)*
+- **16e00d83** — feat(mia): phase 3 — dynamic Mia catalog with Day-0 + platform filters *(karan, 2026-04-21)*
+- **42669c62** — feat(mia): phase 2 — skill safety metadata + mia-facing descriptions *(karan, 2026-04-21)*
+- **6780fa2e** — docs(plan): correct .github/ location — GitHub repo root is growth-os/ *(karan, 2026-04-21)*
+- **4c605c57** — feat(ci): auto-regenerate DEVLOG.md on push to main *(karan, 2026-04-21)*
+- **d20c94b0** — feat(devlog): add build-devlog script and initial DEVLOG.md *(karan, 2026-04-21)*
 - **9dad372a** — docs(devlog,changelog): design + implementation plan for DEVLOG and public changelog *(karan, 2026-04-21)*
 - **c70ca1fa** — feat(mia): schema verification script for 014 migration *(karan, 2026-04-21)*
 - **59562bc1** — feat(mia): add schema for watches, requests, decisions, digests, events *(karan, 2026-04-21)*
