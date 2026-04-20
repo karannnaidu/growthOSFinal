@@ -93,10 +93,10 @@ function MiaActions({ brandId, latestRunId, onTriggerReview }: { brandId?: strin
     }
     setTriggering(true)
     try {
-      const res = await fetch('/api/mia/trigger', {
+      const res = await fetch('/api/mia/wake', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ brandId }),
+        body: JSON.stringify({ brandId, source: 'heartbeat', dryRun: false }),
       })
       if (res.ok) setTriggered(true)
     } finally {
