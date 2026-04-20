@@ -29,6 +29,7 @@ export function PublicFooter() {
         <div>
           <h5 className="font-heading text-sm font-semibold uppercase tracking-wider text-[#0b1c30]">Resources</h5>
           <ul className="mt-3 flex flex-col gap-2">
+            <li><Link href="/changelog" className="text-sm text-[#45464d] hover:text-[#6b38d4]">Changelog</Link></li>
             <li><Link href="/market" className="text-sm text-[#45464d] hover:text-[#6b38d4]">Market</Link></li>
             <li><Link href="/support" className="text-sm text-[#45464d] hover:text-[#6b38d4]">Support</Link></li>
             <li><Link href="mailto:hello@growthOS.ai" className="text-sm text-[#45464d] hover:text-[#6b38d4]">Contact</Link></li>
