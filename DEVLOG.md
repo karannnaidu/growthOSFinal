@@ -7,6 +7,7 @@ Last updated: 2026-04-20
 
 ## Week of 2026-04-20
 
+- **68d6437e** — fix(scripts): satisfy noUncheckedIndexedAccess — unblock Vercel build *(karan, 2026-04-21)*
 - **a12bd58c** — fix(dashboard): resolve cross-account brand id leakage + stuck loading *(karan, 2026-04-21)*
 - **67dcb433** — feat(dashboard): port mission-control onto wake cycle via polling *(karan, 2026-04-21)*
 - **27c21156** — docs: add AGENT-FLOW visual guide *(karan, 2026-04-21)*
