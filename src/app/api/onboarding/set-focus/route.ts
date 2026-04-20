@@ -94,15 +94,12 @@ export async function POST(
     console.error('[set-focus] initializeBrandAgents error:', err)
   }
 
-  // 6. Kick off Scout health-check (fire-and-forget)
-  // This is the first thing Mia needs to make decisions
-  import('@/lib/skills-engine').then(({ runSkill }) => {
-    runSkill({
-      brandId,
-      skillId: 'health-check',
-      triggeredBy: 'user',
-      additionalContext: { source: 'onboarding' },
-    }).catch((err) => console.error('[set-focus] auto health-check failed:', err))
+  // 6. Kick off Mia's first wake (fire-and-forget). Mia decides what runs —
+  // health-check, discovery, whatever the catalog + day-0 filter surfaces.
+  import('@/lib/mia-wake').then(({ runMiaWake }) => {
+    runMiaWake({ brandId, source: 'onboarding' }).catch((err) =>
+      console.error('[set-focus] onboarding wake failed:', err),
+    )
   }).catch(console.error)
 
   return NextResponse.json({ success: true })
