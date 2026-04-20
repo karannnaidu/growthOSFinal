@@ -284,3 +284,8 @@
 @media (hover: hover) {
   .group:hover [style*="marquee"] { animation-play-state: paused !important; }
 }
+
+@keyframes sweep {
+  0%, 100% { transform: translateY(-50%); opacity: 0.3; }
+  50% { transform: translateY(50vh); opacity: 0.6; }
+}
