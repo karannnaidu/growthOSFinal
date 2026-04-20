@@ -261,3 +261,31 @@ export const CTA_LABELS = {
   midPage: 'See what Mia finds on your store →',
   final: 'Start free → Mia begins in 60 seconds',
 } as const
+
+// ── Agent roster (used on /agents page) ─────────────────────────────
+
+export interface AgentRosterEntry {
+  id: string
+  name: string
+  role: string
+  color: string
+  avatar: string
+  tagline: string
+  topSkills: string[]
+  tasksThisWeek: number
+}
+
+export const AGENT_ROSTER: AgentRosterEntry[] = [
+  { id: 'mia',    name: 'Mia',    role: 'Manager',              color: '#6366F1', avatar: '/agents/mia.png',    tagline: 'Orchestrates your crew.',                          topSkills: ['Weekly briefing', 'Agent delegation', 'Launch planning'],    tasksThisWeek: 42 },
+  { id: 'scout',  name: 'Scout',  role: 'Diagnostician',        color: '#0D9488', avatar: '/agents/scout.png',  tagline: 'Spots the problem before you do.',                 topSkills: ['Health check', 'Anomaly detection', 'Returns analysis'],      tasksThisWeek: 18 },
+  { id: 'aria',   name: 'Aria',   role: 'Creative Director',    color: '#F97316', avatar: '/agents/aria.png',   tagline: 'Writes ads your best copywriter wishes she wrote.',topSkills: ['Ad copy', 'UGC scripts', 'Creative fatigue detector'],        tasksThisWeek: 24 },
+  { id: 'luna',   name: 'Luna',   role: 'Email + Retention',    color: '#10B981', avatar: '/agents/luna.png',   tagline: 'Keeps customers coming back.',                     topSkills: ['Email flows', 'Cart recovery', 'Churn prevention'],            tasksThisWeek: 15 },
+  { id: 'hugo',   name: 'Hugo',   role: 'SEO + Content',        color: '#D97706', avatar: '/agents/hugo.png',   tagline: 'Builds organic traffic on autopilot.',             topSkills: ['SEO audit', 'Keyword strategy', 'Programmatic SEO'],           tasksThisWeek: 9  },
+  { id: 'sage',   name: 'Sage',   role: 'CRO + Pricing',        color: '#8B5CF6', avatar: '/agents/sage.png',   tagline: 'Finds money your funnel is leaking.',              topSkills: ['Page CRO', 'A/B tests', 'Pricing optimizer'],                  tasksThisWeek: 11 },
+  { id: 'max',    name: 'Max',    role: 'Budget + Channels',    color: '#3B82F6', avatar: '/agents/max.png',    tagline: "Scales what works, kills what doesn't.",           topSkills: ['Budget allocation', 'Ad scaling', 'Campaign optimizer'],       tasksThisWeek: 33 },
+  { id: 'atlas',  name: 'Atlas',  role: 'Analyst',              color: '#0EA5E9', avatar: '/agents/atlas.png',  tagline: "Reads your numbers so you don't have to.",         topSkills: ['Cohort analysis', 'LTV modeling', 'Attribution'],              tasksThisWeek: 14 },
+  { id: 'echo',   name: 'Echo',   role: 'Competitor Intel',     color: '#EC4899', avatar: '/agents/echo.png',   tagline: 'Watches your rivals while you sleep.',             topSkills: ['Competitor scans', 'Creative drops', 'Positioning shifts'],    tasksThisWeek: 7  },
+  { id: 'nova',   name: 'Nova',   role: 'AI Visibility',        color: '#EF4444', avatar: '/agents/nova.png',   tagline: 'Gets your brand cited in ChatGPT + Perplexity.',   topSkills: ['GEO audit', 'llms.txt', 'Brand mention tracking'],             tasksThisWeek: 5  },
+  { id: 'navi',   name: 'Navi',   role: 'Customer Insights',    color: '#14B8A6', avatar: '/agents/navi.png',   tagline: 'Turns reviews into product roadmaps.',             topSkills: ['Review mining', 'Sentiment tracking', 'Persona builder'],      tasksThisWeek: 12 },
+  { id: 'penny',  name: 'Penny',  role: 'Finance',              color: '#059669', avatar: '/agents/penny.png',  tagline: 'Your AI CFO — watches cash and margin.',           topSkills: ['CAC/LTV audit', 'Cashflow projection', 'Margin analyzer'],     tasksThisWeek: 6  },
+]
