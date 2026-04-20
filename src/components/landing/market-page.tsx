@@ -2,6 +2,11 @@
 
 import { PublicNav } from './public-nav'
 import { PublicFooter } from './public-footer'
+import { AnimatedGlassCard } from './animated-glass-card'
+import { FragmentationGap } from './fragmentation-gap'
+import { useInViewport } from './use-in-viewport'
+import { useReducedMotion } from './use-reduced-motion'
+import { useCountUp } from './use-count-up'
 import {
   AlertTriangle,
   Clock,
@@ -9,33 +14,33 @@ import {
   Sparkles,
 } from 'lucide-react'
 
-// ── Glass card ───────────────────────────────────────────────────
-function GlassCard({
-  children,
-  className = '',
-  dark = false,
-}: {
-  children: React.ReactNode
-  className?: string
-  dark?: boolean
-}) {
-  return (
-    <div
-      className={`rounded-[40px] border p-6 ${
-        dark
-          ? 'border-white/10 bg-[#111c2d] text-white'
-          : 'border-white/60 bg-white/80 backdrop-blur-[20px]'
-      } ${className}`}
-    >
-      {children}
-    </div>
-  )
-}
-
 function PurpleBadge({ children }: { children: React.ReactNode }) {
   return (
     <span className="inline-block rounded-full bg-[#e9ddff] px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-[#5516be]">
       {children}
+    </span>
+  )
+}
+
+function StatNumber({
+  value,
+  suffix = '',
+  className = '',
+}: {
+  value: number
+  suffix?: string
+  className?: string
+}) {
+  const { ref, inView } = useInViewport<HTMLDivElement>(0.3)
+  const reduced = useReducedMotion()
+  const hasDecimal = !Number.isInteger(value)
+  const scaled = hasDecimal ? Math.round(value * 10) : value
+  const n = useCountUp(scaled, 1200, inView && !reduced)
+  const display = hasDecimal ? (n / 10).toFixed(1) : n
+  return (
+    <span ref={ref} className={`tabular-nums ${className}`}>
+      {display}
+      {suffix}
     </span>
   )
 }
@@ -55,13 +60,13 @@ export default function MarketPage() {
               <span className="text-[#45464d]/50">Not a marketing department.</span>
             </h1>
             <p className="mx-auto mt-6 max-w-2xl text-lg text-[#45464d]">
-              Most Shopify founders juggle 11+ tools, 4 dashboards, and zero clarity. They spend more time managing software than growing their brand.
+              Most D2C founders juggle 11+ tools, 4 dashboards, and zero clarity. They spend more time managing software than growing their brand.
             </p>
           </div>
 
           {/* Testimonial glass card */}
           <div className="mx-auto mt-10 max-w-2xl">
-            <GlassCard className="text-center">
+            <AnimatedGlassCard className="text-center" delay={100}>
               <div className="flex justify-center mb-4">
                 <div className="w-10 h-10 rounded-full bg-[#6b38d4] flex items-center justify-center">
                   <Sparkles className="w-5 h-5 text-white" />
@@ -74,51 +79,51 @@ export default function MarketPage() {
               <div className="mt-4 inline-block rounded-full bg-[#e9ddff] px-3 py-1 text-xs font-semibold text-[#5516be]">
                 Trusted by D2C founders
               </div>
-            </GlassCard>
+            </AnimatedGlassCard>
           </div>
 
           {/* Two-column grid */}
           <div className="mt-12 grid gap-8 lg:grid-cols-2">
-            {/* Left: Fragmentation Gap */}
-            <GlassCard className="relative overflow-hidden">
+            {/* Left: Fragmentation Gap (signature animation) */}
+            <AnimatedGlassCard className="relative overflow-hidden" delay={0}>
               <h3 className="font-heading text-xl font-bold text-[#0b1c30]">The Fragmentation Gap</h3>
-              <p className="mt-2 text-sm text-[#45464d]">Your marketing stack is a patchwork of disconnected tools.</p>
-              <div className="mt-6 flex flex-wrap gap-3">
-                {['Meta Ads', 'Ahrefs', 'Klaviyo', 'Finance', 'GA4', 'Shopify'].map((tool) => (
-                  <span key={tool} className="rounded-full border border-[#e5eeff] bg-[#eff4ff] px-4 py-2 text-sm font-medium text-[#0b1c30]">
-                    {tool}
-                  </span>
-                ))}
+              <p className="mt-2 text-sm text-[#45464d]">Your marketing stack is a patchwork of disconnected tools — until Mia ties them together.</p>
+              <div className="mt-4">
+                <FragmentationGap />
               </div>
-            </GlassCard>
+            </AnimatedGlassCard>
 
             {/* Right: Stats cards */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <GlassCard className="text-center">
+              <AnimatedGlassCard className="text-center" delay={80}>
                 <Clock className="mx-auto h-8 w-8 text-[#6b38d4]" />
-                <p className="mt-3 font-heading text-2xl font-bold text-[#0b1c30]">4.7 hrs/day</p>
+                <p className="mt-3 font-heading text-2xl font-bold text-[#0b1c30]">
+                  <StatNumber value={4.7} suffix=" hrs/day" />
+                </p>
                 <p className="mt-1 text-xs text-[#45464d]">Manual Overhead</p>
-              </GlassCard>
-              <GlassCard className="text-center">
+              </AnimatedGlassCard>
+              <AnimatedGlassCard className="text-center" delay={160}>
                 <AlertTriangle className="mx-auto h-8 w-8 text-[#6b38d4]" />
                 <p className="mt-3 font-heading text-2xl font-bold text-[#0b1c30]">Silent Bias</p>
                 <p className="mt-1 text-xs text-[#45464d]">Algorithms optimize for spend, not profit</p>
-              </GlassCard>
-              <GlassCard className="text-center">
+              </AnimatedGlassCard>
+              <AnimatedGlassCard className="text-center" delay={240}>
                 <Brain className="mx-auto h-8 w-8 text-[#6b38d4]" />
                 <p className="mt-3 font-heading text-2xl font-bold text-[#0b1c30]">Maximum Paralysis</p>
                 <p className="mt-1 text-xs text-[#45464d]">Too many dashboards, too little action</p>
-              </GlassCard>
+              </AnimatedGlassCard>
             </div>
           </div>
 
           {/* Bottom stat */}
           <div className="mt-10 text-center">
-            <GlassCard dark className="mx-auto inline-block">
+            <AnimatedGlassCard dark className="mx-auto inline-block" delay={320}>
               <p className="text-base font-medium text-white/60">Founders waste</p>
-              <p className="font-heading text-3xl font-bold text-white">14.3 hours/week</p>
+              <p className="font-heading text-3xl font-bold text-white">
+                <StatNumber value={14.3} suffix=" hours/week" />
+              </p>
               <p className="text-sm text-white/60">on Software Stewardship</p>
-            </GlassCard>
+            </AnimatedGlassCard>
           </div>
         </section>
       </main>
