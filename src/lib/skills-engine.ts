@@ -315,7 +315,7 @@ export async function runSkill(input: SkillRunInput, onProgress?: (event: SkillP
 
         onProgress?.({ agent: skill.agent, skill: skill.id, step: 'pre_flight', message: blockage.blockedReason, progress: 0 })
 
-        const { data: blockedRun } = await supabase
+        const { data: blockedRun, error: blockedInsertErr } = await supabase
           .from('skill_runs')
           .insert({
             brand_id: input.brandId,
@@ -329,6 +329,8 @@ export async function runSkill(input: SkillRunInput, onProgress?: (event: SkillP
             parent_run_id: input.parentRunId ?? null,
             chain_depth: input.chainDepth ?? 0,
             credits_used: 0,
+            // model_used is NOT NULL in the schema even for blocked runs.
+            model_used: 'none',
             input: input.additionalContext ?? {},
             output: {},
             duration_ms: durationMs,
@@ -336,6 +338,9 @@ export async function runSkill(input: SkillRunInput, onProgress?: (event: SkillP
           })
           .select('id')
           .single();
+        if (blockedInsertErr) {
+          console.warn('[SkillsEngine] blocked-row insert failed:', blockedInsertErr.message);
+        }
 
         return {
           id: blockedRun?.id ?? '',
