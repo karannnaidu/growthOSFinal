@@ -102,7 +102,7 @@ export function UrlInputCta({
     <form onSubmit={onSubmit} className="space-y-2 w-full">
       <div className={classes.wrap}>
         <input
-          type="url"
+          type="text"
           inputMode="url"
           autoComplete="url"
           spellCheck={false}
