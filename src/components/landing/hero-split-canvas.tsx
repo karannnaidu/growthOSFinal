@@ -48,9 +48,9 @@ export function HeroSplitCanvas() {
           <UrlInputCta size="hero" label={CTA_LABELS.hero} />
         </div>
 
-        {/* Right — Mia anchor + rotating canvas */}
+        {/* Right — Mia anchor stacked above rotating canvas */}
         <div
-          className="lg:col-span-7 order-1 lg:order-2 relative flex items-center justify-center min-h-[480px]"
+          className="lg:col-span-7 order-1 lg:order-2 flex flex-col items-center gap-5"
           onMouseEnter={() => setPaused(true)}
           onMouseLeave={() => setPaused(false)}
         >
@@ -73,19 +73,19 @@ export function HeroSplitCanvas() {
             />
           </div>
 
-          {/* Anchor status line */}
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 rounded-full bg-white/90 backdrop-blur border border-[#c6c6cd]/40 shadow-sm text-sm text-[#0b1c30]">
+          {/* Anchor status line — just below Mia */}
+          <div className="px-4 py-2 rounded-full bg-white/90 backdrop-blur border border-[#c6c6cd]/40 shadow-sm text-sm text-[#0b1c30]">
             <span className="inline-flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
               Running your store on autopilot. <strong>{agentCount} agents working.</strong>
             </span>
           </div>
 
-          {/* Rotating canvas surface */}
+          {/* Rotating canvas surface — stacked below, never on her face */}
           {current && (
             <div
               key={current.id}
-              className="absolute top-8 -right-2 md:right-8"
+              className="w-[320px]"
               style={{ animation: animating ? 'surfaceIn 400ms cubic-bezier(0.34, 1.56, 0.64, 1)' : 'none' }}
             >
               {renderSurface(current)}

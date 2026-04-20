@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import type { HeroSurface } from './landing-content'
 
 function Pill({ children, color }: { children: React.ReactNode; color: string }) {
@@ -19,9 +20,12 @@ export function SurfaceAria({ s }: { s: HeroSurface }) {
     <div className="p-5 rounded-2xl bg-white border border-[#c6c6cd]/40 shadow-lg space-y-3 w-[320px]">
       <Pill color={s.accentColor}>{s.caption}</Pill>
       <div className="grid grid-cols-2 gap-2">
-        <div className="h-20 rounded-lg bg-gradient-to-br from-[#f8f9ff] to-[#eff4ff] border border-[#c6c6cd]/30" />
-        <div className="relative h-20 rounded-lg bg-gradient-to-br from-[#eff4ff] to-[#e9ddff] border border-[#F97316]/30 animate-[pulse_1.2s_ease-out_1]">
-          <span className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded bg-[#F97316] text-white text-[9px] font-bold tracking-wider">NEW</span>
+        <div className="relative h-20 rounded-lg overflow-hidden border border-[#c6c6cd]/30">
+          <Image src="/landing/aria-ad-1.jpg" alt="Ad variant 1" fill sizes="160px" className="object-cover" />
+        </div>
+        <div className="relative h-20 rounded-lg overflow-hidden border border-[#F97316]/40 animate-[pulse_1.2s_ease-out_1]">
+          <Image src="/landing/aria-ad-2.jpg" alt="Ad variant 2" fill sizes="160px" className="object-cover" />
+          <span className="absolute top-1.5 right-1.5 z-10 px-1.5 py-0.5 rounded bg-[#F97316] text-white text-[9px] font-bold tracking-wider shadow">NEW</span>
         </div>
       </div>
       <p className="text-[13px] leading-snug text-[#45464d]">{s.body}</p>
@@ -85,8 +89,10 @@ export function SurfaceEcho({ s }: { s: HeroSurface }) {
     <div className="p-5 rounded-2xl bg-white border border-[#c6c6cd]/40 shadow-lg space-y-3 w-[320px]">
       <Pill color={s.accentColor}>{s.caption}</Pill>
       <div className="grid grid-cols-3 gap-1.5">
-        {[0, 1, 2].map((i) => (
-          <div key={i} className="aspect-video rounded bg-gradient-to-br from-slate-100 to-slate-200" />
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="relative aspect-video rounded overflow-hidden border border-[#c6c6cd]/30">
+            <Image src={`/landing/echo-ad-${i}.jpg`} alt={`Competitor ad ${i}`} fill sizes="96px" className="object-cover" />
+          </div>
         ))}
       </div>
       <p className="text-[13px] leading-snug text-[#45464d]">{s.body}</p>
