@@ -289,3 +289,50 @@ export const AGENT_ROSTER: AgentRosterEntry[] = [
   { id: 'navi',   name: 'Navi',   role: 'Customer Insights',    color: '#14B8A6', avatar: '/agents/navi.png',   tagline: 'Turns reviews into product roadmaps.',             topSkills: ['Review mining', 'Sentiment tracking', 'Persona builder'],      tasksThisWeek: 12 },
   { id: 'penny',  name: 'Penny',  role: 'Finance',              color: '#059669', avatar: '/agents/penny.png',  tagline: 'Your AI CFO — watches cash and margin.',           topSkills: ['CAC/LTV audit', 'Cashflow projection', 'Margin analyzer'],     tasksThisWeek: 6  },
 ]
+
+// ── Pricing ─────────────────────────────────────────────────────────
+
+export interface PricingTier {
+  id: string
+  name: string
+  priceMonthly: number
+  priceAnnual: number
+  tagline: string
+  features: string[]
+  popular?: boolean
+}
+
+export const PRICING_TIERS: PricingTier[] = [
+  {
+    id: 'starter',
+    name: 'Starter',
+    priceMonthly: 49,
+    priceAnnual: 39,
+    tagline: 'For solo founders getting started.',
+    features: ['3 core agents (Mia, Scout, Aria)', '500 credits/month', 'Email support', '1 brand workspace'],
+  },
+  {
+    id: 'growth',
+    name: 'Growth',
+    priceMonthly: 149,
+    priceAnnual: 119,
+    tagline: 'For brands scaling past $1M.',
+    features: ['All 12 agents', '3,000 credits/month', 'Priority support', '3 brand workspaces', 'BYO AI keys (optional)'],
+    popular: true,
+  },
+  {
+    id: 'scale',
+    name: 'Scale',
+    priceMonthly: 499,
+    priceAnnual: 399,
+    tagline: 'For multi-brand operators.',
+    features: ['All 12 agents', 'Unlimited credits', 'Dedicated slack channel', 'Unlimited brands', 'Custom skill library', 'White-label option'],
+  },
+]
+
+export const PRICING_FAQ_ITEMS = [
+  { q: 'Can I cancel anytime?', a: 'Yes. Cancel in one click from your dashboard — no email back-and-forth.' },
+  { q: 'What are credits?', a: 'Credits power every AI action (ad draft, email, analysis). Typical brand uses 2,000–3,000/month.' },
+  { q: 'Do I need my own AI API keys?', a: 'No. We include model inference at every tier. You can BYO keys on Growth+ if you want direct control.' },
+  { q: 'Is the free trial full-featured?', a: 'Yes. 14 days, all 12 agents, 1,000 credits included. No card required to start.' },
+]

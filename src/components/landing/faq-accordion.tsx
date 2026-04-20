@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import { FAQ_ITEMS } from './landing-content'
 
+export type FaqItem = { q: string; a: string }
+
 function FaqRow({ q, a, isOpen, onToggle }: { q: string; a: string; isOpen: boolean; onToggle: () => void }) {
   return (
     <div className="border-b border-[#c6c6cd]/40">
@@ -39,27 +41,41 @@ function FaqRow({ q, a, isOpen, onToggle }: { q: string; a: string; isOpen: bool
   )
 }
 
-export function FaqAccordion() {
+export function FaqAccordion({
+  items = FAQ_ITEMS,
+  title = 'Questions?',
+  wrapInSection = true,
+}: {
+  items?: readonly FaqItem[]
+  title?: string
+  wrapInSection?: boolean
+} = {}) {
   const [openIdx, setOpenIdx] = useState<number | null>(0)
+
+  const body = (
+    <div className="max-w-3xl mx-auto px-6 space-y-8">
+      <header className="text-center space-y-3">
+        <h2 className="font-heading font-bold text-4xl md:text-5xl text-[#0b1c30]">{title}</h2>
+      </header>
+      <div>
+        {items.map((item, i) => (
+          <FaqRow
+            key={item.q}
+            q={item.q}
+            a={item.a}
+            isOpen={openIdx === i}
+            onToggle={() => setOpenIdx((p) => (p === i ? null : i))}
+          />
+        ))}
+      </div>
+    </div>
+  )
+
+  if (!wrapInSection) return body
 
   return (
     <section className="py-20 bg-[#f8f9ff] border-b border-[#c6c6cd]/10">
-      <div className="max-w-3xl mx-auto px-6 space-y-8">
-        <header className="text-center space-y-3">
-          <h2 className="font-heading font-bold text-4xl md:text-5xl text-[#0b1c30]">Questions?</h2>
-        </header>
-        <div>
-          {FAQ_ITEMS.map((item, i) => (
-            <FaqRow
-              key={item.q}
-              q={item.q}
-              a={item.a}
-              isOpen={openIdx === i}
-              onToggle={() => setOpenIdx((p) => (p === i ? null : i))}
-            />
-          ))}
-        </div>
-      </div>
+      {body}
     </section>
   )
 }
