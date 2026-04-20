@@ -55,7 +55,7 @@ File: `supabase/migrations/014-mia-first-orchestration.sql`
 ```sql
 -- 014-mia-first-orchestration.sql
 -- Mia becomes the single orchestrator: new tables for watches, requests,
--- decisions, digests, events; additive columns on skill_runs and chat_messages.
+-- decisions, digests, events; additive columns on skill_runs and conversation_messages.
 -- Idempotent: re-runs are safe.
 
 -- ------------------------------------------------------------------
@@ -273,26 +273,26 @@ alter table public.skill_runs
   add column if not exists requests_emitted jsonb;
 
 -- ------------------------------------------------------------------
--- 7. chat_messages — add author_kind, source_decision_id, inline card refs
+-- 7. conversation_messages — add author_kind, source_decision_id, inline card refs
 -- ------------------------------------------------------------------
-alter table public.chat_messages
+alter table public.conversation_messages
   add column if not exists author_kind text;
 
-alter table public.chat_messages drop constraint if exists chat_messages_author_kind_chk;
-alter table public.chat_messages
-  add constraint chat_messages_author_kind_chk
+alter table public.conversation_messages drop constraint if exists conversation_messages_author_kind_chk;
+alter table public.conversation_messages
+  add constraint conversation_messages_author_kind_chk
   check (author_kind is null or author_kind in (
     'user','mia_reactive','mia_proactive','mia_digest'
   ));
 
-alter table public.chat_messages
+alter table public.conversation_messages
   add column if not exists source_decision_id uuid
   references public.mia_decisions(id);
 
-alter table public.chat_messages
+alter table public.conversation_messages
   add column if not exists inline_request_ids uuid[];
 
-alter table public.chat_messages
+alter table public.conversation_messages
   add column if not exists inline_watch_ids uuid[];
 
 -- ------------------------------------------------------------------
@@ -344,7 +344,7 @@ git add supabase/migrations/014-mia-first-orchestration.sql
 git commit -m "feat(mia): add schema for watches, requests, decisions, digests, events
 
 Idempotent additive migration. Five new tables plus columns on
-skill_runs and chat_messages. RLS-enabled with brand_members scoping.
+skill_runs and conversation_messages. RLS-enabled with brand_members scoping.
 Not yet applied to remote — next task runs supabase db query."
 ```
 
@@ -380,7 +380,7 @@ Expected: one row returned — `requests_emitted`.
 
 Run:
 ```bash
-npx supabase db query --linked "select column_name from information_schema.columns where table_schema='public' and table_name='chat_messages' and column_name in ('author_kind','source_decision_id','inline_request_ids','inline_watch_ids') order by column_name;"
+npx supabase db query --linked "select column_name from information_schema.columns where table_schema='public' and table_name='conversation_messages' and column_name in ('author_kind','source_decision_id','inline_request_ids','inline_watch_ids') order by column_name;"
 ```
 
 Expected: four rows — `author_kind`, `inline_request_ids`, `inline_watch_ids`, `source_decision_id`.
@@ -395,7 +395,7 @@ File: `scripts/verify-mia-first-schema.ts`
 // Run: npx tsx scripts/verify-mia-first-schema.ts
 // Verifies the 014 migration landed on remote Supabase:
 //  - 5 new tables exist and are queryable
-//  - Additive columns are present on skill_runs and chat_messages
+//  - Additive columns are present on skill_runs and conversation_messages
 // Exits non-zero on any failure.
 
 import { createServiceClient } from '../src/lib/supabase/service'
@@ -426,10 +426,10 @@ async function main() {
 
   const columnChecks: Array<{ table: string; column: string }> = [
     { table: 'skill_runs', column: 'requests_emitted' },
-    { table: 'chat_messages', column: 'author_kind' },
-    { table: 'chat_messages', column: 'source_decision_id' },
-    { table: 'chat_messages', column: 'inline_request_ids' },
-    { table: 'chat_messages', column: 'inline_watch_ids' },
+    { table: 'conversation_messages', column: 'author_kind' },
+    { table: 'conversation_messages', column: 'source_decision_id' },
+    { table: 'conversation_messages', column: 'inline_request_ids' },
+    { table: 'conversation_messages', column: 'inline_watch_ids' },
   ]
   for (const { table, column } of columnChecks) {
     const { error } = await client.from(table).select(column).limit(0)

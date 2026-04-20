@@ -278,20 +278,20 @@ alter table skill_runs add column if not exists requests_emitted jsonb;
 
 Skills write their `requests[]` here at completion. Chain-processor reads and promotes to `mia_requests`.
 
-**`chat_messages`** (existing Mia chat storage) — add:
+**`conversation_messages`** (existing Mia chat storage) — add:
 
 ```sql
-alter table chat_messages add column if not exists author_kind text
+alter table conversation_messages add column if not exists author_kind text
   check (author_kind in ('user','mia_reactive','mia_proactive','mia_digest'));
-alter table chat_messages add column if not exists source_decision_id uuid
+alter table conversation_messages add column if not exists source_decision_id uuid
   references mia_decisions(id);
-alter table chat_messages add column if not exists inline_request_ids uuid[];
-alter table chat_messages add column if not exists inline_watch_ids uuid[];
+alter table conversation_messages add column if not exists inline_request_ids uuid[];
+alter table conversation_messages add column if not exists inline_watch_ids uuid[];
 ```
 
 `author_kind` distinguishes user turns, Mia replying to user (existing behavior), Mia initiating a turn from a wake (new), and Mia posting the daily digest (new). UI renders inline cards from `inline_request_ids` and `inline_watch_ids`.
 
-**`notifications`** — kept as-is. Used for unread badges and routing metadata only; content lives in `chat_messages`.
+**`notifications`** — kept as-is. Used for unread badges and routing metadata only; content lives in `conversation_messages`.
 
 ---
 
@@ -384,11 +384,11 @@ Transactional:
 - insert `mia_decisions` row
 - insert `new_watches` into `watches` (capture IDs into `mia_decisions.new_watches_created`)
 - update `resolve_requests[]` to their new statuses (capture IDs into `mia_decisions.requests_resolved`)
-- write `instant_messages[]` to `chat_messages` (one row each, `author_kind='mia_proactive'`, `source_decision_id` set)
+- write `instant_messages[]` to `conversation_messages` (one row each, `author_kind='mia_proactive'`, `source_decision_id` set)
 - append `digest_lines[]` to today's `mia_digests` row (upsert by `(brand_id, digest_date)`, `status='accumulating'`)
 - enqueue `picked[]` to the existing chain-processor by appending to the `pending_chain` array of a new `knowledge_nodes` row with `node_type='mia_decision'` (unchanged queueing mechanism — this spec reuses the existing successor pattern as-is)
 
-Instant-lane throttle: max 1 message per brand per 60s. If this wake produces multiple instant messages, they're grouped into a single `chat_messages` row with the union of `inline_request_ids` / `inline_watch_ids`.
+Instant-lane throttle: max 1 message per brand per 60s. If this wake produces multiple instant messages, they're grouped into a single `conversation_messages` row with the union of `inline_request_ids` / `inline_watch_ids`.
 
 ### Step 7 — Async fan-out
 
