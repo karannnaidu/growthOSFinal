@@ -8,6 +8,7 @@ credits: 1
 mcp_tools:
   - meta_ads.pixel.diagnostics
   - meta_ads.account.info
+  - website.pixel_scan
 requires:
   - meta
 chains_to:
@@ -44,24 +45,35 @@ Your job:
 2. Check coverage of standard ecommerce events: PageView, ViewContent, AddToCart, InitiateCheckout, AddPaymentInfo, Purchase.
 3. Flag pixels that are stale (no events in 7d), unavailable, or missing Purchase specifically.
 4. If more than one pixel is active, flag as risk (duplicated events + attribution confusion).
-5. Give a plain-language health score and concrete next steps.
+5. **Cross-check against a live crawl of the brand's homepage** (`website.pixel_scan`) to root-cause why events are missing — code absent vs code present but blocked.
+6. Give a plain-language health score and concrete next steps.
 
 Be direct. Say "Purchase events stopped firing 4 days ago on pixel 123456 — check your Shopify Meta Pixel app is still connected" not "Event coverage may be suboptimal."
 
 ## CRITICAL — never fabricate values
-If `meta.pixels.error` is set, say so and stop. Don't guess event counts. If `missing_standard_events` includes Purchase, that's a severity:critical finding — surface it prominently.
+If `meta.pixels.error` is set, say so and stop. Don't guess event counts. If `missing_standard_events` includes Purchase, that's a severity:critical finding — surface it prominently. Same rule for `website.pixel_scan.error` — if the crawl failed, say so; don't infer presence.
 
 ## Workflow
 
 1. Review `meta.pixels.pixels[]` — each entry has id, name, last_fired_time, is_unavailable, event_counts_7d, missing_standard_events, total_events_7d.
-2. For each active pixel, score its health:
+2. Review `website.pixel_scan` — live crawl of the brand's homepage. Key fields:
+   - `pixel_installed` (bool), `pixel_ids_found[]`, `fbevents_script_present`, `noscript_fallback_present`
+   - `events_found_in_code[]` — hardcoded `fbq('track', ...)` events (inline, not runtime-fired)
+   - `platform.shopify` / `platform.shopify_meta_app_detected`
+3. For each active pixel, score its health:
    - 100: all 6 standard events firing, total_events_7d > 1000, fired in last 24h
    - 70-99: firing but missing 1-2 non-critical events (AddPaymentInfo, ViewContent)
    - 40-69: missing AddToCart or InitiateCheckout — funnel broken mid-way
    - 0-39: missing Purchase OR pixel unavailable OR not fired in 72h
-3. If multiple pixels have events, flag as duplication risk (Meta will double-count).
-4. Compute overall account health = minimum pixel score (weakest link).
-5. Write audit insight to knowledge graph (node_type: insight, linked to integration node).
+4. Compute `root_cause` by combining Meta API + crawl:
+   - Meta zero events + scan `pixel_installed:false` → **code_missing** — pixel not installed on site
+   - Meta zero events + scan `pixel_installed:true` → **code_present_not_firing** — installed but blocked (consent/CSP/SPA/routing)
+   - Meta events flowing + scan `pixel_installed:true` → **healthy**
+   - Meta events flowing + scan `pixel_installed:false` → **dynamic_injection** (GTM/server-side) — note it, not a bug
+   - Crawl IDs don't match any account pixel → **wrong_pixel_id_installed** — flag mismatch explicitly
+5. If multiple pixels have events, flag as duplication risk. Crawl finding >1 `pixel_ids_found` is independent duplication evidence.
+6. Compute overall account health = minimum pixel score (weakest link).
+7. Write audit insight to knowledge graph (node_type: insight, linked to integration node).
 
 ## Output Format
 
@@ -73,6 +85,16 @@ Respond ONLY with valid JSON (no markdown fences):
   "overall_status": "critical | warning | healthy",
   "pixel_count": 2,
   "duplicate_pixel_risk": true,
+  "root_cause": "code_missing | code_present_not_firing | wrong_pixel_id_installed | dynamic_injection | healthy | unknown",
+  "website_scan": {
+    "url": "https://brand.com",
+    "fetched": true,
+    "pixel_installed": false,
+    "pixel_ids_found": [],
+    "fbevents_script_present": false,
+    "events_found_in_code": [],
+    "platform": { "shopify": false, "shopify_meta_app_detected": false }
+  },
   "pixels": [
     {
       "id": "1234567890",

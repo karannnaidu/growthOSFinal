@@ -58,6 +58,9 @@ export interface SkillDataContext {
     seo?: unknown[];
     status?: unknown[];
   };
+  website?: {
+    pixel_scan?: unknown;
+  };
 }
 
 interface Credential {
@@ -440,6 +443,114 @@ async function fetchMetaPixelDiagnostics(cred: Credential): Promise<unknown> {
   }
 }
 
+/**
+ * Live crawl of the brand's homepage to cross-check Meta Pixel presence.
+ *
+ * The Meta API tells us whether events arrived — it can't tell us WHY they
+ * didn't. This fills the gap by looking at the actual HTML for:
+ *   - fbq('init', '<id>') calls
+ *   - connect.facebook.net/.../fbevents.js script
+ *   - <noscript> facebook.com/tr fallback pixels
+ *   - fbq('track', '<EventName>') inline calls
+ *   - platform hints (Shopify, WooCommerce) that change where the pixel lives
+ *
+ * Enables root-cause disambiguation in pixel-capi-health:
+ *   - Meta: zero events + scan: no code  → pixel not installed
+ *   - Meta: zero events + scan: code present → installed but blocked
+ *     (consent banner, CSP, SPA routing, ad-block at test, etc.)
+ *   - Meta: events + scan: no code → code injected dynamically / server-side
+ */
+async function fetchWebsitePixelScan(brandId: string): Promise<unknown> {
+  const admin = (await import('@/lib/supabase/service')).createServiceClient();
+  const { data: brand } = await admin
+    .from('brands')
+    .select('domain, brand_guidelines')
+    .eq('id', brandId)
+    .single();
+
+  const guidelines = (brand?.brand_guidelines ?? {}) as Record<string, unknown>;
+  const rawUrl =
+    (brand?.domain as string | null | undefined) ||
+    (guidelines.website as string | undefined) ||
+    (guidelines.domain as string | undefined) ||
+    null;
+
+  if (!rawUrl) {
+    return { error: 'brand.domain not set — cannot scan' };
+  }
+
+  const url = rawUrl.startsWith('http') ? rawUrl : `https://${rawUrl}`;
+
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 10_000);
+    const res = await fetch(url, {
+      signal: controller.signal,
+      redirect: 'follow',
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (compatible; GrowthOS-PixelScan/1.0; +https://growth-os.ai)',
+        Accept: 'text/html,application/xhtml+xml',
+      },
+    });
+    clearTimeout(timer);
+
+    if (!res.ok) {
+      return {
+        url,
+        fetched: false,
+        status: res.status,
+        error: `HTTP ${res.status} fetching ${url}`,
+      };
+    }
+
+    const html = (await res.text()).slice(0, 500_000);
+
+    const initIds = Array.from(
+      html.matchAll(/fbq\s*\(\s*['"]init['"]\s*,\s*['"](\d{6,})['"]/g),
+    ).map((m) => m[1]);
+    const trackEvents = Array.from(
+      html.matchAll(/fbq\s*\(\s*['"]track['"]\s*,\s*['"]([A-Za-z]+)['"]/g),
+    ).map((m) => m[1]);
+    const noscriptIds = Array.from(
+      html.matchAll(/facebook\.com\/tr\?id=(\d{6,})/g),
+    ).map((m) => m[1]);
+    const fbeventsScript = /connect\.facebook\.net\/[a-zA-Z_]+\/fbevents\.js/.test(
+      html,
+    );
+
+    const pixelIdsFound = Array.from(new Set([...initIds, ...noscriptIds]));
+    const eventsFoundInCode = Array.from(new Set(trackEvents));
+
+    const isShopify =
+      /cdn\.shopify\.com|Shopify\.theme|shopify-features/.test(html);
+    const shopifyMetaAppDetected =
+      isShopify && /shopify-pixels|pixels\.shopifyapps\.com/.test(html);
+
+    return {
+      url,
+      fetched: true,
+      status: res.status,
+      pixel_installed: pixelIdsFound.length > 0 || fbeventsScript,
+      pixel_ids_found: pixelIdsFound,
+      fbevents_script_present: fbeventsScript,
+      noscript_fallback_present: noscriptIds.length > 0,
+      events_found_in_code: eventsFoundInCode,
+      platform: {
+        shopify: isShopify,
+        shopify_meta_app_detected: shopifyMetaAppDetected,
+      },
+      scanned_at: new Date().toISOString(),
+    };
+  } catch (err) {
+    return {
+      url,
+      fetched: false,
+      error: (err as Error).message ?? String(err),
+    };
+  }
+}
+
 async function fetchGA4Report(cred: Credential): Promise<unknown> {
   const propertyId = cred.metadata?.property_id;
   if (!propertyId) {
@@ -680,6 +791,7 @@ const TOOL_HANDLERS: Record<string, ToolHandler> = {
   'meta_ads.account.info': async (_brandId, cred) => fetchMetaAccountInfo(cred),
   'meta_ads.insights.breakdowns': async (_brandId, cred) => fetchMetaInsightsBreakdowns(cred),
   'meta_ads.pixel.diagnostics': async (_brandId, cred) => fetchMetaPixelDiagnostics(cred),
+  'website.pixel_scan': async (brandId) => fetchWebsitePixelScan(brandId),
 
   // Google
   'ga4.report.run': async (_brandId, cred) => fetchGA4Report(cred),
@@ -1068,6 +1180,10 @@ export async function fetchSkillData(
         case 'meta_ads.pixel.diagnostics':
           context.meta = context.meta ?? {};
           context.meta.pixels = result;
+          break;
+        case 'website.pixel_scan':
+          context.website = context.website ?? {};
+          context.website.pixel_scan = result;
           break;
 
         // Google Ads
