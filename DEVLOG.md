@@ -7,6 +7,7 @@ Last updated: 2026-04-21
 
 ## Week of 2026-04-20
 
+- **da909c0e** — fix(mia-wake): accept dotted skill_ids from the planner *(karan, 2026-04-21)*
 - **9766170a** — fix(onboarding/diagnose): keep Scout health-check alive on Vercel *(karan, 2026-04-21)*
 - **0569c56e** — docs(spec): campaigns × Max integration design *(karan, 2026-04-21)*
 - **e0bb6456** — fix(onboarding): reflect persisted Meta/Google connection after OAuth *(karan, 2026-04-21)*
