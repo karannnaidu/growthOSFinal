@@ -11,6 +11,37 @@ import { cn } from '@/lib/utils'
 import { ActionCard, type ActionState } from '@/components/chat/action-card'
 import { CollectCard } from '@/components/chat/collect-card'
 import { type MiaAction, type SkillAction, type CollectAction } from '@/lib/mia-actions'
+import { MaxHandoffCard } from '@/components/chat/max-handoff-card'
+import { MaxOpeningCard, type MaxOpeningPayload } from '@/components/chat/max-opening-card'
+import { MaxBundleCard, type MaxBundlePayload } from '@/components/chat/max-bundle-card'
+import type { AudienceTier } from '@/components/campaigns/AudienceTierCard'
+import type { PreflightResult } from '@/lib/preflight-types'
+
+// ---------------------------------------------------------------------------
+// Launch handoff types
+// ---------------------------------------------------------------------------
+
+type LaunchState =
+  | 'awaiting_intent'
+  | 'awaiting_approval_of_plan'
+  | 'awaiting_approval_of_images'
+  | 'launching'
+  | 'completed'
+  | 'cancelled'
+
+type LaunchCardKind = 'max_handoff' | 'max_opening' | 'max_bundle' | 'launch_confirm' | 'launch_result'
+
+interface LaunchHandoff {
+  state: LaunchState
+  cardKind: LaunchCardKind
+  cardPayload: Record<string, unknown>
+  preflight?: PreflightResult
+  budget?: number
+  approvedTiers?: AudienceTier[]
+  approvedCopyIdx?: number
+  loading?: boolean
+  error?: string
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -69,6 +100,10 @@ export default function ChatPage() {
   const [messageActions, setMessageActions] = useState<Record<string, MiaAction[]>>({})
   const [actionStates, setActionStates] = useState<Record<string, ActionState>>({})
   const [executingMessageId, setExecutingMessageId] = useState<string | null>(null)
+
+  // Launch handoff state — keyed by message ID (the Mia assistant message
+  // that triggered the handoff). Tracks the Max state machine locally.
+  const [launchHandoffs, setLaunchHandoffs] = useState<Record<string, LaunchHandoff>>({})
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const didRestoreRef = useRef(false)
@@ -225,6 +260,83 @@ export default function ChatPage() {
     setActionStates((prev) => ({ ...prev, ...initialStates }))
   }, [])
 
+  // Drive the Max launch-intent state machine one turn at a time.
+  // Called from the `handoff` SSE event and from Max card approvals.
+  const advanceLaunchIntent = useCallback(
+    async (
+      messageId: string,
+      currentState: LaunchState,
+      userInput?: Record<string, unknown>,
+    ) => {
+      if (!brandId) return
+      setLaunchHandoffs((prev) => {
+        const existing = prev[messageId]
+        if (!existing) return prev
+        return { ...prev, [messageId]: { ...existing, loading: true, error: undefined } }
+      })
+      try {
+        const res = await fetch('/api/mia/launch-intent', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            brandId,
+            conversationId: activeConversationId ?? undefined,
+            currentState,
+            userInput,
+          }),
+        })
+        const body = (await res.json()) as {
+          state?: LaunchState
+          card_kind?: LaunchCardKind
+          card_payload?: Record<string, unknown>
+          preflight?: PreflightResult
+          error?: string
+        }
+        if (!res.ok) {
+          setLaunchHandoffs((prev) => {
+            const existing = prev[messageId]
+            if (!existing) return prev
+            return {
+              ...prev,
+              [messageId]: { ...existing, loading: false, error: body.error ?? `HTTP ${res.status}` },
+            }
+          })
+          return
+        }
+        setLaunchHandoffs((prev) => {
+          const existing = prev[messageId]
+          if (!existing) return prev
+          return {
+            ...prev,
+            [messageId]: {
+              ...existing,
+              state: body.state ?? existing.state,
+              cardKind: body.card_kind ?? existing.cardKind,
+              cardPayload: body.card_payload ?? {},
+              preflight: body.preflight ?? existing.preflight,
+              loading: false,
+              error: undefined,
+            },
+          }
+        })
+      } catch (err) {
+        setLaunchHandoffs((prev) => {
+          const existing = prev[messageId]
+          if (!existing) return prev
+          return {
+            ...prev,
+            [messageId]: {
+              ...existing,
+              loading: false,
+              error: err instanceof Error ? err.message : 'Launch intent failed',
+            },
+          }
+        })
+      }
+    },
+    [brandId, activeConversationId],
+  )
+
   // Send a message
   const sendMessage = useCallback(
     async (message: string) => {
@@ -340,6 +452,29 @@ export default function ChatPage() {
                 return updated
               })
             }
+
+            if (event.type === 'handoff' && event.agent === 'max') {
+              // Capture which Mia message owns this handoff. The `{type:'message'}`
+              // SSE event that precedes it has already updated the last mia entry,
+              // so use that message's id to key the handoff card.
+              setMessages((prev) => {
+                const last = prev[prev.length - 1]
+                if (last && last.role === 'mia') {
+                  setLaunchHandoffs((h) => ({
+                    ...h,
+                    [last.id]: {
+                      state: 'awaiting_intent',
+                      cardKind: 'max_opening',
+                      cardPayload: {},
+                      loading: true,
+                    },
+                  }))
+                  // Kick off the first launch-intent turn to fetch preflight + opening card.
+                  void advanceLaunchIntent(last.id, 'awaiting_intent')
+                }
+                return prev
+              })
+            }
           }
         }
       } catch (err) {
@@ -360,7 +495,7 @@ export default function ChatPage() {
         setIsStreaming(false)
       }
     },
-    [brandId, activeConversationId, isStreaming],
+    [brandId, activeConversationId, isStreaming, advanceLaunchIntent],
   )
 
   const handleRunActions = useCallback(
@@ -614,6 +749,16 @@ export default function ChatPage() {
                       />
                     </div>
                   )}
+
+                  {/* Max launch handoff cards */}
+                  {launchHandoffs[msg.id] && (
+                    <div className="ml-11 mt-2">
+                      <LaunchHandoffView
+                        handoff={launchHandoffs[msg.id]!}
+                        onAdvance={(state, userInput) => advanceLaunchIntent(msg.id, state, userInput)}
+                      />
+                    </div>
+                  )}
                 </div>
               )
             })
@@ -640,6 +785,92 @@ export default function ChatPage() {
       </div>
     </div>
   )
+}
+
+// ---------------------------------------------------------------------------
+// LaunchHandoffView — renders the correct Max card for the current state
+// ---------------------------------------------------------------------------
+
+function LaunchHandoffView({
+  handoff,
+  onAdvance,
+}: {
+  handoff: LaunchHandoff
+  onAdvance: (state: LaunchState, userInput?: Record<string, unknown>) => void
+}) {
+  if (handoff.loading) {
+    return <div className="text-xs text-muted-foreground">Max is working…</div>
+  }
+  if (handoff.error) {
+    return (
+      <div className="rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800">
+        {handoff.error}
+      </div>
+    )
+  }
+
+  if (handoff.cardKind === 'max_handoff') {
+    const preflight = (handoff.cardPayload.preflight as PreflightResult | undefined) ?? handoff.preflight
+    if (!preflight) return null
+    return <MaxHandoffCard preflight={preflight} />
+  }
+
+  if (handoff.cardKind === 'max_opening') {
+    const payload = handoff.cardPayload as unknown as MaxOpeningPayload
+    return (
+      <MaxOpeningCard
+        payload={payload}
+        onSubmit={({ angle, budget, proposeAll }) => {
+          // Cache budget so we can pass it through to `launching` later.
+          onAdvance('awaiting_approval_of_plan', { angle, budget, proposeAll })
+        }}
+      />
+    )
+  }
+
+  if (handoff.cardKind === 'max_bundle') {
+    const payload = handoff.cardPayload as unknown as MaxBundlePayload
+    return (
+      <MaxBundleCard
+        payload={payload}
+        onApprove={({ selectedTiers, selectedCopyIdx }) => {
+          // For now we skip the image-approval loop and go straight through
+          // `awaiting_approval_of_images` → `launching` in the next call.
+          onAdvance('awaiting_approval_of_images', {
+            approvedTiers: selectedTiers,
+            approvedCopyIdx: selectedCopyIdx,
+          })
+        }}
+      />
+    )
+  }
+
+  if (handoff.cardKind === 'launch_confirm') {
+    return (
+      <div className="rounded-lg border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm space-y-2">
+        <div>Images approved. Ready to launch.</div>
+        <button
+          onClick={() => onAdvance('launching')}
+          className="rounded bg-emerald-600 text-white px-3 py-1 text-sm"
+        >
+          Launch campaign
+        </button>
+      </div>
+    )
+  }
+
+  if (handoff.cardKind === 'launch_result') {
+    return (
+      <div className="rounded-lg border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm">
+        <div className="font-medium mb-1">Campaign launched</div>
+        <pre className="text-xs whitespace-pre-wrap text-zinc-700">
+          {JSON.stringify(handoff.cardPayload, null, 2)}
+        </pre>
+      </div>
+    )
+  }
+
+  return null
 }
 
 // ---------------------------------------------------------------------------
