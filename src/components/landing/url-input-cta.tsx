@@ -13,18 +13,18 @@ type Size = 'hero' | 'default' | 'final'
 const SIZE_CLASSES: Record<Size, { input: string; button: string; wrap: string }> = {
   hero: {
     wrap: 'flex flex-col sm:flex-row gap-3 w-full max-w-xl',
-    input: 'h-24 text-xl sm:h-16 sm:text-lg px-5',
-    button: 'h-24 text-xl sm:h-16 sm:text-lg px-8',
+    input: 'h-20 text-xl sm:h-16 sm:text-lg px-5',
+    button: 'h-14 text-base sm:h-16 sm:text-lg px-8',
   },
   default: {
     wrap: 'flex flex-col sm:flex-row gap-3 w-full max-w-lg',
-    input: 'h-24 text-lg sm:h-14 sm:text-base px-5 sm:px-4',
-    button: 'h-24 text-lg sm:h-14 sm:text-base px-7 sm:px-6',
+    input: 'h-20 text-lg sm:h-14 sm:text-base px-5 sm:px-4',
+    button: 'h-12 text-base sm:h-14 sm:text-base px-7 sm:px-6',
   },
   final: {
     wrap: 'flex flex-col sm:flex-row gap-3 w-full max-w-xl',
-    input: 'h-24 text-lg sm:h-14 sm:text-base px-5 sm:px-4',
-    button: 'h-24 text-lg sm:h-14 sm:text-base px-7 sm:px-6',
+    input: 'h-20 text-lg sm:h-14 sm:text-base px-5 sm:px-4',
+    button: 'h-12 text-base sm:h-14 sm:text-base px-7 sm:px-6',
   },
 }
 
@@ -118,7 +118,7 @@ export function UrlInputCta({
           onBlur={() => setFocused(false)}
           placeholder={reduced ? HERO_CONTENT.urlPlaceholders[0] : placeholderText}
           aria-label="Your store URL"
-          className={`flex-1 rounded-xl border border-[#c6c6cd] bg-white text-[#0b1c30] placeholder:text-[#45464d]/60 focus:border-[#6b38d4] focus:ring-2 focus:ring-[#6b38d4]/30 outline-none transition-all ${classes.input}`}
+          className={`w-full sm:flex-1 rounded-xl border border-[#c6c6cd] bg-white text-[#0b1c30] placeholder:text-[#45464d]/60 focus:border-[#6b38d4] focus:ring-2 focus:ring-[#6b38d4]/30 outline-none transition-all ${classes.input}`}
         />
         <button
           type="submit"
