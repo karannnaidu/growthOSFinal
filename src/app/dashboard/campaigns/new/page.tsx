@@ -13,6 +13,8 @@ import { AgentAvatar } from '@/components/agents/agent-avatar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
+import { PreflightBanner } from '@/components/campaigns/PreflightBanner'
+import type { PreflightResult } from '@/lib/preflight-types'
 
 // ---------------------------------------------------------------------------
 // Types + Constants
@@ -105,6 +107,9 @@ export default function NewCampaignPage() {
 
   // Launch state
   const [launching, setLaunching] = useState(false)
+
+  // Pre-flight result (set by PreflightBanner)
+  const [preflight, setPreflight] = useState<PreflightResult | null>(null)
 
   // ---------------------------------------------------------------------------
   // Init: resolve brand
@@ -342,6 +347,11 @@ export default function NewCampaignPage() {
 
   function handleNext() {
     if (currentStep >= STEPS.length - 1) return
+    // Pre-flight gate: block leaving step 1 (Define) when verdict is blocked.
+    if (currentStep === 0 && preflight?.verdict === 'blocked') {
+      setStepError(preflight.blocked_reason ?? 'Pre-flight blocked launch.')
+      return
+    }
     const nextIdx = currentStep + 1
     const nextStep = STEPS[nextIdx]
     if (!nextStep) return
@@ -421,6 +431,11 @@ export default function NewCampaignPage() {
           Follow the steps to create a full AI-powered campaign.
         </p>
       </div>
+
+      {/* Pre-flight banner — Max checks Meta setup before you spend creative credits */}
+      {brandId && (
+        <PreflightBanner brandId={brandId} onResult={setPreflight} />
+      )}
 
       {/* Step Indicator */}
       <div className="flex items-center gap-1 overflow-x-auto pb-2 scrollbar-none">
@@ -846,9 +861,11 @@ export default function NewCampaignPage() {
               </Button>
               <Button
                 className="bg-indigo-600 hover:bg-indigo-700 text-white"
-                disabled={launching}
+                disabled={launching || preflight?.verdict === 'blocked'}
+                title={preflight?.verdict === 'blocked' ? preflight.blocked_reason ?? 'Pre-flight blocked launch' : undefined}
                 onClick={async () => {
                   if (!brandId) return
+                  if (preflight?.verdict === 'blocked') return
                   setLaunching(true)
                   try {
                     const selected = copyVariants.filter(v => approvedVariants.has(v.id))
