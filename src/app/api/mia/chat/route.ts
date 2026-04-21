@@ -116,6 +116,12 @@ function sseEvent(data: Record<string, unknown>): Uint8Array {
   return new TextEncoder().encode(`data: ${JSON.stringify(data)}\n\n`)
 }
 
+function detectLaunchIntent(message: string): boolean {
+  const normalized = message.toLowerCase()
+  if (/\bnew campaign\b/.test(normalized)) return true
+  return /\blaunch\b/.test(normalized) && /\b(campaign|ad|ads)\b/.test(normalized)
+}
+
 /** Extract a short, user-facing line from a completed skill's JSON output. */
 function extractHeadline(output: unknown): string {
   if (!output || typeof output !== 'object') return ''
@@ -451,6 +457,42 @@ export async function POST(request: NextRequest): Promise<Response> {
       try {
         // Send start event with conversationId
         controller.enqueue(sseEvent({ type: 'start', conversationId }))
+
+        // Short-circuit for campaign launch intent: hand off to Max via
+        // /api/mia/launch-intent rather than calling the chat LLM. Mia writes a
+        // single assistant message so history stays coherent, then emits a
+        // `handoff` SSE event the chat UI uses to open Max's launch cards.
+        if (detectLaunchIntent(message)) {
+          const assistantMessage = 'Max is taking this. Running pre-flight…'
+          try {
+            await admin.from('conversation_messages').insert({
+              conversation_id: conversationId,
+              role: 'assistant',
+              content: assistantMessage,
+              author_kind: 'mia_reactive',
+            })
+          } catch (dbErr) {
+            console.warn('[Mia Chat] Failed to store handoff message:', dbErr)
+          }
+          controller.enqueue(
+            sseEvent({
+              type: 'message',
+              content: assistantMessage,
+              conversationId,
+            }),
+          )
+          controller.enqueue(
+            sseEvent({
+              type: 'handoff',
+              agent: 'max',
+              intent: 'launch',
+              next_api: '/api/mia/launch-intent',
+              payload: { brandId, currentState: 'awaiting_intent' },
+            }),
+          )
+          controller.enqueue(sseEvent({ type: 'done' }))
+          return
+        }
 
         // Call Claude Sonnet via callModel (Mia always gets premium)
         const result = await callModel({
