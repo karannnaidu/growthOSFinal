@@ -7,23 +7,24 @@ import { useReducedMotion } from './use-reduced-motion'
 
 type Size = 'hero' | 'default' | 'final'
 
-// Mobile gets explicitly larger inputs (chunky touch targets, 17px+ font to
-// avoid iOS auto-zoom on focus) — desktop sizes kick in at sm: and up.
+// Mobile gets explicitly tall inputs (the wrap stacks flex-col on mobile, so
+// each row is full-width and visually thin unless we bump height too). 17px+
+// font keeps iOS from auto-zooming on focus.
 const SIZE_CLASSES: Record<Size, { input: string; button: string; wrap: string }> = {
   hero: {
     wrap: 'flex flex-col sm:flex-row gap-3 w-full max-w-xl',
-    input: 'h-[68px] text-[17px] sm:h-16 sm:text-lg px-5',
-    button: 'h-[68px] text-[17px] sm:h-16 sm:text-lg px-8',
+    input: 'h-20 text-lg sm:h-16 px-5',
+    button: 'h-20 text-lg sm:h-16 px-8',
   },
   default: {
     wrap: 'flex flex-col sm:flex-row gap-3 w-full max-w-lg',
-    input: 'h-16 text-[17px] sm:h-14 sm:text-base px-5 sm:px-4',
-    button: 'h-16 text-[17px] sm:h-14 sm:text-base px-7 sm:px-6',
+    input: 'h-20 text-lg sm:h-14 sm:text-base px-5 sm:px-4',
+    button: 'h-20 text-lg sm:h-14 sm:text-base px-7 sm:px-6',
   },
   final: {
     wrap: 'flex flex-col sm:flex-row gap-3 w-full max-w-xl',
-    input: 'h-16 text-[17px] sm:h-14 sm:text-base px-5 sm:px-4',
-    button: 'h-16 text-[17px] sm:h-14 sm:text-base px-7 sm:px-6',
+    input: 'h-20 text-lg sm:h-14 sm:text-base px-5 sm:px-4',
+    button: 'h-20 text-lg sm:h-14 sm:text-base px-7 sm:px-6',
   },
 }
 
