@@ -3,10 +3,11 @@
 Auto-generated from git history on every push to `main`. Do not edit by hand —
 changes will be overwritten. For the user-facing changelog, see /changelog.
 
-Last updated: 2026-04-20
+Last updated: 2026-04-21
 
 ## Week of 2026-04-20
 
+- **6ef13da8** — fix(imagen): rasterize SVG reference images before sending to Nano Banana 2 *(karan, 2026-04-21)*
 - **68d6437e** — fix(scripts): satisfy noUncheckedIndexedAccess — unblock Vercel build *(karan, 2026-04-21)*
 - **a12bd58c** — fix(dashboard): resolve cross-account brand id leakage + stuck loading *(karan, 2026-04-21)*
 - **67dcb433** — feat(dashboard): port mission-control onto wake cycle via polling *(karan, 2026-04-21)*
