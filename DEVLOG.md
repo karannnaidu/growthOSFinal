@@ -7,6 +7,7 @@ Last updated: 2026-04-21
 
 ## Week of 2026-04-20
 
+- **87df2fa6** — fix(max+landing): drop GA4 from ad-scaling, bump mobile CTA heights *(karan, 2026-04-21)*
 - **86ad8f33** — feat(max): add ad-level + account-info Meta tools, fix hallucinated lifetime spend *(karan, 2026-04-21)*
 - **e6da70e0** — fix(landing): bump mobile URL input height + heading-first hero on mobile *(karan, 2026-04-21)*
 - **ab1fe9eb** — fix(landing): bump URL input size on mobile *(karan, 2026-04-21)*
