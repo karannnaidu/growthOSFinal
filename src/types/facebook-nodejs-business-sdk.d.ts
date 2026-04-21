@@ -16,5 +16,7 @@ declare module 'facebook-nodejs-business-sdk' {
     getInsights(fields: string[], params?: Record<string, unknown>): Promise<unknown[]>;
     getAdSets(fields: string[], params?: Record<string, unknown>): Promise<unknown[]>;
     getCampaigns(fields: string[], params?: Record<string, unknown>): Promise<unknown[]>;
+    getAds(fields: string[], params?: Record<string, unknown>): Promise<unknown[]>;
+    read(fields: string[]): Promise<Record<string, unknown>>;
   }
 }

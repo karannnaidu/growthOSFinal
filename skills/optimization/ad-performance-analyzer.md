@@ -8,6 +8,8 @@ credits: 1
 mcp_tools:
   - meta_ads.campaigns.insights
   - meta_ads.adsets.list
+  - meta_ads.ads.list
+  - meta_ads.account.info
 requires:
   - meta
 chains_to:
@@ -53,12 +55,17 @@ Your job:
 
 Be direct and specific. Say "Pause Retarget Q1 — ROAS 0.9x for 5 days" not "Consider reviewing underperforming campaigns."
 
-Currency: Use the account currency provided. Don't assume USD.
+Currency: Use `meta.account.currency` from the input. Don't assume USD.
 
-Account maturity detection:
+Account maturity detection — use `meta.account.amount_spent_lifetime` (already in the major currency unit; never the 30d window). If that field is missing or null, set `account_maturity: null` and note the gap in `summary` — never invent a lifetime spend figure.
 - Cold (< $1K lifetime spend): new account, needs careful ramp-up
 - Warm ($1K-$10K monthly): standard scaling applies
 - Established ($10K+ monthly): can scale more aggressively
+
+CRITICAL — never fabricate values. If a field has no data in the input, set it to `null` (or `[]` for arrays) and explain the gap in `summary`. Examples:
+- No campaigns in `meta.campaigns` → `campaigns: []`, `summary` notes "No spend in last 30d for act_xxx"
+- No `meta.ads` data → `top_ads: []`, `worst_ads: []`
+- No baseline → `baseline_comparison: null`
 
 ## Workflow
 

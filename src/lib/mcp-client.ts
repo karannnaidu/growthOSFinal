@@ -30,6 +30,8 @@ export interface SkillDataContext {
   meta?: {
     campaigns?: unknown[];
     adSets?: unknown[];
+    ads?: unknown[];
+    account?: unknown;
   };
   google?: {
     ads?: unknown;
@@ -97,10 +99,114 @@ async function fetchMetaInsights(cred: Credential): Promise<unknown> {
       { date_preset: 'last_30d', level: 'campaign' },
     );
     const data = (insights as { _data?: unknown }[]).map((i) => i._data ?? i);
+    const totalSpend = data.reduce<number>((sum, row) => {
+      const r = row as { spend?: string | number };
+      const n = typeof r.spend === 'string' ? parseFloat(r.spend) : (r.spend ?? 0);
+      return sum + (Number.isFinite(n) ? Number(n) : 0);
+    }, 0);
+    console.log('[MCP] Meta insights fetched', {
+      adAccountId: rawId,
+      rowCount: data.length,
+      totalSpend30d: totalSpend,
+    });
     return { data };
   } catch (err) {
     console.warn('[MCP] Meta insights error:', err);
+    return { data: [], error: (err as Error).message ?? String(err) };
+  }
+}
+
+async function fetchMetaAds(cred: Credential): Promise<unknown> {
+  const rawId = cred.metadata?.ad_account_id;
+  if (!rawId) {
+    console.warn('[MCP] Meta: ad_account_id not set in credential metadata');
     return { data: [] };
+  }
+  try {
+    const account = metaAdAccount(cred.access_token, rawId);
+    // Two parallel calls: ad metadata + ad-level insights for last 30d.
+    // Then merge by ad_id so the LLM gets one row per ad with both
+    // creative info and performance numbers.
+    const [adsRaw, insightsRaw] = await Promise.all([
+      account.getAds(
+        ['id', 'name', 'status', 'effective_status', 'campaign_id', 'adset_id', 'creative'],
+        { limit: 200 },
+      ),
+      account.getInsights(
+        [
+          'ad_id',
+          'ad_name',
+          'campaign_name',
+          'adset_name',
+          'impressions',
+          'clicks',
+          'spend',
+          'ctr',
+          'cpc',
+          'frequency',
+          'actions',
+          'action_values',
+          'purchase_roas',
+        ],
+        { date_preset: 'last_30d', level: 'ad', limit: 200 },
+      ),
+    ]);
+    const ads = (adsRaw as { _data?: unknown }[]).map((a) => a._data ?? a);
+    const insights = (insightsRaw as { _data?: unknown }[]).map((i) => i._data ?? i);
+    const insightsById = new Map<string, Record<string, unknown>>();
+    for (const ins of insights) {
+      const obj = ins as Record<string, unknown>;
+      const id = obj.ad_id as string | undefined;
+      if (id) insightsById.set(id, obj);
+    }
+    const merged = ads.map((ad) => {
+      const obj = ad as Record<string, unknown>;
+      const id = obj.id as string | undefined;
+      const ins = id ? insightsById.get(id) : undefined;
+      return { ...obj, insights: ins ?? null };
+    });
+    console.log('[MCP] Meta ads fetched', {
+      adAccountId: rawId,
+      adCount: ads.length,
+      insightsCount: insights.length,
+    });
+    return { data: merged };
+  } catch (err) {
+    console.warn('[MCP] Meta ads error:', err);
+    return { data: [], error: (err as Error).message ?? String(err) };
+  }
+}
+
+async function fetchMetaAccountInfo(cred: Credential): Promise<unknown> {
+  const rawId = cred.metadata?.ad_account_id;
+  if (!rawId) {
+    return { error: 'ad_account_id not set in credential metadata' };
+  }
+  try {
+    const account = metaAdAccount(cred.access_token, rawId);
+    const [info, lifetimeInsights] = await Promise.all([
+      account.read(['name', 'currency', 'amount_spent', 'account_status', 'business_name', 'timezone_name']),
+      account.getInsights(['spend', 'impressions', 'clicks'], { date_preset: 'maximum', level: 'account' }),
+    ]);
+    const lifetime = (lifetimeInsights as { _data?: unknown }[])
+      .map((i) => i._data ?? i)[0] as Record<string, unknown> | undefined;
+    const result = {
+      name: info.name,
+      currency: info.currency,
+      account_status: info.account_status,
+      business_name: info.business_name,
+      timezone: info.timezone_name,
+      // amount_spent is in cents per Meta's API — divide by 100 for the major unit
+      amount_spent_lifetime: typeof info.amount_spent === 'string'
+        ? parseFloat(info.amount_spent) / 100
+        : null,
+      lifetime_insights: lifetime ?? null,
+    };
+    console.log('[MCP] Meta account info fetched', { adAccountId: rawId, ...result });
+    return result;
+  } catch (err) {
+    console.warn('[MCP] Meta account info error:', err);
+    return { error: (err as Error).message ?? String(err) };
   }
 }
 
@@ -363,6 +469,8 @@ const TOOL_HANDLERS: Record<string, ToolHandler> = {
   // Meta Ads
   'meta_ads.campaigns.insights': async (_brandId, cred) => fetchMetaInsights(cred),
   'meta_ads.adsets.list': async (_brandId, cred) => fetchMetaAdSets(cred),
+  'meta_ads.ads.list': async (_brandId, cred) => fetchMetaAds(cred),
+  'meta_ads.account.info': async (_brandId, cred) => fetchMetaAccountInfo(cred),
 
   // Google
   'ga4.report.run': async (_brandId, cred) => fetchGA4Report(cred),
@@ -595,6 +703,8 @@ const TOOL_PLATFORM: Record<string, string> = {
   'shopify.shop.get': 'shopify',
   'meta_ads.campaigns.insights': 'meta',
   'meta_ads.adsets.list': 'meta',
+  'meta_ads.ads.list': 'meta',
+  'meta_ads.account.info': 'meta',
   'ga4.report.run': 'google_analytics',
   'gsc.performance': 'google_analytics',
   'google_ads.campaigns': 'google',
@@ -726,6 +836,14 @@ export async function fetchSkillData(
         case 'meta_ads.adsets.list':
           context.meta = context.meta ?? {};
           context.meta.adSets = (result as { data?: unknown[] }).data ?? [];
+          break;
+        case 'meta_ads.ads.list':
+          context.meta = context.meta ?? {};
+          context.meta.ads = (result as { data?: unknown[] }).data ?? [];
+          break;
+        case 'meta_ads.account.info':
+          context.meta = context.meta ?? {};
+          context.meta.account = result;
           break;
 
         // Google Ads

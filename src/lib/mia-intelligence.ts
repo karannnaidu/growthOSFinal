@@ -24,6 +24,8 @@ const TOOL_PLATFORM_MAP: Record<string, string> = {
   'shopify.shop.get': 'shopify',
   'meta_ads.campaigns.insights': 'meta',
   'meta_ads.adsets.list': 'meta',
+  'meta_ads.ads.list': 'meta',
+  'meta_ads.account.info': 'meta',
   'ga4.report.run': 'ga4',
   'gsc.performance': 'gsc',
   'google_ads.campaigns': 'ga4',
