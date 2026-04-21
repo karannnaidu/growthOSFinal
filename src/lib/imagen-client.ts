@@ -30,12 +30,58 @@ export interface GeneratedImage {
  * URLs are public images going straight into a generative model; a bad cert on
  * the brand's CDN shouldn't silently drop the product reference.
  */
+// Nano Banana 2 / Imagen only accept raster photo formats. SVG 400s the
+// whole request, so we rasterize vector inputs to PNG before inlining.
+const SUPPORTED_REFERENCE_MIME = new Set([
+  'image/png',
+  'image/jpeg',
+  'image/jpg',
+  'image/webp',
+])
+
+function normalizeMime(raw: string | null, url: string): string {
+  const base = (raw ?? '').split(';')[0]!.trim().toLowerCase()
+  if (base) return base
+  const ext = url.split('?')[0]!.split('.').pop()?.toLowerCase()
+  if (ext === 'png') return 'image/png'
+  if (ext === 'jpg' || ext === 'jpeg') return 'image/jpeg'
+  if (ext === 'webp') return 'image/webp'
+  if (ext === 'svg') return 'image/svg+xml'
+  return 'image/png'
+}
+
+async function rasterizeSvgToPng(buffer: Buffer): Promise<Buffer | null> {
+  try {
+    const sharp = (await import('sharp')).default
+    // density=300 keeps thin logo strokes crisp; fit=inside preserves aspect;
+    // transparent background so Nano Banana can composite cleanly.
+    return await sharp(buffer, { density: 300 })
+      .resize(1024, 1024, { fit: 'inside', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+      .png()
+      .toBuffer()
+  } catch (err) {
+    console.warn('[imagen-client] SVG rasterization failed:', err)
+    return null
+  }
+}
+
 async function fetchReferenceImage(
   url: string,
 ): Promise<{ mimeType: string; data: string } | null> {
   const toInlineData = async (res: Response) => {
+    const mimeType = normalizeMime(res.headers.get('content-type'), url)
     const buffer = Buffer.from(await res.arrayBuffer())
-    const mimeType = res.headers.get('content-type') || 'image/png'
+
+    if (mimeType === 'image/svg+xml') {
+      const png = await rasterizeSvgToPng(buffer)
+      if (!png) return null
+      return { mimeType: 'image/png', data: png.toString('base64') }
+    }
+
+    if (!SUPPORTED_REFERENCE_MIME.has(mimeType)) {
+      console.warn(`[imagen-client] Skipping reference image with unsupported MIME ${mimeType}: ${url}`)
+      return null
+    }
     return { mimeType, data: buffer.toString('base64') }
   }
 
