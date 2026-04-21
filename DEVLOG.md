@@ -7,6 +7,18 @@ Last updated: 2026-04-21
 
 ## Week of 2026-04-20
 
+- **3068f421** — feat(diagnosis): cross-check pixel-capi-health with live site crawl *(karan, 2026-04-21)*
+- **5c587aae** — feat(api): POST /api/mia/launch-intent drives launch-conversation state *(karan, 2026-04-21)*
+- **4c6473e6** — feat(chat): Max handoff + opening + bundle chat cards *(karan, 2026-04-21)*
+- **80164acb** — feat(max): launch-conversation skill + register in agents *(karan, 2026-04-21)*
+- **cb4025c5** — feat(campaigns): insert Max audience step, replace hardcoded targeting *(karan, 2026-04-21)*
+- **ed2e0a32** — feat(campaigns): AudienceStep + AudienceTierCard for Max-proposed tiers *(karan, 2026-04-21)*
+- **7b956df1** — feat(max): own audience-targeting; fuse Brand DNA + KG + Meta breakdowns *(karan, 2026-04-21)*
+- **e084028d** — feat(campaigns): wire pre-flight banner into wizard *(karan, 2026-04-21)*
+- **1a7f31bc** — feat(campaigns): PreflightBanner with checking/ready/warning/blocked states *(karan, 2026-04-21)*
+- **14a7c0a3** — feat(api): POST /api/preflight/run wraps lib/preflight *(karan, 2026-04-21)*
+- **0641d9fa** — feat(preflight): verify script for cache hit and force-refresh *(karan, 2026-04-21)*
+- **07df1e98** — feat(preflight): library to orchestrate 4 Max skills with 15min cache *(karan, 2026-04-21)*
 - **a8f7dfb4** — fix(skills): adaptive flag so health-check isn't blocked by missing GA4/Meta *(karan, 2026-04-21)*
 - **f1c640b3** — feat(preflight): shared types for verdict, warnings, details *(karan, 2026-04-21)*
 - **9dbb08d9** — feat(db): preflight_results table for Max pre-flight cache *(karan, 2026-04-21)*
