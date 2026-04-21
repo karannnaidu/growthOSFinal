@@ -7,6 +7,10 @@ Last updated: 2026-04-21
 
 ## Week of 2026-04-20
 
+- **82159d56** — fix(mia/wake): log diagnostics when planner returns zero picks *(karan, 2026-04-21)*
+- **b1628a5a** — fix(mia/chat): include account identifiers in connectedPlatformsBlock *(karan, 2026-04-21)*
+- **8c68f52e** — fix(cron): use GET handlers — Vercel cron invokes GET, not POST *(karan, 2026-04-21)*
+- **6f9c0d2e** — fix(agents): self-heal brand_agents rows on /api/agents read *(karan, 2026-04-21)*
 - **6ef13da8** — fix(imagen): rasterize SVG reference images before sending to Nano Banana 2 *(karan, 2026-04-21)*
 - **68d6437e** — fix(scripts): satisfy noUncheckedIndexedAccess — unblock Vercel build *(karan, 2026-04-21)*
 - **a12bd58c** — fix(dashboard): resolve cross-account brand id leakage + stuck loading *(karan, 2026-04-21)*
