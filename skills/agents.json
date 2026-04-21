@@ -86,7 +86,7 @@
     "role": "Budget + Channels",
     "color": "#3B82F6",
     "avatar": "/agents/max.png",
-    "skills": ["budget-allocation", "ad-scaling", "channel-expansion-advisor", "ad-performance-analyzer", "campaign-optimizer", "campaign-launcher", "pixel-capi-health", "learning-phase-monitor", "account-structure-audit", "breakdown-analyzer", "asc-readiness-audit", "audience-targeting"],
+    "skills": ["budget-allocation", "ad-scaling", "channel-expansion-advisor", "ad-performance-analyzer", "campaign-optimizer", "campaign-launcher", "pixel-capi-health", "learning-phase-monitor", "account-structure-audit", "breakdown-analyzer", "asc-readiness-audit", "audience-targeting", "launch-conversation"],
     "schedule": "0 9 * * *",
     "is_manager": false,
     "can_spawn": false,
