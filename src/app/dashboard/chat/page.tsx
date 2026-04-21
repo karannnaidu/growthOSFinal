@@ -107,6 +107,7 @@ export default function ChatPage() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const didRestoreRef = useRef(false)
+  const didAutoLaunchRef = useRef(false)
   const supabase = createClient()
 
   // Auto-scroll when messages change
@@ -209,6 +210,30 @@ export default function ChatPage() {
 
   // Reset restore guard when brandId changes so brand switches trigger a fresh restore
   useEffect(() => { didRestoreRef.current = false }, [brandId])
+
+  // Auto-initiate the Max launch flow if the user arrived with ?intent=launch.
+  // Runs once per brand-resolved mount — after restore so we don't double-fire
+  // alongside a restored conversation.
+  useEffect(() => {
+    if (!brandId || isStreaming || didAutoLaunchRef.current) return
+    if (typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+    const intent = params.get('intent')
+    if (intent !== 'launch') return
+
+    didAutoLaunchRef.current = true
+    // Clear the query param so a reload doesn't re-fire.
+    params.delete('intent')
+    const qs = params.toString()
+    const nextUrl = `${window.location.pathname}${qs ? `?${qs}` : ''}`
+    window.history.replaceState({}, '', nextUrl)
+
+    // Send a natural-language launch message so the existing intent detector
+    // in /api/mia/chat emits the handoff event and the Max cards render.
+    startNewConversation()
+    void sendMessage('Launch a new campaign')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [brandId])
 
   // Load chat-context sidebar data (brand focus, active agents, sources).
   // Re-runs every 30s so agent status reflects in-flight skill runs.
