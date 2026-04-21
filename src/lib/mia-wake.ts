@@ -550,6 +550,7 @@ export async function runMiaWake(options: WakeOptions): Promise<WakeResult> {
   })
 
   let llmText = ''
+  let plannerError: string | null = null
   try {
     const result = await callModel({
       model: MODEL_ID,
@@ -562,7 +563,8 @@ export async function runMiaWake(options: WakeOptions): Promise<WakeResult> {
     })
     llmText = result.content
   } catch (e) {
-    console.error('[mia-wake] planner call failed:', e)
+    plannerError = (e as Error).message ?? String(e)
+    console.error('[mia-wake] planner call failed:', plannerError, { brandId, source })
     llmText = ''
   }
 
@@ -574,7 +576,26 @@ export async function runMiaWake(options: WakeOptions): Promise<WakeResult> {
   // Drop any picks the filter would have rejected (e.g. platform-gated skills
   // on a fresh brand) — planner discipline isn't guaranteed, so enforce here.
   const allowedIds = new Set(skills.map(s => s.id))
+  const beforeFilter = plan.picks.length
   plan.picks = plan.picks.filter(p => allowedIds.has(p.skill_id))
+
+  // Diagnostic: when picks=0 the user just sees "Fallback" with no signal as
+  // to whether the planner errored, returned empty JSON, returned skills
+  // outside the catalog, or actually reasoned its way to "do nothing".
+  if (plan.picks.length === 0) {
+    console.warn('[mia-wake] zero picks', {
+      brandId,
+      source,
+      plannerError,
+      llmTextLength: llmText.length,
+      llmTextPreview: llmText.slice(0, 300),
+      beforeCatalogFilter: beforeFilter,
+      catalogSize: catalog.skillById.size,
+      eligibleSkillCount: skills.length,
+      reasoning: plan.reasoning?.slice(0, 200) ?? null,
+      platforms: snap.platforms,
+    })
+  }
 
   // 6. persist decision (always, even on dry run)
   const decisionId = await persistDecision({
