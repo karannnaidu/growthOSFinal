@@ -93,7 +93,10 @@ export async function initializeBrandAgents(
  *   - config.revealed === true  (was in the initial set), OR
  *   - config.reveal_after has passed
  *
- * Falls back to ['mia', 'scout'] if no records exist yet.
+ * Self-heals: if no brand_agents rows exist (e.g. the user never completed
+ * the set-focus onboarding step, or the brand predates the agent-reveal
+ * rollout), initializes the full set on-the-fly so the user isn't stuck
+ * seeing only 2 agents forever.
  */
 export async function getRevealedAgents(brandId: string): Promise<string[]> {
   const supabase = createServiceClient();
@@ -109,7 +112,22 @@ export async function getRevealedAgents(brandId: string): Promise<string[]> {
   }
 
   if (!data || data.length === 0) {
-    return ['mia', 'scout'];
+    console.warn(`[AgentReveal] No brand_agents rows for ${brandId} — self-healing.`);
+    try {
+      const { data: brandRow } = await supabase
+        .from('brands')
+        .select('focus_areas')
+        .eq('id', brandId)
+        .single();
+      const focusAreas = Array.isArray(brandRow?.focus_areas)
+        ? (brandRow!.focus_areas as string[])
+        : [];
+      await initializeBrandAgents(brandId, focusAreas);
+      return Array.from(ALL_AGENT_IDS);
+    } catch (err) {
+      console.error('[AgentReveal] self-heal failed:', err);
+      return ['mia', 'scout'];
+    }
   }
 
   const now = new Date();
