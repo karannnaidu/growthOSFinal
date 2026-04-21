@@ -34,6 +34,10 @@ produces:
 side_effect: none
 reversible: true
 requires_human_approval: false
+# Adaptive: runs even when some declared tools have no data (fresh brand,
+# Shopify/Meta/GA4 not yet connected). The prompt explicitly handles the
+# "Brand DNA only" case and reports missing sources via data_gaps.
+adaptive: true
 description_for_mia: >-
   Input: brand orders/products/campaigns. Output: health insights + flagged
   anomalies + suggested next skills. Use when: first wake of the day or after

@@ -24,6 +24,14 @@ export interface SkillDefinition {
   sideEffect?: SkillSideEffect;
   reversible?: boolean;
   requiresHumanApproval?: boolean;
+  /**
+   * Adaptive skills degrade gracefully when some declared tools have no data —
+   * they work with whatever resolved. Default (false) hard-blocks the skill if
+   * any declared tool lacks data, which is right for e.g. ad-scaling that needs
+   * spend + revenue both, but wrong for diagnosis skills that explicitly cope
+   * with partial input.
+   */
+  adaptive?: boolean;
   descriptionForMia?: string;
   descriptionForUser?: string;
   knowledge?: {
@@ -155,6 +163,7 @@ export function parseSkillMarkdown(raw: string): SkillDefinition {
       typeof data.requires_human_approval === 'boolean'
         ? data.requires_human_approval
         : undefined,
+    adaptive: typeof data.adaptive === 'boolean' ? data.adaptive : undefined,
     descriptionForMia: data.description_for_mia as string | undefined,
     descriptionForUser: data.description_for_user as string | undefined,
     produces: Array.isArray(data.produces)

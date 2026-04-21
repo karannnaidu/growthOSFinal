@@ -298,7 +298,9 @@ export async function runSkill(input: SkillRunInput, onProgress?: (event: SkillP
   onProgress?.({ agent: skill.agent, skill: skill.id, step: 'pre_flight', message: preFlightResult?.dataGapsNote || 'Pre-flight checks passed', progress: 15 })
 
   // 5. Tool-level resolution — classify each declared tool's data source.
-  //    Hard-block if ANY declared tool has no resolvable data.
+  //    Hard-block if ANY declared tool has no resolvable data, UNLESS the skill
+  //    opts into adaptive mode (adaptive: true in frontmatter), in which case
+  //    it runs with whatever resolved and the model reports data_gaps.
   const { resolveDeclaredTools, computeBlockage } = await import('@/lib/skills-engine/preflight');
   type ToolResolution = import('@/lib/skills-engine/preflight').ToolResolution;
 
@@ -310,7 +312,12 @@ export async function runSkill(input: SkillRunInput, onProgress?: (event: SkillP
       toolResolutions = resolutions;
 
       const blockage = computeBlockage(resolutions);
-      if (blockage) {
+      if (blockage && skill.adaptive) {
+        console.log(
+          `[SkillsEngine] ${skill.id}: adaptive mode — running with partial data. Missing: ${blockage.missingPlatforms.join(', ') || '(none)'}`,
+        );
+      }
+      if (blockage && !skill.adaptive) {
         const durationMs = Date.now() - startTime;
 
         onProgress?.({ agent: skill.agent, skill: skill.id, step: 'pre_flight', message: blockage.blockedReason, progress: 0 })
