@@ -202,6 +202,7 @@ function buildPlannerPrompt(args: {
     '',
     'Rules:',
     '- Never invent skill ids — only pick from the catalog block below.',
+    '- skill_id must be the bare id as written in the catalog (e.g. "brand-dna-extractor"). Do NOT prefix it with the agent ("nova.brand-dna-extractor" is wrong).',
     '- Prefer skills flagged effect=none for fresh brands with little data.',
     '- Never pick a skill whose requires=[...] list has a platform not in "Connected platforms".',
     '- Do not re-pick a skill that ran successfully in the last 24 hours unless data has meaningfully changed.',
@@ -283,10 +284,20 @@ export function parsePlannerOutput(raw: string, catalog: MiaCatalog): PlannerOut
   const validPicks: Pick[] = []
   for (const p of picks) {
     if (!p || typeof p !== 'object') continue
-    const id = (p as Pick).skill_id
+    const rawId = (p as Pick).skill_id
     const reason = (p as Pick).reason
-    if (typeof id !== 'string' || !catalog.skillById.has(id)) continue
-    if (typeof reason !== 'string' || reason.length < 3) continue
+    if (typeof rawId !== 'string' || typeof reason !== 'string' || reason.length < 3) continue
+
+    // LLMs often emit `agent.skill-id` because the prompt groups skills under
+    // `## Nova (nova)` headers. Strip the last-dot prefix and retry the lookup
+    // so we don't throw away otherwise-valid picks.
+    let id = rawId
+    if (!catalog.skillById.has(id) && id.includes('.')) {
+      const stripped = id.slice(id.lastIndexOf('.') + 1)
+      if (catalog.skillById.has(stripped)) id = stripped
+    }
+    if (!catalog.skillById.has(id)) continue
+
     validPicks.push({ skill_id: id, reason, priority: (p as Pick).priority ?? 'medium' })
   }
 
