@@ -7,6 +7,8 @@ Last updated: 2026-04-21
 
 ## Week of 2026-04-20
 
+- **9766170a** — fix(onboarding/diagnose): keep Scout health-check alive on Vercel *(karan, 2026-04-21)*
+- **0569c56e** — docs(spec): campaigns × Max integration design *(karan, 2026-04-21)*
 - **e0bb6456** — fix(onboarding): reflect persisted Meta/Google connection after OAuth *(karan, 2026-04-21)*
 - **f39fd238** — feat(mcp): add meta_ads.campaigns.list for zero-spend launch readiness *(karan, 2026-04-21)*
 - **0177eea0** — fix(landing): input height actually applies on mobile; shorter mobile button *(karan, 2026-04-21)*
