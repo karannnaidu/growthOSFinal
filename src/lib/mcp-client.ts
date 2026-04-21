@@ -32,6 +32,8 @@ export interface SkillDataContext {
     adSets?: unknown[];
     ads?: unknown[];
     account?: unknown;
+    breakdowns?: Record<string, unknown>;
+    pixels?: unknown;
   };
   google?: {
     ads?: unknown;
@@ -218,19 +220,174 @@ async function fetchMetaAdSets(cred: Credential): Promise<unknown> {
   }
   try {
     const account = metaAdAccount(cred.access_token, rawId);
-    const adSets = await account.getAdSets([
-      'id',
-      'name',
-      'status',
-      'daily_budget',
-      'lifetime_budget',
-      'optimization_goal',
-    ]);
+    // Pull learning_stage_info + bid_strategy + status fields so the
+    // learning-phase-monitor and account-structure-audit skills have signal.
+    const adSets = await account.getAdSets(
+      [
+        'id',
+        'name',
+        'status',
+        'configured_status',
+        'effective_status',
+        'daily_budget',
+        'lifetime_budget',
+        'optimization_goal',
+        'bid_strategy',
+        'billing_event',
+        'learning_stage_info',
+        'campaign_id',
+        'targeting',
+        'created_time',
+        'updated_time',
+      ],
+      { limit: 200 },
+    );
     const data = (adSets as { _data?: unknown }[]).map((a) => a._data ?? a);
     return { data };
   } catch (err) {
     console.warn('[MCP] Meta adsets error:', err);
-    return { data: [] };
+    return { data: [], error: (err as Error).message ?? String(err) };
+  }
+}
+
+/**
+ * Insights with multiple breakdown dimensions, returned per breakdown
+ * group so the LLM can compare segments. Runs four parallel insight
+ * queries — Meta only allows compatible breakdown combinations per call.
+ */
+async function fetchMetaInsightsBreakdowns(cred: Credential): Promise<unknown> {
+  const rawId = cred.metadata?.ad_account_id;
+  if (!rawId) {
+    console.warn('[MCP] Meta: ad_account_id not set in credential metadata');
+    return { data: {} };
+  }
+  const baseFields = [
+    'impressions',
+    'clicks',
+    'spend',
+    'ctr',
+    'cpc',
+    'frequency',
+    'actions',
+    'action_values',
+    'purchase_roas',
+  ];
+  const baseParams = { date_preset: 'last_30d', level: 'account', limit: 500 };
+  const breakdownGroups: Record<string, string[]> = {
+    age_gender: ['age', 'gender'],
+    placement: ['publisher_platform', 'platform_position', 'impression_device'],
+    region: ['country'],
+    device: ['device_platform'],
+  };
+  try {
+    const account = metaAdAccount(cred.access_token, rawId);
+    const entries = await Promise.all(
+      Object.entries(breakdownGroups).map(async ([key, breakdowns]) => {
+        try {
+          const insights = await account.getInsights(baseFields, {
+            ...baseParams,
+            breakdowns,
+          });
+          const rows = (insights as { _data?: unknown }[]).map((i) => i._data ?? i);
+          return [key, { rows }] as const;
+        } catch (err) {
+          console.warn(`[MCP] Meta breakdown "${key}" failed:`, err);
+          return [key, { rows: [], error: (err as Error).message ?? String(err) }] as const;
+        }
+      }),
+    );
+    const data: Record<string, unknown> = Object.fromEntries(entries);
+    console.log('[MCP] Meta breakdowns fetched', {
+      adAccountId: rawId,
+      groups: Object.keys(breakdownGroups),
+      rowCounts: Object.fromEntries(
+        entries.map(([k, v]) => [k, (v as { rows: unknown[] }).rows.length]),
+      ),
+    });
+    return { data };
+  } catch (err) {
+    console.warn('[MCP] Meta breakdowns error:', err);
+    return { data: {}, error: (err as Error).message ?? String(err) };
+  }
+}
+
+/**
+ * Pixel + CAPI diagnostics. Lists all pixels on the ad account, then
+ * for each pixel pulls last-7d event activity (per-event volume + match
+ * quality + server/browser split). Surfaces missing standard ecommerce
+ * events so Max can flag broken tracking.
+ *
+ * Uses Graph API directly because the SDK shim doesn't expose AdsPixel
+ * stats and the type cost of expanding the shim isn't worth it here.
+ */
+async function fetchMetaPixelDiagnostics(cred: Credential): Promise<unknown> {
+  const rawId = cred.metadata?.ad_account_id;
+  if (!rawId) {
+    return { error: 'ad_account_id not set in credential metadata' };
+  }
+  const normalized = rawId.startsWith('act_') ? rawId : `act_${rawId}`;
+  const token = cred.access_token;
+  const baseUrl = 'https://graph.facebook.com/v21.0';
+  const STANDARD_EVENTS = [
+    'PageView',
+    'ViewContent',
+    'AddToCart',
+    'InitiateCheckout',
+    'AddPaymentInfo',
+    'Purchase',
+  ];
+  try {
+    // 1. List pixels on the account
+    const pixelsRes = await fetch(
+      `${baseUrl}/${normalized}/adspixels?fields=id,name,code,creation_time,last_fired_time,is_unavailable&access_token=${encodeURIComponent(token)}`,
+    );
+    if (!pixelsRes.ok) {
+      const body = await pixelsRes.text();
+      return { error: `Pixel list failed: ${pixelsRes.status} ${body.slice(0, 200)}` };
+    }
+    const pixelsJson = (await pixelsRes.json()) as { data?: Array<Record<string, unknown>> };
+    const pixels = pixelsJson.data ?? [];
+
+    // 2. For each pixel, pull last-7d stats
+    const enriched = await Promise.all(
+      pixels.map(async (pixel) => {
+        const pid = pixel.id as string;
+        try {
+          const statsRes = await fetch(
+            `${baseUrl}/${pid}/stats?aggregation=event&start_time=${Math.floor(Date.now() / 1000) - 7 * 86400}&access_token=${encodeURIComponent(token)}`,
+          );
+          if (!statsRes.ok) {
+            return { ...pixel, stats_error: `${statsRes.status}` };
+          }
+          const statsJson = (await statsRes.json()) as { data?: Array<Record<string, unknown>> };
+          const events = statsJson.data ?? [];
+          const eventCounts: Record<string, number> = {};
+          for (const ev of events) {
+            const name = (ev.event as string) ?? 'unknown';
+            const count = Number(ev.count ?? 0);
+            eventCounts[name] = (eventCounts[name] ?? 0) + count;
+          }
+          const missing_standard = STANDARD_EVENTS.filter((e) => !eventCounts[e] || eventCounts[e] === 0);
+          return {
+            ...pixel,
+            event_counts_7d: eventCounts,
+            missing_standard_events: missing_standard,
+            total_events_7d: Object.values(eventCounts).reduce((s, n) => s + n, 0),
+          };
+        } catch (err) {
+          return { ...pixel, stats_error: (err as Error).message ?? String(err) };
+        }
+      }),
+    );
+
+    console.log('[MCP] Meta pixel diagnostics fetched', {
+      adAccountId: normalized,
+      pixelCount: pixels.length,
+    });
+    return { pixels: enriched };
+  } catch (err) {
+    console.warn('[MCP] Meta pixel diagnostics error:', err);
+    return { error: (err as Error).message ?? String(err) };
   }
 }
 
@@ -471,6 +628,8 @@ const TOOL_HANDLERS: Record<string, ToolHandler> = {
   'meta_ads.adsets.list': async (_brandId, cred) => fetchMetaAdSets(cred),
   'meta_ads.ads.list': async (_brandId, cred) => fetchMetaAds(cred),
   'meta_ads.account.info': async (_brandId, cred) => fetchMetaAccountInfo(cred),
+  'meta_ads.insights.breakdowns': async (_brandId, cred) => fetchMetaInsightsBreakdowns(cred),
+  'meta_ads.pixel.diagnostics': async (_brandId, cred) => fetchMetaPixelDiagnostics(cred),
 
   // Google
   'ga4.report.run': async (_brandId, cred) => fetchGA4Report(cred),
@@ -705,6 +864,8 @@ const TOOL_PLATFORM: Record<string, string> = {
   'meta_ads.adsets.list': 'meta',
   'meta_ads.ads.list': 'meta',
   'meta_ads.account.info': 'meta',
+  'meta_ads.insights.breakdowns': 'meta',
+  'meta_ads.pixel.diagnostics': 'meta',
   'ga4.report.run': 'google_analytics',
   'gsc.performance': 'google_analytics',
   'google_ads.campaigns': 'google',
@@ -844,6 +1005,14 @@ export async function fetchSkillData(
         case 'meta_ads.account.info':
           context.meta = context.meta ?? {};
           context.meta.account = result;
+          break;
+        case 'meta_ads.insights.breakdowns':
+          context.meta = context.meta ?? {};
+          context.meta.breakdowns = (result as { data?: Record<string, unknown> }).data ?? {};
+          break;
+        case 'meta_ads.pixel.diagnostics':
+          context.meta = context.meta ?? {};
+          context.meta.pixels = result;
           break;
 
         // Google Ads

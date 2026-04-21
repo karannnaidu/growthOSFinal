@@ -26,6 +26,8 @@ const TOOL_PLATFORM_MAP: Record<string, string> = {
   'meta_ads.adsets.list': 'meta',
   'meta_ads.ads.list': 'meta',
   'meta_ads.account.info': 'meta',
+  'meta_ads.insights.breakdowns': 'meta',
+  'meta_ads.pixel.diagnostics': 'meta',
   'ga4.report.run': 'ga4',
   'gsc.performance': 'gsc',
   'google_ads.campaigns': 'ga4',
