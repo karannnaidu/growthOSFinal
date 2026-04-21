@@ -283,13 +283,41 @@ export async function POST(request: NextRequest): Promise<Response> {
     try { platformStatus = await syncPlatformStatus(brandId) } catch { platformStatus = null }
   }
 
+  // Pull credential metadata so Mia can name the specific account/property
+  // that's connected (otherwise Max et al. just see "Meta: connected" with
+  // no idea which ad account they're operating on).
+  const { data: credRows } = await admin
+    .from('credentials')
+    .select('platform, metadata')
+    .eq('brand_id', brandId)
+
+  const credMeta: Record<string, Record<string, unknown>> = {}
+  for (const row of credRows ?? []) {
+    credMeta[row.platform as string] = (row.metadata as Record<string, unknown>) ?? {}
+  }
+
+  const fmt = (label: string, connected: boolean, detail?: string | null): string => {
+    if (!connected) return `${label}: not connected`
+    return detail ? `${label}: connected (${detail})` : `${label}: connected`
+  }
+
+  const metaAdAcct = credMeta.meta?.ad_account_id as string | undefined
+  const shopifyShop = credMeta.shopify?.shop as string | undefined
+  const ga4Property =
+    (credMeta.google_analytics?.property_display_name as string | undefined) ??
+    (credMeta.google_analytics?.property_id as string | undefined)
+  const gscSite =
+    (credMeta.google?.gsc_site_url as string | undefined) ??
+    (credMeta.search_console?.site_url as string | undefined)
+  const klaviyoLists = credMeta.klaviyo?.lists_count as number | undefined
+
   const connectedPlatformsBlock = platformStatus
     ? [
-        `Meta Ads: ${platformStatus.meta ? 'connected' : 'not connected'}`,
-        `Shopify: ${platformStatus.shopify ? 'connected' : 'not connected'}`,
-        `GA4: ${platformStatus.ga4 ? 'connected' : 'not connected'}`,
-        `GSC: ${platformStatus.gsc ? 'connected' : 'not connected'}`,
-        `Klaviyo: ${platformStatus.klaviyo ? 'connected' : 'not connected'}`,
+        fmt('Meta Ads', !!platformStatus.meta, metaAdAcct ? `Ad Account: ${metaAdAcct.startsWith('act_') ? metaAdAcct : `act_${metaAdAcct}`}` : null),
+        fmt('Shopify', !!platformStatus.shopify, shopifyShop ? `Shop: ${shopifyShop}` : null),
+        fmt('GA4', !!platformStatus.ga4, ga4Property ? `Property: ${ga4Property}` : null),
+        fmt('GSC', !!platformStatus.gsc, gscSite ? `Site: ${gscSite}` : null),
+        fmt('Klaviyo', !!platformStatus.klaviyo, klaviyoLists != null ? `${klaviyoLists} lists` : null),
       ].join('\n')
     : 'Platform status unknown — verify in Settings → Platforms.'
 
