@@ -13,6 +13,7 @@ import {
   Loader2,
   Zap,
   AlertCircle,
+  MessageSquare,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -232,6 +233,16 @@ export default function CampaignsPage() {
             )}
             {quickRunning ? 'Generating...' : 'Quick Generate (Mia)'}
           </Button>
+          <Link href="/dashboard/chat?intent=launch">
+            <Button
+              variant="outline"
+              className="border-indigo-400/40 text-indigo-200 hover:bg-indigo-500/10 hover:text-indigo-100"
+              title="Launch conversationally with Max via Mia"
+            >
+              <MessageSquare className="h-4 w-4 mr-1.5" />
+              Launch via chat
+            </Button>
+          </Link>
           <Link href="/dashboard/campaigns/new">
             <Button className="bg-indigo-600 hover:bg-indigo-700 text-white">
               <Plus className="h-4 w-4 mr-1.5" />
@@ -353,12 +364,23 @@ export default function CampaignsPage() {
             Create your first campaign and let your AI agent team generate copy,
             creative briefs, and launch ads on Meta.
           </p>
-          <Link href="/dashboard/campaigns/new">
-            <Button className="bg-indigo-600 hover:bg-indigo-700 text-white mt-2">
-              <Plus className="h-4 w-4 mr-1.5" />
-              Create First Campaign
-            </Button>
-          </Link>
+          <div className="mt-2 flex gap-2 justify-center">
+            <Link href="/dashboard/campaigns/new">
+              <Button className="bg-indigo-600 hover:bg-indigo-700 text-white">
+                <Plus className="h-4 w-4 mr-1.5" />
+                Create First Campaign
+              </Button>
+            </Link>
+            <Link href="/dashboard/chat?intent=launch">
+              <Button
+                variant="outline"
+                className="border-indigo-400/40 text-indigo-200 hover:bg-indigo-500/10 hover:text-indigo-100"
+              >
+                <MessageSquare className="h-4 w-4 mr-1.5" />
+                Or launch via chat
+              </Button>
+            </Link>
+          </div>
         </div>
       )}
 
