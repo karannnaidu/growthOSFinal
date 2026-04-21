@@ -13,18 +13,18 @@ type Size = 'hero' | 'default' | 'final'
 const SIZE_CLASSES: Record<Size, { input: string; button: string; wrap: string }> = {
   hero: {
     wrap: 'flex flex-col sm:flex-row gap-3 w-full max-w-xl',
-    input: 'h-20 text-lg sm:h-16 px-5',
-    button: 'h-20 text-lg sm:h-16 px-8',
+    input: 'h-24 text-xl sm:h-16 sm:text-lg px-5',
+    button: 'h-24 text-xl sm:h-16 sm:text-lg px-8',
   },
   default: {
     wrap: 'flex flex-col sm:flex-row gap-3 w-full max-w-lg',
-    input: 'h-20 text-lg sm:h-14 sm:text-base px-5 sm:px-4',
-    button: 'h-20 text-lg sm:h-14 sm:text-base px-7 sm:px-6',
+    input: 'h-24 text-lg sm:h-14 sm:text-base px-5 sm:px-4',
+    button: 'h-24 text-lg sm:h-14 sm:text-base px-7 sm:px-6',
   },
   final: {
     wrap: 'flex flex-col sm:flex-row gap-3 w-full max-w-xl',
-    input: 'h-20 text-lg sm:h-14 sm:text-base px-5 sm:px-4',
-    button: 'h-20 text-lg sm:h-14 sm:text-base px-7 sm:px-6',
+    input: 'h-24 text-lg sm:h-14 sm:text-base px-5 sm:px-4',
+    button: 'h-24 text-lg sm:h-14 sm:text-base px-7 sm:px-6',
   },
 }
 

@@ -7,7 +7,6 @@ complexity: premium
 credits: 3
 mcp_tools:
   - meta_ads.campaigns.insights
-  - ga4.report.run
 requires:
   - meta
 chains_to:
