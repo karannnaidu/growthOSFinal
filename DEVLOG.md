@@ -7,6 +7,11 @@ Last updated: 2026-04-21
 
 ## Week of 2026-04-20
 
+- **05e1a24e** — test(scripts): add smoke-launch-intent driver *(karan, 2026-04-21)*
+- **5b8dda11** — feat(campaigns): offer chat-led launch path alongside manual wizard *(karan, 2026-04-21)*
+- **9bc13ae1** — feat(chat): auto-initiate launch flow when arriving with ?intent=launch *(karan, 2026-04-21)*
+- **6e390ac7** — feat(chat): render Max launch cards on SSE handoff event *(karan, 2026-04-21)*
+- **13a42dab** — feat(mia): detect launch intent in chat, emit Max handoff directive *(karan, 2026-04-21)*
 - **3068f421** — feat(diagnosis): cross-check pixel-capi-health with live site crawl *(karan, 2026-04-21)*
 - **5c587aae** — feat(api): POST /api/mia/launch-intent drives launch-conversation state *(karan, 2026-04-21)*
 - **4c6473e6** — feat(chat): Max handoff + opening + bundle chat cards *(karan, 2026-04-21)*
