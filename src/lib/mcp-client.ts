@@ -29,6 +29,7 @@ export interface SkillDataContext {
   };
   meta?: {
     campaigns?: unknown[];
+    campaignsList?: unknown[];
     adSets?: unknown[];
     ads?: unknown[];
     account?: unknown;
@@ -114,6 +115,54 @@ async function fetchMetaInsights(cred: Credential): Promise<unknown> {
     return { data };
   } catch (err) {
     console.warn('[MCP] Meta insights error:', err);
+    return { data: [], error: (err as Error).message ?? String(err) };
+  }
+}
+
+/**
+ * Entity-level campaign metadata — the list of campaigns that exist in
+ * the account regardless of whether they have any spend/impressions.
+ * Separate from fetchMetaInsights because getInsights only returns rows
+ * with delivery; pre-launch or never-delivered campaigns are invisible
+ * there. This tool answers "what's configured" for Max & Co. so they
+ * can report account structure even when spend is zero.
+ */
+async function fetchMetaCampaigns(cred: Credential): Promise<unknown> {
+  const rawId = cred.metadata?.ad_account_id;
+  if (!rawId) {
+    console.warn('[MCP] Meta: ad_account_id not set in credential metadata');
+    return { data: [] };
+  }
+  try {
+    const account = metaAdAccount(cred.access_token, rawId);
+    const campaigns = await account.getCampaigns(
+      [
+        'id',
+        'name',
+        'status',
+        'effective_status',
+        'configured_status',
+        'objective',
+        'buying_type',
+        'daily_budget',
+        'lifetime_budget',
+        'budget_remaining',
+        'special_ad_categories',
+        'created_time',
+        'start_time',
+        'stop_time',
+        'updated_time',
+      ],
+      { limit: 200 },
+    );
+    const data = (campaigns as { _data?: unknown }[]).map((c) => c._data ?? c);
+    console.log('[MCP] Meta campaigns (entities) fetched', {
+      adAccountId: rawId,
+      campaignCount: data.length,
+    });
+    return { data };
+  } catch (err) {
+    console.warn('[MCP] Meta campaigns list error:', err);
     return { data: [], error: (err as Error).message ?? String(err) };
   }
 }
@@ -625,6 +674,7 @@ const TOOL_HANDLERS: Record<string, ToolHandler> = {
 
   // Meta Ads
   'meta_ads.campaigns.insights': async (_brandId, cred) => fetchMetaInsights(cred),
+  'meta_ads.campaigns.list': async (_brandId, cred) => fetchMetaCampaigns(cred),
   'meta_ads.adsets.list': async (_brandId, cred) => fetchMetaAdSets(cred),
   'meta_ads.ads.list': async (_brandId, cred) => fetchMetaAds(cred),
   'meta_ads.account.info': async (_brandId, cred) => fetchMetaAccountInfo(cred),
@@ -861,6 +911,7 @@ const TOOL_PLATFORM: Record<string, string> = {
   'shopify.customers.list': 'shopify',
   'shopify.shop.get': 'shopify',
   'meta_ads.campaigns.insights': 'meta',
+  'meta_ads.campaigns.list': 'meta',
   'meta_ads.adsets.list': 'meta',
   'meta_ads.ads.list': 'meta',
   'meta_ads.account.info': 'meta',
@@ -993,6 +1044,10 @@ export async function fetchSkillData(
         case 'meta_ads.campaigns.insights':
           context.meta = context.meta ?? {};
           context.meta.campaigns = (result as { data?: unknown[] }).data ?? [];
+          break;
+        case 'meta_ads.campaigns.list':
+          context.meta = context.meta ?? {};
+          context.meta.campaignsList = (result as { data?: unknown[] }).data ?? [];
           break;
         case 'meta_ads.adsets.list':
           context.meta = context.meta ?? {};

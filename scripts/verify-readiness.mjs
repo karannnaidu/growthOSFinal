@@ -163,6 +163,7 @@ const TOOL_PLATFORM = {
   'shopify.customers.list': 'shopify',
   'shopify.shop.get': 'shopify',
   'meta_ads.campaigns.insights': 'meta',
+  'meta_ads.campaigns.list': 'meta',
   'meta_ads.adsets.list': 'meta',
   'ga4.report.run': 'google_analytics',
   'gsc.performance': 'google_analytics',

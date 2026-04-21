@@ -23,6 +23,7 @@ const TOOL_PLATFORM_MAP: Record<string, string> = {
   'shopify.customers.list': 'shopify',
   'shopify.shop.get': 'shopify',
   'meta_ads.campaigns.insights': 'meta',
+  'meta_ads.campaigns.list': 'meta',
   'meta_ads.adsets.list': 'meta',
   'meta_ads.ads.list': 'meta',
   'meta_ads.account.info': 'meta',
