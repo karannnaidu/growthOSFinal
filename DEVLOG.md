@@ -7,6 +7,7 @@ Last updated: 2026-04-21
 
 ## Week of 2026-04-20
 
+- **ab1fe9eb** — fix(landing): bump URL input size on mobile *(karan, 2026-04-21)*
 - **82159d56** — fix(mia/wake): log diagnostics when planner returns zero picks *(karan, 2026-04-21)*
 - **b1628a5a** — fix(mia/chat): include account identifiers in connectedPlatformsBlock *(karan, 2026-04-21)*
 - **8c68f52e** — fix(cron): use GET handlers — Vercel cron invokes GET, not POST *(karan, 2026-04-21)*
