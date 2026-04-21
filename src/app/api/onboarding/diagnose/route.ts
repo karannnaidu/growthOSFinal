@@ -1,7 +1,13 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse, after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { runSkill } from '@/lib/skills-engine'
+
+// The health-check skill runs RAG + MCP fetches + an LLM call, which can
+// easily exceed the default Vercel timeout. Without this the fire-and-forget
+// Promise gets killed once the response is sent, and the skill_run row is
+// stuck in `status: 'running'` forever.
+export const maxDuration = 300
 
 // ---------------------------------------------------------------------------
 // Types
@@ -97,14 +103,17 @@ export async function POST(
 
   const skillRunId = pendingRun.id
 
-  // 5. Fire-and-forget: run the skill async, update the record on completion
-  runSkill({
-    brandId,
-    skillId: 'health-check',
-    triggeredBy: 'user',
-    additionalContext: { source: 'onboarding' },
-  })
-    .then(async (result) => {
+  // 5. Background execution: `after()` hands the Promise to Vercel's
+  //    waitUntil so the serverless invocation stays alive until the skill
+  //    finishes (up to maxDuration). On Node it just runs post-response.
+  after(async () => {
+    try {
+      const result = await runSkill({
+        brandId,
+        skillId: 'health-check',
+        triggeredBy: 'user',
+        additionalContext: { source: 'onboarding' },
+      })
       await admin
         .from('skill_runs')
         .update({
@@ -117,8 +126,7 @@ export async function POST(
           completed_at: new Date().toISOString(),
         })
         .eq('id', skillRunId)
-    })
-    .catch(async (err) => {
+    } catch (err) {
       console.error('[onboarding/diagnose] runSkill error:', err)
       await admin
         .from('skill_runs')
@@ -128,7 +136,8 @@ export async function POST(
           completed_at: new Date().toISOString(),
         })
         .eq('id', skillRunId)
-    })
+    }
+  })
 
   return NextResponse.json({ success: true, skillRunId })
 }
