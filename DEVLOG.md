@@ -7,6 +7,10 @@ Last updated: 2026-04-21
 
 ## Week of 2026-04-20
 
+- **a8f7dfb4** — fix(skills): adaptive flag so health-check isn't blocked by missing GA4/Meta *(karan, 2026-04-21)*
+- **f1c640b3** — feat(preflight): shared types for verdict, warnings, details *(karan, 2026-04-21)*
+- **9dbb08d9** — feat(db): preflight_results table for Max pre-flight cache *(karan, 2026-04-21)*
+- **13f934d3** — docs(plan): campaigns × Max integration — 23 tasks across 4 milestones *(karan, 2026-04-21)*
 - **da909c0e** — fix(mia-wake): accept dotted skill_ids from the planner *(karan, 2026-04-21)*
 - **9766170a** — fix(onboarding/diagnose): keep Scout health-check alive on Vercel *(karan, 2026-04-21)*
 - **0569c56e** — docs(spec): campaigns × Max integration design *(karan, 2026-04-21)*
