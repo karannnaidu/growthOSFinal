@@ -15,6 +15,8 @@ import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import { PreflightBanner } from '@/components/campaigns/PreflightBanner'
 import type { PreflightResult } from '@/lib/preflight-types'
+import { AudienceStep } from '@/components/campaigns/AudienceStep'
+import type { AudienceTier } from '@/components/campaigns/AudienceTierCard'
 
 // ---------------------------------------------------------------------------
 // Types + Constants
@@ -25,6 +27,7 @@ const STEPS = [
   { key: 'generate', label: 'Generate Copy', icon: Sparkles },
   { key: 'review', label: 'Persona Review', icon: Users },
   { key: 'approve', label: 'Approval', icon: ThumbsUp },
+  { key: 'audience', label: 'Audience', icon: Users },
   { key: 'brief', label: 'Image Brief', icon: FileImage },
   { key: 'images', label: 'Image Gen', icon: ImageIcon },
   { key: 'final', label: 'Final Review', icon: Eye },
@@ -110,6 +113,9 @@ export default function NewCampaignPage() {
 
   // Pre-flight result (set by PreflightBanner)
   const [preflight, setPreflight] = useState<PreflightResult | null>(null)
+
+  // Audience tiers proposed by Max's audience-targeting skill
+  const [audienceTiers, setAudienceTiers] = useState<AudienceTier[]>([])
 
   // ---------------------------------------------------------------------------
   // Init: resolve brand
@@ -338,6 +344,7 @@ export default function NewCampaignPage() {
       case 'generate': return copyVariants.length > 0 && !isGeneratingCopy
       case 'review': return reviewScores.length > 0 && !isReviewing
       case 'approve': return approvedVariants.size > 0
+      case 'audience': return audienceTiers.length > 0
       case 'brief': return imageBriefs.length > 0 && !isGeneratingBriefs
       case 'images': return !isGeneratingImages
       case 'final': return true
@@ -696,7 +703,20 @@ export default function NewCampaignPage() {
           </div>
         )}
 
-        {/* ── Step 5: Image Briefs ───────────────────────────────── */}
+        {/* ── Step 5: Audience (Max proposes tiers from Brand DNA + KG) ─ */}
+        {stepKey === 'audience' && brandId && (
+          <AudienceStep
+            brandId={brandId}
+            objective={objective}
+            dailyBudget={Number(budgetRange) || 50}
+            onConfirm={(tiers) => {
+              setAudienceTiers(tiers)
+              handleNext()
+            }}
+          />
+        )}
+
+        {/* ── Step 6: Image Briefs ───────────────────────────────── */}
         {stepKey === 'brief' && (
           <div className="space-y-5">
             <div className="flex items-center gap-3">
@@ -883,9 +903,9 @@ export default function NewCampaignPage() {
                           body: v.body,
                           cta: v.cta,
                         })),
-                        audienceTiers: [
-                          { name: 'Prospecting', targeting: { geo_locations: { countries: ['IN'] }, age_min: 18, age_max: 65 } },
-                        ],
+                        audienceTiers: audienceTiers.length > 0
+                          ? audienceTiers.map(t => ({ name: t.name, targeting: t.targeting }))
+                          : [{ name: 'Prospecting', targeting: { geo_locations: { countries: ['IN'] }, age_min: 18, age_max: 65 } }],
                         linkUrl: '',
                       }),
                     })
@@ -931,9 +951,9 @@ export default function NewCampaignPage() {
                           body: v.body,
                           cta: v.cta,
                         })),
-                        audienceTiers: [
-                          { name: 'Prospecting', targeting: { geo_locations: { countries: ['IN'] }, age_min: 18, age_max: 65 } },
-                        ],
+                        audienceTiers: audienceTiers.length > 0
+                          ? audienceTiers.map(t => ({ name: t.name, targeting: t.targeting }))
+                          : [{ name: 'Prospecting', targeting: { geo_locations: { countries: ['IN'] }, age_min: 18, age_max: 65 } }],
                         linkUrl: '',
                       }),
                     })
