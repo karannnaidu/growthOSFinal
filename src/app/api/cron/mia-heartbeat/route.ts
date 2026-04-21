@@ -1,4 +1,4 @@
-// POST /api/cron/mia-heartbeat
+// GET /api/cron/mia-heartbeat
 //
 // Fires Mia's wake cycle for every active brand. Configured on Vercel Cron
 // to run 4x/day. The wake cycle is idempotent per brand — on quiet ticks
@@ -22,7 +22,7 @@ async function processBatches<T>(items: T[], size: number, fn: (item: T) => Prom
   }
 }
 
-export async function POST(request: NextRequest): Promise<NextResponse> {
+export async function GET(request: NextRequest): Promise<NextResponse> {
   if (!verifyCronSecret(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }

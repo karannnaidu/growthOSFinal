@@ -1,4 +1,4 @@
-// POST /api/cron/daily-retention
+// GET /api/cron/daily-retention
 //
 // Once-a-day housekeeping that used to live inside the old /api/cron/daily
 // alongside the hardcoded specialist schedule (Scout 6am, Navi 7am, etc.).
@@ -17,7 +17,7 @@ function verifyCronSecret(request: NextRequest): boolean {
   return authHeader === `Bearer ${process.env.CRON_SECRET}`
 }
 
-export async function POST(request: NextRequest): Promise<NextResponse> {
+export async function GET(request: NextRequest): Promise<NextResponse> {
   if (!verifyCronSecret(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }

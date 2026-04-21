@@ -1,4 +1,4 @@
-// POST /api/cron/mia-digest
+// GET /api/cron/mia-digest
 //
 // Once per day, composes today's digest for every active brand. Today's
 // date is UTC for now — brand-local timezone handling is a follow-up.
@@ -14,7 +14,7 @@ function verifyCronSecret(request: NextRequest): boolean {
   return authHeader === `Bearer ${process.env.CRON_SECRET}`
 }
 
-export async function POST(request: NextRequest): Promise<NextResponse> {
+export async function GET(request: NextRequest): Promise<NextResponse> {
   if (!verifyCronSecret(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }

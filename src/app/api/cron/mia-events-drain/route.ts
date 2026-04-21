@@ -1,4 +1,4 @@
-// POST /api/cron/mia-events-drain
+// GET /api/cron/mia-events-drain
 //
 // Pulls unprocessed mia_events and triggers a wake per event. Runs frequently
 // (Vercel cron minimum is 1 min). Groups consecutive events for the same
@@ -24,7 +24,7 @@ const WAKE_SOURCE_BY_EVENT: Record<MiaEventType, WakeSource> = {
   webhook: 'event:webhook',
 }
 
-export async function POST(request: NextRequest): Promise<NextResponse> {
+export async function GET(request: NextRequest): Promise<NextResponse> {
   if (!verifyCronSecret(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
