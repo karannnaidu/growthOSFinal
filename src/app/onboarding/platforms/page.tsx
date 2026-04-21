@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Shield, ArrowLeft, ArrowRight, CheckCircle2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -62,6 +62,46 @@ function PlatformsPageInner() {
   const [connecting, setConnecting] = useState<string | null>(null)
   const [connected, setConnected] = useState<Set<string>>(new Set())
   const [error, setError] = useState<string | null>(null)
+
+  // Hydrate connection state after OAuth roundtrip. The credential is already
+  // persisted server-side by the callback / select route; without this the
+  // card still shows 'Connect' and the user reconnects in a loop.
+  useEffect(() => {
+    const brandId =
+      typeof window !== 'undefined'
+        ? sessionStorage.getItem('onboarding_brand_id')
+        : null
+    if (!brandId) return
+    let cancelled = false
+    void (async () => {
+      try {
+        const res = await fetch(
+          `/api/platforms/status?brandId=${encodeURIComponent(brandId)}`,
+          { cache: 'no-store' },
+        )
+        if (!res.ok) return
+        const body = (await res.json()) as {
+          success: boolean
+          data?: Record<string, { connected: boolean }>
+        }
+        if (cancelled || !body.success || !body.data) return
+        const live = new Set<string>()
+        for (const [id, status] of Object.entries(body.data)) {
+          if (status.connected) live.add(id)
+        }
+        setConnected((prev) => {
+          const merged = new Set(prev)
+          for (const id of live) merged.add(id)
+          return merged
+        })
+      } catch (err) {
+        console.warn('[onboarding/platforms] status hydrate failed', err)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [searchParams])
 
   // Only surface ad platforms on this onboarding step, and only the ones
   // currently visible per the registry (comingSoon hides stubs unless
