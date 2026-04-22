@@ -35,6 +35,8 @@ type PatternType =
   | 'card_grid'
   | 'metrics'
   | 'data_table'
+  | 'variant_cards'
+  | 'score_bars'
   | 'categories'
   | 'signal_positive'
   | 'signal_warning'
@@ -73,11 +75,37 @@ function isUniformObjectArray(val: unknown[]): boolean {
   return objs.slice(1, 5).every((o) => Object.keys(o).sort().join(',') === firstKeys)
 }
 
+/**
+ * A uniform object array has "nested complexity" when any row contains
+ * an object or array cell. Flat tables render those as "[object Object]",
+ * so we need to upgrade to a card-per-row layout that can recurse.
+ */
+function hasNestedCells(items: Record<string, unknown>[]): boolean {
+  const sample = items.slice(0, 8)
+  return sample.some((row) =>
+    Object.values(row).some(
+      (v) => v !== null && typeof v === 'object',
+    ),
+  )
+}
+
 function isMostlyNumeric(obj: Record<string, unknown>): boolean {
   const values = Object.values(obj)
   if (values.length === 0) return false
   const numCount = values.filter((v) => typeof v === 'number').length
   return numCount / values.length >= 0.6
+}
+
+/**
+ * A "score dictionary" is an object whose values are all numbers in [0, 100]
+ * with at least 2 entries. Great for horizontal bar-chart rendering.
+ */
+function isScoreDict(obj: Record<string, unknown>): boolean {
+  const values = Object.values(obj)
+  if (values.length < 2) return false
+  return values.every(
+    (v) => typeof v === 'number' && isFinite(v as number) && (v as number) >= 0 && (v as number) <= 100,
+  )
 }
 
 function isCategoryObject(obj: Record<string, unknown>): boolean {
@@ -99,11 +127,15 @@ function detectPattern(key: string, value: unknown): PatternType {
     if (isCategoryObject(value as Record<string, unknown>)) return 'categories'
   }
   if (PROSE_KEYS.test(key) && typeof value === 'string' && value.length > 100) return 'prose'
-  if (TABLE_KEYS.test(key) && Array.isArray(value) && isUniformObjectArray(value)) return 'data_table'
+  if (TABLE_KEYS.test(key) && Array.isArray(value) && isUniformObjectArray(value)) {
+    return hasNestedCells(value as Record<string, unknown>[]) ? 'variant_cards' : 'data_table'
+  }
 
   if (Array.isArray(value)) {
     if (isCardGridArray(value)) return 'card_grid'
-    if (isUniformObjectArray(value)) return 'data_table'
+    if (isUniformObjectArray(value)) {
+      return hasNestedCells(value as Record<string, unknown>[]) ? 'variant_cards' : 'data_table'
+    }
     if (value.every((v) => typeof v === 'string')) return 'bullet_list'
     if (value.length > 0 && value.every((v) => v && typeof v === 'object')) return 'card_grid'
     return 'bullet_list'
@@ -113,7 +145,12 @@ function detectPattern(key: string, value: unknown): PatternType {
   }
   if (typeof value === 'number' || typeof value === 'boolean') return 'text'
   if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-    if (isMostlyNumeric(value as Record<string, unknown>)) return 'metrics'
+    const obj = value as Record<string, unknown>
+    const isScoreKey = /^(scores?|ratings?)$/i.test(key) || SCORE_KEYS.test(key)
+    if (isScoreDict(obj) && (isScoreKey || Object.values(obj).every((v) => (v as number) <= 10))) {
+      return 'score_bars'
+    }
+    if (isMostlyNumeric(obj)) return 'metrics'
     return 'object'
   }
   return 'fallback'
@@ -124,9 +161,9 @@ function detectPattern(key: string, value: unknown): PatternType {
 // ---------------------------------------------------------------------------
 
 const PRIORITY: Record<PatternType, number> = {
-  score: 0, categories: 1, issues: 2, recommendations: 3,
+  score: 0, score_bars: 0.5, categories: 1, issues: 2, recommendations: 3,
   signal_positive: 4, signal_warning: 5, metrics: 6, data_table: 7,
-  card_grid: 8, prose: 9, bullet_list: 10, text: 11, object: 12, fallback: 13,
+  variant_cards: 7.5, card_grid: 8, prose: 9, bullet_list: 10, text: 11, object: 12, fallback: 13,
 }
 
 // ---------------------------------------------------------------------------
@@ -273,6 +310,40 @@ function MetricsRow({ data, compact }: { data: Record<string, unknown>; compact?
   )
 }
 
+/**
+ * Compact inline summary for a cell value. Safe against objects/arrays —
+ * never emits "[object Object]". Used by DataTable rows.
+ */
+function summarizeCell(val: unknown): string {
+  if (val === null || val === undefined) return '—'
+  if (typeof val === 'number') return val.toLocaleString()
+  if (typeof val === 'boolean') return val ? '✓' : '—'
+  if (typeof val === 'string') return val
+  if (Array.isArray(val)) {
+    if (val.length === 0) return '—'
+    if (val.every((v) => typeof v === 'string' || typeof v === 'number')) {
+      const joined = val.slice(0, 3).map(String).join(', ')
+      return val.length > 3 ? `${joined} · +${val.length - 3}` : joined
+    }
+    return `${val.length} item${val.length === 1 ? '' : 's'}`
+  }
+  if (typeof val === 'object') {
+    const obj = val as Record<string, unknown>
+    const keys = Object.keys(obj).slice(0, 2)
+    const bits = keys
+      .map((k) => {
+        const v = obj[k]
+        if (v === null || v === undefined) return `${k}: —`
+        if (typeof v === 'object') return `${k}: …`
+        const s = String(v)
+        return `${k}: ${s.length > 24 ? s.slice(0, 24) + '…' : s}`
+      })
+      .join(' · ')
+    return Object.keys(obj).length > keys.length ? `${bits} · +${Object.keys(obj).length - keys.length}` : bits
+  }
+  return String(val)
+}
+
 function DataTable({ items, compact }: { items: Record<string, unknown>[]; compact?: boolean }) {
   if (items.length === 0) return null
   const columns = Object.keys(items[0]!)
@@ -295,7 +366,7 @@ function DataTable({ items, compact }: { items: Record<string, unknown>[]; compa
             <tr key={i} className="border-b border-white/[0.03]">
               {columns.map((col) => (
                 <td key={col} className={cn('px-3 py-2 text-foreground', typeof row[col] === 'number' ? 'text-right font-mono' : 'text-left')}>
-                  {typeof row[col] === 'number' ? Number(row[col]).toLocaleString() : String(row[col] ?? '')}
+                  {summarizeCell(row[col])}
                 </td>
               ))}
             </tr>
@@ -303,6 +374,105 @@ function DataTable({ items, compact }: { items: Record<string, unknown>[]; compa
         </tbody>
       </table>
       {items.length > limit && <p className="text-[10px] text-muted-foreground/50 px-3 py-2">+{items.length - limit} more rows</p>}
+    </div>
+  )
+}
+
+/**
+ * VariantCards — one card per row for uniform object arrays with nested
+ * object/array cells (e.g. ad-copy `variants`). Each field renders through
+ * RenderValue so scores render as metrics, nested objects expand, etc.
+ * Headline field (id/name/title) is pulled to the top for quick scanning.
+ */
+const HEADLINE_KEYS = ['id', 'name', 'title', 'variant', 'label', 'key']
+
+function VariantCards({ items, compact }: { items: Record<string, unknown>[]; compact?: boolean }) {
+  const limit = compact ? 3 : 8
+  const cards = items.slice(0, limit)
+  return (
+    <div className="space-y-3">
+      {cards.map((item, i) => {
+        const headlineKey = HEADLINE_KEYS.find((k) => k in item && typeof item[k] !== 'object')
+        const headline = headlineKey ? String(item[headlineKey]) : `Item ${i + 1}`
+        const bodyEntries = Object.entries(item).filter(
+          ([k, v]) => k !== headlineKey && v !== null && v !== undefined && !isHiddenKey(k),
+        )
+        return (
+          <div
+            key={i}
+            className="rounded-xl bg-white/[0.04] border border-white/[0.06] p-4 space-y-3"
+          >
+            <div className="flex items-center justify-between gap-2">
+              <p className={cn('font-heading font-semibold text-foreground', compact ? 'text-xs' : 'text-sm')}>
+                {headline}
+              </p>
+              <span className="text-[10px] font-mono text-muted-foreground">#{i + 1}</span>
+            </div>
+            <div className="space-y-3">
+              {bodyEntries.map(([k, v]) => (
+                <div key={k}>
+                  <SectionHeader label={k} compact={compact} />
+                  <RenderValue keyName={k} value={v} compact={compact} />
+                </div>
+              ))}
+            </div>
+          </div>
+        )
+      })}
+      {items.length > limit && (
+        <p className="text-[10px] text-muted-foreground/50">+{items.length - limit} more</p>
+      )}
+    </div>
+  )
+}
+
+/**
+ * Horizontal bar chart for numeric score dictionaries.
+ * Auto-detects 0-10 vs 0-100 scale from the max value.
+ * Color gradient: red (<40%) / amber (40-70%) / green (≥70%).
+ */
+function ScoreBars({ data, compact }: { data: Record<string, number>; compact?: boolean }) {
+  const entries = Object.entries(data).filter(([, v]) => typeof v === 'number' && isFinite(v))
+  if (entries.length === 0) return null
+  const maxVal = Math.max(...entries.map(([, v]) => v))
+  const scale = maxVal <= 10 ? 10 : 100
+  const rowHeight = compact ? 18 : 22
+  return (
+    <div className="rounded-lg bg-white/[0.04] border border-white/[0.06] p-3">
+      <div className="space-y-1.5">
+        {entries.map(([key, val]) => {
+          const pct = Math.max(0, Math.min(100, (val / scale) * 100))
+          const color = pct >= 70 ? '#10b981' : pct >= 40 ? '#f59e0b' : '#e11d48'
+          return (
+            <div key={key} className="flex items-center gap-3" style={{ height: rowHeight }}>
+              <p
+                className={cn(
+                  'capitalize shrink-0 text-muted-foreground truncate',
+                  compact ? 'text-[10px] w-24' : 'text-[11px] w-36',
+                )}
+                title={key.replace(/_/g, ' ')}
+              >
+                {key.replace(/_/g, ' ')}
+              </p>
+              <div className="flex-1 relative h-2 rounded-full bg-white/[0.06] overflow-hidden">
+                <div
+                  className="absolute inset-y-0 left-0 rounded-full transition-[width]"
+                  style={{ width: `${pct}%`, background: color }}
+                />
+              </div>
+              <p
+                className={cn(
+                  'shrink-0 font-mono font-semibold tabular-nums text-foreground text-right',
+                  compact ? 'text-[10px] w-10' : 'text-xs w-12',
+                )}
+              >
+                {val}
+                <span className="text-muted-foreground">/{scale}</span>
+              </p>
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }
@@ -380,6 +550,8 @@ function RenderValue({ keyName, value, compact }: { keyName: string; value: unkn
     case 'card_grid': return <CardGrid items={value as unknown[]} compact={compact} />
     case 'metrics': return <MetricsRow data={value as Record<string, unknown>} compact={compact} />
     case 'data_table': return <DataTable items={value as Record<string, unknown>[]} compact={compact} />
+    case 'variant_cards': return <VariantCards items={value as Record<string, unknown>[]} compact={compact} />
+    case 'score_bars': return <ScoreBars data={value as Record<string, number>} compact={compact} />
     case 'categories': return <CategoryCards data={value as Record<string, Record<string, unknown>>} compact={compact} />
     case 'signal_positive': return <SignalList items={value as unknown[]} color="green" compact={compact} />
     case 'signal_warning': return <SignalList items={value as unknown[]} color="amber" compact={compact} />

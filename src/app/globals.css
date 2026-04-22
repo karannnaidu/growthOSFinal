@@ -317,6 +317,47 @@
   from { transform: rotate(0deg); }
   to   { transform: rotate(360deg); }
 }
+/* Print / Save-as-PDF styles for skill run reports.
+   Applied when the user triggers the browser's print dialog. */
+@media print {
+  /* Hide shell chrome */
+  [data-print-hide] { display: none !important; }
+  /* Force a document-style canvas */
+  html, body {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  /* Flatten dashboard chrome so report fills the page */
+  main { margin: 0 !important; padding: 0 !important; }
+  main > div { padding: 0 !important; }
+  /* Turn glass panels into clean light cards */
+  .glass-panel,
+  [class*="bg-white/[0.04]"],
+  [class*="bg-white/[0.06]"],
+  [class*="bg-black/20"] {
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: none !important;
+  }
+  [class*="text-muted-foreground"] { color: #475569 !important; }
+  [class*="text-foreground"] { color: #0f172a !important; }
+  [class*="border-white"] { border-color: #e2e8f0 !important; }
+  [class*="border-border"] { border-color: #e2e8f0 !important; }
+  /* Avoid ugly splits inside cards */
+  .rounded-xl, .rounded-2xl, .rounded-lg {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  /* Scrollable regions become full-height on paper */
+  .overflow-auto, .overflow-y-auto {
+    overflow: visible !important;
+    max-height: none !important;
+  }
+  @page { margin: 14mm; size: A4; }
+}
+
 @keyframes orbitSpinReverse {
   from { transform: rotate(0deg); }
   to   { transform: rotate(-360deg); }

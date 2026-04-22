@@ -49,7 +49,7 @@ export function TopBar({ userEmail, brandId, walletBalance = 0 }: TopBarProps) {
 
   return (
     <>
-      <header className="fixed top-0 right-0 left-0 md:left-60 z-20 h-14 glass-panel border-b border-white/[0.06] flex items-center justify-between px-4 md:px-6">
+      <header data-print-hide className="fixed top-0 right-0 left-0 md:left-60 z-20 h-14 glass-panel border-b border-white/[0.06] flex items-center justify-between px-4 md:px-6">
         {/* Left: branding + Cmd+K search trigger */}
         <div className="flex items-center gap-3">
           <span className="hidden sm:block text-[10px] font-semibold tracking-widest text-white/30 uppercase select-none">

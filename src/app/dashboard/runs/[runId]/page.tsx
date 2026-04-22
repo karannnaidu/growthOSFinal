@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, Download, Play, Clock, Cpu, Zap } from 'lucide-react'
+import { ArrowLeft, Download, FileText, Play, Clock, Cpu, Zap } from 'lucide-react'
 import { SkillOutput } from '@/components/ui/skill-output'
 
 interface SkillRun {
@@ -89,6 +89,12 @@ export default function SkillRunDetailPage() {
     URL.revokeObjectURL(url)
   }
 
+  function handleDownloadPdf() {
+    // Browser's print dialog → user picks "Save as PDF". Print CSS in
+    // globals.css hides dashboard chrome and flattens the dark theme.
+    window.print()
+  }
+
   if (loading) {
     return (
       <div className="animate-pulse space-y-4">
@@ -130,8 +136,17 @@ export default function SkillRunDetailPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between gap-4 flex-wrap">
+      {/* Print-only document header: shown on paper, hidden on screen */}
+      <div className="hidden print:block border-b border-slate-200 pb-4 mb-6">
+        <p className="text-[10px] uppercase tracking-widest text-slate-500">Growth OS — Skill Run Report</p>
+        <h1 className="text-2xl font-bold text-slate-900 mt-1">{run.skill_name}</h1>
+        <p className="text-xs text-slate-600 mt-1">
+          {run.agent} · {new Date(run.created_at).toLocaleString()} · run {run.id.slice(0, 8)}
+        </p>
+      </div>
+
+      {/* On-screen header */}
+      <div data-print-hide className="flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3">
           <Link href="/dashboard" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
             <ArrowLeft className="w-4 h-4" />
@@ -154,6 +169,15 @@ export default function SkillRunDetailPage() {
           >
             <Download className="w-4 h-4" />
             Export JSON
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleDownloadPdf}
+            className="gap-2 border-border/60"
+          >
+            <FileText className="w-4 h-4" />
+            Download PDF
           </Button>
           <Button
             size="sm"

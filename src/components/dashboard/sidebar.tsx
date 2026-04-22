@@ -53,7 +53,7 @@ export function Sidebar({ brandId: _brandId, walletBalance = 0 }: SidebarProps) 
   return (
     <>
       {/* Desktop sidebar */}
-      <aside className="hidden md:flex fixed left-0 top-0 h-full w-60 flex-col bg-[#0a1628] border-r border-white/[0.06] z-30">
+      <aside data-print-hide className="hidden md:flex fixed left-0 top-0 h-full w-60 flex-col bg-[#0a1628] border-r border-white/[0.06] z-30">
 
         {/* Mia header */}
         <div className="flex flex-col items-center gap-2 px-6 pt-7 pb-5 border-b border-white/[0.06]">
@@ -141,6 +141,7 @@ export function Sidebar({ brandId: _brandId, walletBalance = 0 }: SidebarProps) 
 
       {/* Mobile bottom nav */}
       <nav
+        data-print-hide
         className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-[#0a1628] border-t border-white/[0.06] flex items-center justify-around px-2 py-2"
         aria-label="Mobile navigation"
       >
