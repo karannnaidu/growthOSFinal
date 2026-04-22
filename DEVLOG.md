@@ -3,10 +3,11 @@
 Auto-generated from git history on every push to `main`. Do not edit by hand —
 changes will be overwritten. For the user-facing changelog, see /changelog.
 
-Last updated: 2026-04-21
+Last updated: 2026-04-22
 
 ## Week of 2026-04-20
 
+- **166b8929** — fix(skill-output): stop rendering nested objects as [object Object] *(karan, 2026-04-22)*
 - **05e1a24e** — test(scripts): add smoke-launch-intent driver *(karan, 2026-04-21)*
 - **5b8dda11** — feat(campaigns): offer chat-led launch path alongside manual wizard *(karan, 2026-04-21)*
 - **9bc13ae1** — feat(chat): auto-initiate launch flow when arriving with ?intent=launch *(karan, 2026-04-21)*
